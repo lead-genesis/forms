@@ -50,7 +50,26 @@ export function buildWebhookPayload({ formId, formName, steps, answers }: Payloa
             } else if (s.type === "input") {
                 value = answers[`${s.id}_input`] ?? null;
             } else if (s.type === "address") {
-                value = answers[`${s.id}_address`] ?? null;
+                const rawAddress = answers[`${s.id}_address`];
+                if (rawAddress) {
+                    try {
+                        const parsed = JSON.parse(rawAddress);
+                        value = {
+                            full_address: parsed.full_address,
+                            street_number: parsed.components?.street_number || null,
+                            street_address: parsed.components?.street_address || null,
+                            city: parsed.components?.city || null,
+                            state: parsed.components?.state || null,
+                            postcode: parsed.components?.postcode || null,
+                            country: parsed.components?.country || null,
+                        };
+                    } catch (e) {
+                        // Fallback if it wasn't valid JSON (e.g. old data or manual type)
+                        value = { full_address: rawAddress };
+                    }
+                } else {
+                    value = null;
+                }
             }
 
             return {

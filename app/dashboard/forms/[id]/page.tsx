@@ -28,6 +28,7 @@ interface Form {
     webhook_url: string | null;
     created_at: string;
     brand_id: string;
+    subdomain: string | null;
     brands?: {
         id: string;
         name: string;
@@ -67,6 +68,7 @@ export default function FormDetailPage() {
     const [editName, setEditName] = useState("");
     const [editWebhook, setEditWebhook] = useState("");
     const [editStatus, setEditStatus] = useState("draft");
+    const [editSubdomain, setEditSubdomain] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [copied, setCopied] = useState(false);
 
@@ -83,6 +85,7 @@ export default function FormDetailPage() {
             setEditName(f.name);
             setEditWebhook(f.webhook_url ?? "");
             setEditStatus(f.status);
+            setEditSubdomain(f.subdomain ?? "");
         }
         setIsLoading(false);
     }, [formId]);
@@ -96,14 +99,15 @@ export default function FormDetailPage() {
             name: editName.trim() || form.name,
             webhook_url: editWebhook.trim() || null,
             status: editStatus,
+            subdomain: editSubdomain.trim() || null,
         });
         await fetchData();
         setIsSaving(false);
     };
 
-    const shareUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/f/${formId}`
-        : `/f/${formId}`;
+    const shareUrl = form?.subdomain
+        ? `https://${form.subdomain}.genesisflow.io`
+        : (typeof window !== "undefined" ? `${window.location.origin}/f/${formId}` : `/f/${formId}`);
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(shareUrl);
@@ -268,6 +272,8 @@ export default function FormDetailPage() {
                             setEditWebhook={setEditWebhook}
                             editStatus={editStatus}
                             setEditStatus={setEditStatus}
+                            editSubdomain={editSubdomain}
+                            setEditSubdomain={setEditSubdomain}
                             isSaving={isSaving}
                             onSave={handleSaveSettings}
                             shareUrl={shareUrl}
@@ -390,6 +396,8 @@ function SettingsTab({
     setEditWebhook,
     editStatus,
     setEditStatus,
+    editSubdomain,
+    setEditSubdomain,
     isSaving,
     onSave,
     shareUrl,
@@ -402,6 +410,8 @@ function SettingsTab({
     setEditWebhook: (v: string) => void;
     editStatus: string;
     setEditStatus: (v: string) => void;
+    editSubdomain: string;
+    setEditSubdomain: (v: string) => void;
     isSaving: boolean;
     onSave: () => void;
     shareUrl: string;
@@ -423,6 +433,28 @@ function SettingsTab({
                             onChange={(e) => setEditName(e.target.value)}
                             className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                         />
+                    </div>
+
+                    {/* Subdomain */}
+                    <div>
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">
+                            Custom Subdomain
+                        </label>
+                        <div className="flex items-center">
+                            <input
+                                type="text"
+                                value={editSubdomain}
+                                onChange={(e) => setEditSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                                placeholder="my-form"
+                                className="w-full px-4 py-2.5 rounded-l-xl border border-r-0 border-border bg-background text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors placeholder:text-muted-foreground/40"
+                            />
+                            <div className="px-4 py-2.5 bg-secondary/50 border border-border rounded-r-xl text-sm text-muted-foreground font-medium whitespace-nowrap">
+                                .genesisflow.io
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Leave blank to use the default /f/[id] URL. Letters, numbers, and hyphens only. Be careful changing this as existing links will break.
+                        </p>
                     </div>
 
                     {/* Webhook URL */}

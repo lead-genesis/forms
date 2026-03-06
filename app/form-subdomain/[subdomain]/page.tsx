@@ -4,12 +4,13 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import { FormStep } from "@/components/form/FormStepRenderer";
-import { getFormWithBrand, getFormSteps } from "@/app/actions/forms";
+import { getFormBySubdomain, getFormSteps } from "@/app/actions/forms";
 
-export default function PublicFormPage() {
+export default function SubdomainFormPage() {
     const params = useParams();
     const searchParams = useSearchParams();
-    const formId = params.id as string;
+    // In our middleware we rewrite to /form-subdomain/[subdomain]
+    const subdomain = params.subdomain as string;
     const isPreviewSession = searchParams.get("preview") === "true";
 
     const [isLoading, setIsLoading] = useState(true);
@@ -17,18 +18,18 @@ export default function PublicFormPage() {
     const [steps, setSteps] = useState<FormStep[]>([]);
     const [webhookUrl, setWebhookUrl] = useState("");
     const [formName, setFormName] = useState("");
+    const [formId, setFormId] = useState("");
     const [error, setError] = useState(false);
     const [isInactive, setIsInactive] = useState(false);
 
     useEffect(() => {
-        if (!formId) return;
+        if (!subdomain) return;
 
         (async () => {
             setIsLoading(true);
-            const [formRes, stepsRes] = await Promise.all([
-                getFormWithBrand(formId),
-                getFormSteps(formId),
-            ]);
+
+            // First get the form by subdomain
+            const formRes = await getFormBySubdomain(subdomain);
 
             if (formRes.error || !formRes.data) {
                 setError(true);
@@ -44,11 +45,15 @@ export default function PublicFormPage() {
                 return;
             }
 
+            // Now get the steps using the actual form ID
+            const stepsRes = await getFormSteps(form.id);
+
+            setFormId(form.id);
             setFormName(form.name ?? "");
             setWebhookUrl(form.webhook_url ?? "");
             if (form.brands) setBrand(form.brands);
 
-            const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
+            const loadedSteps: FormStep[] = (stepsRes.data as any[]).map((s: any) => ({
                 id: s.id,
                 type: s.type,
                 title: s.title,
@@ -58,7 +63,7 @@ export default function PublicFormPage() {
             setSteps(loadedSteps);
             setIsLoading(false);
         })();
-    }, [formId]);
+    }, [subdomain, isPreviewSession]);
 
     useEffect(() => {
         if (!isLoading) {
@@ -91,7 +96,7 @@ export default function PublicFormPage() {
         );
     }
 
-    if (error || steps.length === 0) {
+    if (error || steps.length === 0 || !formId) {
         return (
             <div className="flex items-center justify-center h-screen bg-background">
                 <div className="text-center space-y-2">

@@ -114,6 +114,32 @@ export async function getFormWithBrand(formId: string) {
     return { data, error: null };
 }
 
+/** Load a single form with its brand details by subdomain (for custom domains). */
+export async function getFormBySubdomain(subdomain: string) {
+    const supabase = getClient();
+
+    const { data, error } = await supabase
+        .from("forms")
+        .select(`
+            *,
+            brands (
+                id,
+                name,
+                logo_url,
+                banner_url
+            )
+        `)
+        .eq("subdomain", subdomain)
+        .single();
+
+    if (error) {
+        console.error("Get form by subdomain error:", error);
+        return { data: null, error: error.message };
+    }
+
+    return { data, error: null };
+}
+
 // ─── Form Steps ───────────────────────────────────────────────────────────────
 
 export async function getFormSteps(formId: string) {
@@ -252,6 +278,7 @@ export interface UpdateFormInput {
     name?: string;
     webhook_url?: string | null;
     status?: string;
+    subdomain?: string | null;
 }
 
 export async function updateForm(formId: string, input: UpdateFormInput) {

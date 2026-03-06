@@ -6,6 +6,7 @@ import { sansFont } from "@/lib/design-system";
 import { motion } from "framer-motion";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AddressAutocomplete } from "./AddressAutocomplete";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -265,11 +266,19 @@ export function FormStepRenderer({
                             <div className="h-10 w-full bg-secondary/40 rounded-lg border border-border/30" />
                         ) : (
                             <>
-                                <input
-                                    type="text"
-                                    value={answers[`${step.id}_address`] ?? ""}
-                                    onChange={(e) => handleInputChange(`${step.id}_address`, e.target.value)}
-                                    placeholder="Start typing your address..."
+                                <AddressAutocomplete
+                                    value={(() => {
+                                        const raw = answers[`${step.id}_address`];
+                                        if (!raw) return "";
+                                        try {
+                                            const parsed = JSON.parse(raw);
+                                            return parsed.full_address || raw;
+                                        } catch {
+                                            return raw;
+                                        }
+                                    })()}
+                                    onChange={(val) => handleInputChange(`${step.id}_address`, val)}
+                                    disabled={isPreview}
                                     className="w-full h-10 px-3 rounded-lg border border-border/50 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
                                 />
                                 <Button className="w-full rounded-lg h-10 text-sm font-semibold" onClick={onNext}>

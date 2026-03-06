@@ -158,11 +158,7 @@ function BuilderContent() {
     }, [formId]);
 
     // ── Update Page Title Dynamically ──────────────────────────────────────────
-    useEffect(() => {
-        if (!isLoading) {
-            document.title = formName ? `${formName} – Genesis Forms` : "Genesis Forms";
-        }
-    }, [formName, isLoading]);
+    // Moving this to a JSX <title> tag to avoid Next.js App Router metadata overriding it
 
     const currentStep = steps.find(s => s.id === currentStepId) ?? steps[0];
 
@@ -318,6 +314,7 @@ function BuilderContent() {
 
     return (
         <div className="flex flex-col h-screen bg-background overflow-hidden">
+            <title>Builder - FormState</title>
             {/* Header */}
             <BuilderHeader
                 formName={formName}

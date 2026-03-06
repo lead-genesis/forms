@@ -41,14 +41,9 @@ export default function DashboardLayout({
         "/dashboard/products": "Products",
     };
 
-    useEffect(() => {
-        // Use prefix matching (longest first) so dynamic sub-routes like
-        // /dashboard/forms/[id] still resolve to "Forms"
-        const sortedPaths = Object.keys(pageTitleMap).sort((a, b) => b.length - a.length);
-        const matchedPath = sortedPaths.find((path) => pathname.startsWith(path));
-        const pageTitle = matchedPath ? pageTitleMap[matchedPath] : "Dashboard";
-        document.title = `${pageTitle} - Genesis Forms`;
-    }, [pathname]);
+    const sortedPaths = Object.keys(pageTitleMap).sort((a, b) => b.length - a.length);
+    const matchedPath = sortedPaths.find((path) => pathname.startsWith(path));
+    const pageTitle = matchedPath ? pageTitleMap[matchedPath] : "Dashboard";
 
     const navItems = [
         { href: "/dashboard", label: "Overview", icon: Squares2X2Icon },
@@ -60,6 +55,7 @@ export default function DashboardLayout({
 
     return (
         <div className="min-h-screen bg-background flex">
+            <title>{pageTitle} - FormState</title>
             {/* Desktop Sidebar */}
             <aside className="w-64 bg-background hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border">
                 {/* Logo */}
