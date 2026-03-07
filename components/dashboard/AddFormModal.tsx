@@ -21,6 +21,7 @@ interface Brand {
     id: string;
     name: string;
     logo_url?: string | null;
+    banner_url?: string | null;
     verticals?: string[];
 }
 

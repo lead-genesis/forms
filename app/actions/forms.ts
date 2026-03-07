@@ -26,6 +26,8 @@ export interface Form {
     brand_id: string;
     subdomain: string | null;
     views: number;
+    banner: string | null;
+    sms_verification: boolean;
 }
 
 export interface CreateFormInput {
@@ -41,6 +43,14 @@ export async function createForm(input: CreateFormInput) {
     if (!supabase) return { data: null, error: "Supabase client not initialized" };
     const userId = input.userId ?? DEMO_USER_ID;
 
+    // Fetch brand to get default banner
+    const { data: brand } = await supabase
+        .from("brands")
+        .select("banner_url")
+        .eq("id", input.brand_id)
+        .single();
+    const banner = brand?.banner_url || null;
+
     const { data, error } = await supabase
         .from("forms")
         .insert({
@@ -48,6 +58,7 @@ export async function createForm(input: CreateFormInput) {
             brand_id: input.brand_id,
             name: input.name.trim() || "New Lead Form",
             status: "draft",
+            banner: banner,
         })
         .select()
         .single();
@@ -160,9 +171,6 @@ export async function getFormBySubdomain(subdomain: string) {
         .eq("subdomain", subdomain)
         .single();
 
-    // #region agent log
-    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9dc2d2' }, body: JSON.stringify({ sessionId: '9dc2d2', runId: 'initial', hypothesisId: 'B', location: 'app/actions/forms.ts:getFormBySubdomain:result', message: 'getFormBySubdomain result', data: { subdomain, hasData: !!data, hasError: !!error, errorMessage: error?.message ?? null, formId: (data as any)?.id ?? null, status: (data as any)?.status ?? null }, timestamp: Date.now() }) }).catch(() => { });
-    // #endregion
 
     if (error) {
         console.error("Get form by subdomain error:", error);
@@ -189,9 +197,6 @@ export async function getFormSteps(formId: string) {
         .eq("form_id", formId)
         .order("order", { ascending: true });
 
-    // #region agent log
-    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9dc2d2' }, body: JSON.stringify({ sessionId: '9dc2d2', runId: 'initial', hypothesisId: 'C', location: 'app/actions/forms.ts:getFormSteps:result', message: 'getFormSteps result', data: { formId, stepsCount: data?.length ?? 0, hasError: !!error, errorMessage: error?.message ?? null }, timestamp: Date.now() }) }).catch(() => { });
-    // #endregion
 
     if (error) {
         console.error("Get form steps error:", error);
@@ -360,11 +365,75 @@ export interface UpdateFormInput {
     webhook_url?: string | null;
     status?: string;
     subdomain?: string | null;
+    banner?: string | null;
+    sms_verification?: boolean;
 }
 
 export async function updateForm(formId: string, input: UpdateFormInput) {
     const supabase = getClient();
     if (!supabase) return { data: null, error: "Supabase client not initialized" };
+
+    // 1. Handle SMS verification step side-effects
+    if (input.sms_verification !== undefined) {
+        const { data: currentForm } = await supabase
+            .from("forms")
+            .select("sms_verification")
+            .eq("id", formId)
+            .single();
+
+        if (currentForm && currentForm.sms_verification !== input.sms_verification) {
+            if (input.sms_verification) {
+                // Toggled ON: Add the step
+                const { data: steps } = await supabase
+                    .from("form_steps")
+                    .select("id, order, type")
+                    .eq("form_id", formId)
+                    .order("order", { ascending: true });
+
+                const thankYouStep = steps?.find(s => s.type === "thank-you");
+                const smsStepExists = steps?.some(s => s.type === "sms-verification");
+
+                if (!smsStepExists && thankYouStep) {
+                    // Push thank-you step forward
+                    await supabase
+                        .from("form_steps")
+                        .update({ order: thankYouStep.order + 1 })
+                        .eq("id", thankYouStep.id);
+
+                    // Insert SMS step
+                    await supabase.from("form_steps").insert({
+                        form_id: formId,
+                        type: "sms-verification",
+                        title: "SMS Verification",
+                        data: {},
+                        order: thankYouStep.order,
+                    });
+                }
+            } else {
+                // Toggled OFF: Remove the step
+                await supabase
+                    .from("form_steps")
+                    .delete()
+                    .eq("form_id", formId)
+                    .eq("type", "sms-verification");
+
+                // Re-order remaining steps to be compact
+                const { data: remainingSteps } = await supabase
+                    .from("form_steps")
+                    .select("id")
+                    .eq("form_id", formId)
+                    .order("order", { ascending: true });
+
+                if (remainingSteps) {
+                    await Promise.all(
+                        remainingSteps.map((s, i) =>
+                            supabase.from("form_steps").update({ order: i }).eq("id", s.id)
+                        )
+                    );
+                }
+            }
+        }
+    }
 
     const { data, error } = await supabase
         .from("forms")
@@ -379,6 +448,132 @@ export async function updateForm(formId: string, input: UpdateFormInput) {
     }
 
     return { data, error: null };
+}
+
+// ─── Duplicate Form ───────────────────────────────────────────────────────────
+
+/** 
+ * Generates a unique subdomain by appending suffixes if needed.
+ */
+async function generateUniqueSubdomain(baseSubdomain: string): Promise<string> {
+    const supabase = getClient();
+    if (!supabase) return baseSubdomain;
+
+    let candidate = baseSubdomain;
+    let attempt = 0;
+    let isUnique = false;
+
+    while (!isUnique && attempt < 10) {
+        const { count, error } = await supabase
+            .from("forms")
+            .select("subdomain", { count: "exact", head: true })
+            .eq("subdomain", candidate);
+
+        if (error) {
+            console.error("Error checking subdomain uniqueness:", error);
+            // If error, we'll just try to append something random to be safe
+            candidate = `${baseSubdomain}-${Math.random().toString(36).substring(2, 7)}`;
+            break;
+        }
+
+        if (count === 0) {
+            isUnique = true;
+        } else {
+            attempt++;
+            candidate = `${baseSubdomain}-${attempt}`;
+        }
+    }
+
+    // Final safety check if loop exhausted
+    if (!isUnique) {
+        candidate = `${baseSubdomain}-${Math.random().toString(36).substring(2, 7)}`;
+    }
+
+    return candidate;
+}
+
+/**
+ * Robustly duplicates a form and all its steps.
+ */
+export async function duplicateForm(formId: string) {
+    const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+
+    // 1. Fetch original form
+    const { data: originalForm, error: fetchError } = await supabase
+        .from("forms")
+        .select("*")
+        .eq("id", formId)
+        .single();
+
+    if (fetchError || !originalForm) {
+        console.error("Fetch original form error:", fetchError);
+        return { data: null, error: fetchError?.message || "Original form not found" };
+    }
+
+    // 2. Prepare new form data
+    const newName = `${originalForm.name} (copy)`;
+    const baseSubdomain = originalForm.subdomain ? `${originalForm.subdomain}-copy` : null;
+    let newSubdomain = null;
+
+    if (baseSubdomain) {
+        newSubdomain = await generateUniqueSubdomain(baseSubdomain);
+    }
+
+    // 3. Insert new form
+    const { data: newForm, error: insertError } = await supabase
+        .from("forms")
+        .insert({
+            user_id: originalForm.user_id,
+            brand_id: originalForm.brand_id,
+            name: newName,
+            status: "draft", // Always default to draft on copy
+            webhook_url: originalForm.webhook_url,
+            subdomain: newSubdomain,
+            views: 0,
+            banner: originalForm.banner,
+        })
+        .select()
+        .single();
+
+    if (insertError || !newForm) {
+        console.error("Duplicate form insert error:", insertError);
+        return { data: null, error: insertError?.message || "Failed to create duplicated form" };
+    }
+
+    // 4. Duplicate steps
+    const { data: originalSteps, error: stepsError } = await supabase
+        .from("form_steps")
+        .select("*")
+        .eq("form_id", formId)
+        .order("order", { ascending: true });
+
+    if (stepsError) {
+        console.error("Fetch original steps error:", stepsError);
+        // We still have the form, so maybe not a total failure but good to report
+        return { data: newForm, error: `Form duplicated but steps failed: ${stepsError.message}` };
+    }
+
+    if (originalSteps && originalSteps.length > 0) {
+        const stepsToInsert = originalSteps.map(step => ({
+            form_id: newForm.id,
+            type: step.type,
+            title: step.title,
+            data: step.data,
+            order: step.order,
+        }));
+
+        const { error: batchInsertError } = await supabase
+            .from("form_steps")
+            .insert(stepsToInsert);
+
+        if (batchInsertError) {
+            console.error("Batch insert steps error:", batchInsertError);
+            return { data: newForm, error: `Form duplicated but steps failed to insert: ${batchInsertError.message}` };
+        }
+    }
+
+    return { data: newForm, error: null };
 }
 
 // ─── Webhooks ─────────────────────────────────────────────────────────────────
@@ -403,3 +598,73 @@ export async function testWebhookUrl(url: string, payload: any) {
         return { success: false, error: error.message || "Network error" };
     }
 }
+
+// ─── Image Upload ─────────────────────────────────────────────────────────────
+
+async function uploadImage(
+    dataUrl: string,
+    path: string
+): Promise<string | null> {
+    const supabase = getClient();
+    if (!supabase) return null;
+
+    try {
+        const [meta, base64] = dataUrl.split(",");
+        const mimeMatch = meta.match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        const ext = mime.split("/")[1] ?? "jpg";
+        const buffer = Buffer.from(base64, "base64");
+        const filePath = `${path}.${ext}`;
+
+        const { error } = await supabase.storage
+            .from("brand-images")
+            .upload(filePath, buffer, { contentType: mime, upsert: true });
+
+        if (error) {
+            console.error("Image upload error:", error);
+            return null;
+        }
+
+        const { data } = supabase.storage.from("brand-images").getPublicUrl(filePath);
+        return data.publicUrl;
+    } catch (err) {
+        console.error("Image upload exception:", err);
+        return null;
+    }
+}
+
+export async function updateFormBanner(formId: string, dataUrl: string) {
+    const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+
+    // Fetch form to get user_id for path
+    const { data: form } = await supabase
+        .from("forms")
+        .select("user_id")
+        .eq("id", formId)
+        .single();
+
+    if (!form) return { data: null, error: "Form not found" };
+
+    const filePath = `${form.user_id}/forms/${formId}/banner`;
+    const bannerUrl = await uploadImage(dataUrl, filePath);
+
+    if (!bannerUrl) {
+        return { data: null, error: "Failed to upload image" };
+    }
+
+    const { data, error } = await supabase
+        .from("forms")
+        .update({ banner: bannerUrl })
+        .eq("id", formId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Update form banner error:", error);
+        return { data: null, error: error.message };
+    }
+
+    return { data, error: null };
+}
+

@@ -11,6 +11,9 @@ import { updatePassword } from "@/app/actions/user";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const specialties = [
     { id: "saas", label: "SaaS", icon: Zap },
@@ -40,10 +43,56 @@ export default function OnboardingPage() {
         confidence_level: 0,
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [hasPassword, setHasPassword] = useState(false);
+    const router = useRouter();
+    const supabase = createClient();
+
+    useEffect(() => {
+        const checkUserStatus = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // If they have a profile already, send them to dashboard
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", user.id)
+                    .single();
+
+                if (profile) {
+                    router.push("/dashboard");
+                    return;
+                }
+
+                // Check if they have an email provider (which implies they have or will set a password)
+                // In Supabase, if it's an invite, they might have set it or will.
+                // We'll trust the user's logic: if they arrived here and were invited, 
+                // they likely handled the password already if they're authenticated.
+                const isEmailUser = user.app_metadata.provider === 'email';
+                const isInvited = user.confirmed_at && user.last_sign_in_at;
+
+                if (isEmailUser && isInvited) {
+                    setHasPassword(true);
+                }
+            } else {
+                router.push("/auth");
+            }
+        };
+        checkUserStatus();
+    }, []);
 
     const totalSteps = 6; // 0 is welcome, so 1-6 are input steps
 
     const nextStep = async () => {
+        if (step === 0 && hasPassword) {
+            setStep(2); // Skip password step (1) if it's already set
+            return;
+        }
+
+        if (step === 2 && hasPassword) {
+            setStep(6); // Jump to completion after name if password was already set
+            return;
+        }
+
         if (step === 1) {
             if (formData.password.length < 6) {
                 toast.error("Password must be at least 6 characters.");
@@ -61,6 +110,14 @@ export default function OnboardingPage() {
     };
 
     const prevStep = () => {
+        if (step === 6 && hasPassword) {
+            setStep(2);
+            return;
+        }
+        if (step === 2 && hasPassword) {
+            setStep(0);
+            return;
+        }
         if (step > 0) setStep(step - 1);
     };
 

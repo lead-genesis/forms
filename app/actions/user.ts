@@ -60,6 +60,57 @@ export async function updateProfile(data: { first_name?: string; last_name?: str
     return { success: true, error: null };
 }
 
+export async function updateUserProfile(userId: string, data: { first_name?: string; last_name?: string }) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("profiles")
+        .update(data)
+        .eq("id", userId);
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard/users");
+    return { success: true, error: null };
+}
+
+export async function getTeamMembers() {
+    try {
+        const supabase = await createClient();
+        const adminClient = createAdminClient();
+
+        // 1. Get all profiles
+        const { data: profiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("*");
+
+        if (profileError) throw profileError;
+
+        // 2. Get all users from auth (using admin client)
+        const { data: { users: authUsers }, error: authError } = await adminClient.auth.admin.listUsers();
+
+        if (authError) throw authError;
+
+        // 3. Merge profiles with auth user data (emails)
+        const mergedUsers = (profiles || []).map(profile => {
+            const authUser = authUsers?.find(u => u.id === profile.id);
+            return {
+                ...profile,
+                email: authUser?.email || profile.email, // Use auth email if available
+                role: profile.role || 'Member', // Default role if not set
+                status: profile.status || 'Active'
+            };
+        });
+
+        return { data: mergedUsers, error: null };
+    } catch (error: any) {
+        console.error("Error fetching team members:", error);
+        return { data: [], error: error.message };
+    }
+}
+
 export async function getCurrentUser() {
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();

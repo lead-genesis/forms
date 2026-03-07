@@ -47,19 +47,26 @@ export default function DashboardLayout({
                     .eq("id", user.id)
                     .single();
 
+                if (!profile && pathname !== "/onboarding") {
+                    router.push("/onboarding");
+                    return;
+                }
+
                 setUser({
                     email: user.email,
                     first_name: profile?.first_name,
                     last_name: profile?.last_name,
                 });
+            } else if (pathname !== "/auth") {
+                router.push("/auth");
             }
         };
         getUser();
-    }, []);
+    }, [pathname]);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
-        router.push("/auth/login");
+        router.push("/auth");
     };
 
     // Map routes to page titles

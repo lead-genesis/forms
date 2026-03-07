@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams, notFound } from "next/navigation";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import { FormStep } from "@/components/form/FormStepRenderer";
-import { getFormBySubdomain, getFormSteps } from "@/app/actions/forms";
+import { getFormBySubdomain, getFormSteps, incrementFormViews } from "@/app/actions/forms";
 // Metadata moved to layout.tsx
 
 export default function SubdomainFormPage() {
@@ -20,6 +20,8 @@ export default function SubdomainFormPage() {
     const [webhookUrl, setWebhookUrl] = useState("");
     const [formName, setFormName] = useState("");
     const [formId, setFormId] = useState("");
+    const [banner, setBanner] = useState<string | null>(null);
+    const [smsVerification, setSmsVerification] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isInactive, setIsInactive] = useState(false);
 
@@ -62,6 +64,8 @@ export default function SubdomainFormPage() {
                 setFormId(form.id);
                 setFormName(form.name ?? "");
                 setWebhookUrl(form.webhook_url ?? "");
+                setBanner(form.banner ?? null);
+                setSmsVerification(form.sms_verification ?? false);
                 if (form.brands) setBrand(form.brands);
 
                 const loadedSteps: FormStep[] = (stepsRes.data as any[] || []).map((s: any) => ({
@@ -72,6 +76,11 @@ export default function SubdomainFormPage() {
                 }));
 
                 setSteps(loadedSteps);
+
+                // Increment views if it's a real visit
+                if (!isPreviewSession && form.status === "active") {
+                    await incrementFormViews(form.id);
+                }
             } catch (err) {
                 console.error("Subdomain form crash:", err);
                 setError(String(err));
@@ -137,6 +146,8 @@ export default function SubdomainFormPage() {
                     brand={brand}
                     formId={formId}
                     webhookUrl={webhookUrl}
+                    banner={banner}
+                    smsVerification={smsVerification}
                 />
             </div>
 

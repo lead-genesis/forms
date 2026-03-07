@@ -111,25 +111,9 @@ function AuthContent() {
                                 {isLoading ? "Processing..." : "Sign In"}
                                 {!isLoading && <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />}
                             </Button>
-
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full h-11 text-base bg-secondary/50 group"
-                                onClick={() => {
-                                    window.location.href = '/dashboard';
-                                }}
-                            >
-                                Demo Login
-                            </Button>
                         </form>
                     </div>
 
-                    <div className="text-center text-sm">
-                        <p className="text-muted-foreground">
-                            Access to this platform is currently by invite only.
-                        </p>
-                    </div>
                 </div>
             </div>
 
@@ -140,19 +124,19 @@ function AuthContent() {
                 <div className="relative z-10 max-w-lg space-y-8">
                     <div className="space-y-4">
                         <Badge variant="premium" className="px-3 py-1">
-                            Pro Feature
+                            New: Conversion Optimization
                         </Badge>
                         <h3 className={cn("text-4xl font-bold leading-tight text-slate-900 dark:text-white", sansFont)}>
-                            Modern Architecture.<br />
-                            Scalable Solutions.
+                            Lead Generation Perfected.<br />
+                            Forms that Convert.
                         </h3>
                         <p className="text-lg text-slate-600 dark:text-slate-300">
-                            "This template provided the perfect foundation for our SaaS, allowing us to launch 3 weeks ahead of schedule."
+                            "The high-conversion layouts helped us increase our lead capture by 40% in the first month. Incredible tool."
                         </p>
                     </div>
 
                     <div className="grid gap-4">
-                        {["Secure Auth Flow", "Modern Design System", "Production Ready"].map((feature, i) => (
+                        {["High Conversion Layouts", "Smart Lead Routing", "Real-time Analytics"].map((feature, i) => (
                             <div key={i} className="flex items-center gap-3">
                                 <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 text-green-600 flex items-center justify-center">
                                     <CheckCircle className="w-4 h-4" />

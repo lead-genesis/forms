@@ -21,7 +21,9 @@ import {
     EllipsisHorizontalIcon
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
+import { inviteUser, getTeamMembers } from "@/app/actions/user";
 import { InviteUserModal } from "@/components/dashboard/InviteUserModal";
+import { UserDetailsSheet } from "@/components/dashboard/UserDetailsSheet";
 
 interface Profile {
     id: string;
@@ -38,22 +40,19 @@ export default function UsersPage() {
     const [users, setUsers] = useState<Profile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const supabase = createClient();
 
     useEffect(() => {
         const fetchUsers = async () => {
             setIsLoading(true);
-            const { data, error } = await supabase
-                .from("profiles")
-                .select("*")
-                .order("first_name", { ascending: true });
+            const { data, error } = await getTeamMembers();
 
             if (error) {
                 console.error("Error fetching users:", error);
             } else {
-                // Note: In a real app we'd join with auth.users or store email in profiles
-                // For now we'll just show what we have.
                 setUsers(data || []);
             }
             setIsLoading(false);
@@ -120,7 +119,14 @@ export default function UsersPage() {
                             </tr>
                         ) : (
                             filteredUsers.map((user) => (
-                                <tr key={user.id} className={tableRow}>
+                                <tr
+                                    key={user.id}
+                                    className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
+                                    onClick={() => {
+                                        setSelectedUser(user);
+                                        setIsSheetOpen(true);
+                                    }}
+                                >
                                     <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center font-bold text-xs text-foreground ring-1 ring-border/50 shrink-0">
@@ -130,7 +136,7 @@ export default function UsersPage() {
                                                 <p className={cn("font-semibold text-sm truncate", sansFont)}>
                                                     {user.first_name} {user.last_name}
                                                 </p>
-                                                {/* <p className="text-xs text-muted-foreground truncate">{user.email}</p> */}
+                                                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -162,6 +168,12 @@ export default function UsersPage() {
             <InviteUserModal
                 isOpen={isInviteModalOpen}
                 onClose={() => setIsInviteModalOpen(false)}
+            />
+
+            <UserDetailsSheet
+                user={selectedUser}
+                open={isSheetOpen}
+                onOpenChange={setIsSheetOpen}
             />
         </DashboardPage>
     );

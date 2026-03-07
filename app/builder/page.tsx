@@ -108,6 +108,8 @@ function BuilderContent() {
     const [webhookUrl, setWebhookUrl] = useState("");
     const [subdomain, setSubdomain] = useState("");
     const [status, setStatus] = useState("draft");
+    const [banner, setBanner] = useState<string | null>(null);
+    const [smsVerification, setSmsVerification] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
@@ -146,6 +148,8 @@ function BuilderContent() {
             setWebhookUrl(form.webhook_url ?? "");
             setSubdomain(form.subdomain ?? "");
             setStatus(form.status ?? "draft");
+            setBanner(form.banner ?? null);
+            setSmsVerification(form.sms_verification ?? false);
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -421,6 +425,9 @@ function BuilderContent() {
                             mode="preview"
                             steps={steps}
                             brand={brand}
+                            formId={formId ?? undefined}
+                            banner={banner}
+                            onBannerChange={setBanner}
                             activeStepId={currentStepId}
                         />
                     </div>
@@ -449,6 +456,8 @@ function BuilderContent() {
                         onWebhookChange={setWebhookUrlWithSave}
                         subdomain={subdomain}
                         onSubdomainChange={setSubdomainWithSave}
+                        smsVerification={smsVerification}
+                        onSmsVerificationChange={setSmsVerification}
                     />
                 </aside>
             </div>

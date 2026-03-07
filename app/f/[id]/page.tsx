@@ -18,6 +18,8 @@ export default function PublicFormPage() {
     const [steps, setSteps] = useState<FormStep[]>([]);
     const [webhookUrl, setWebhookUrl] = useState("");
     const [formName, setFormName] = useState("");
+    const [banner, setBanner] = useState<string | null>(null);
+    const [smsVerification, setSmsVerification] = useState(false);
     const [error, setError] = useState(false);
     const [isInactive, setIsInactive] = useState(false);
 
@@ -47,6 +49,8 @@ export default function PublicFormPage() {
 
             setFormName(form.name ?? "");
             setWebhookUrl(form.webhook_url ?? "");
+            setBanner(form.banner ?? null);
+            setSmsVerification(form.sms_verification ?? false);
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -61,7 +65,7 @@ export default function PublicFormPage() {
 
             // Increment views if it's a real visit
             if (!isPreviewSession && form.status === "active") {
-                incrementFormViews(formId);
+                await incrementFormViews(formId);
             }
         })();
     }, [formId]);
@@ -113,6 +117,8 @@ export default function PublicFormPage() {
                     brand={brand}
                     formId={formId}
                     webhookUrl={webhookUrl}
+                    banner={banner}
+                    smsVerification={smsVerification}
                 />
             </div>
 

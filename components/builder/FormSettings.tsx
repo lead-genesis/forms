@@ -19,14 +19,30 @@ interface FormSettingsProps {
     onWebhookChange: (url: string) => void;
     subdomain: string;
     onSubdomainChange: (sub: string) => void;
+    smsVerification: boolean;
+    onSmsVerificationChange: (enabled: boolean) => void;
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { testWebhookUrl } from "@/app/actions/forms";
+import { testWebhookUrl, updateForm } from "@/app/actions/forms";
+import { ShieldCheck, MessageSquare } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
-export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookChange, subdomain, onSubdomainChange }: FormSettingsProps) {
+export function FormSettings({
+    formName,
+    formId,
+    steps,
+    webhookUrl,
+    onWebhookChange,
+    subdomain,
+    onSubdomainChange,
+    smsVerification,
+    onSmsVerificationChange
+}: FormSettingsProps) {
     const [copied, setCopied] = React.useState(false);
     const [testing, setTesting] = React.useState(false);
+    const [uploading, setUploading] = React.useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Build clean payload — exclude welcome/thank-you, show structured step data
     const sampleAnswers: Record<string, any> = {};
@@ -54,6 +70,7 @@ export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookCha
     });
 
     const jsonPayload = JSON.stringify(payload, null, 2);
+
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(jsonPayload);
@@ -102,6 +119,12 @@ export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookCha
                         className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
                     >
                         Domain
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="verification"
+                        className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
+                    >
+                        Verification
                     </TabsTrigger>
                 </TabsList>
 
@@ -187,6 +210,46 @@ export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookCha
                         <p className="text-[10px] text-muted-foreground leading-relaxed">
                             Your form will be accessible at this subdomain. Only lowercase letters, numbers, and hyphens are allowed.
                         </p>
+                    </div>
+                </TabsContent>
+                <TabsContent value="verification" className="space-y-6 mt-0">
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 mb-1">
+                            <ShieldCheck className="w-3 h-3 text-primary" />
+                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Verification Settings</Label>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-secondary/10 border border-border/50 space-y-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                                        <span className="text-sm font-semibold text-foreground italic">SMS Verification</span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground leading-snug pr-4">
+                                        Require users to verify their phone number via a 4-digit SMS code before completion.
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={smsVerification}
+                                    onCheckedChange={(val: boolean) => {
+                                        onSmsVerificationChange(val);
+                                        if (formId) {
+                                            updateForm(formId, { sms_verification: val });
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {smsVerification && (
+                                <div className="pt-2 border-t border-border/30">
+                                    <div className="flex gap-2 text-[10px] text-primary/80 bg-primary/5 p-2.5 rounded-lg border border-primary/10">
+                                        <Zap className="w-3 h-3 shrink-0 mt-0.5" />
+                                        <p>Verification is triggered automatically after the lead is saved (following contact details).</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </TabsContent>
             </Tabs>

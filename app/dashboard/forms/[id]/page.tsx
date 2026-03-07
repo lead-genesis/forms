@@ -14,10 +14,15 @@ import {
     ChartBarIcon,
     Cog6ToothIcon,
     ClipboardDocumentIcon,
+    ClipboardDocumentListIcon,
     CheckIcon,
     LinkIcon,
 } from "@heroicons/react/24/outline";
-import { getFormWithBrand, getLeadsByForm, updateForm, getFormSteps } from "@/app/actions/forms";
+import { getFormWithBrand, getLeadsByForm, updateForm, getFormSteps, duplicateForm } from "@/app/actions/forms";
+import { toast } from "sonner";
+
+import { format } from "date-fns";
+import { LeadDetailsSheet } from "@/components/leads/LeadDetailsSheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +48,10 @@ interface Lead {
     created_at: string;
     form_id: string;
     answers: Record<string, any>;
+    form_name?: string;
+    webhook_status?: number | null;
+    webhook_response?: any;
+    is_sms_verified?: boolean;
 }
 
 interface FormStep {
@@ -73,12 +82,17 @@ export default function FormDetailPage() {
     const [activeTab, setActiveTab] = useState<Tab>("leads");
     const [isLoading, setIsLoading] = useState(true);
 
+    // Lead Sheet State
+    const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+
     // Settings state
     const [editName, setEditName] = useState("");
     const [editWebhook, setEditWebhook] = useState("");
     const [editStatus, setEditStatus] = useState("draft");
     const [editSubdomain, setEditSubdomain] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [isDuplicating, setIsDuplicating] = useState(false);
     const [copied, setCopied] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -115,6 +129,26 @@ export default function FormDetailPage() {
         await fetchData();
         setIsSaving(false);
     };
+    const handleDuplicate = async () => {
+        if (!form) return;
+        setIsDuplicating(true);
+        try {
+            const { data: newForm, error } = await duplicateForm(form.id);
+            if (error) {
+                toast.error(error);
+                return;
+            }
+            if (newForm) {
+                toast.success("Form duplicated successfully!");
+                router.push(`/dashboard/forms/${newForm.id}`);
+            }
+        } catch (error) {
+            console.error("Duplication error:", error);
+            toast.error("An unexpected error occurred.");
+        } finally {
+            setIsDuplicating(false);
+        }
+    };
 
     const shareUrl = form?.subdomain
         ? `https://${form.subdomain}.genesisflow.io`
@@ -124,6 +158,11 @@ export default function FormDetailPage() {
         navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleViewDetails = (lead: Lead) => {
+        setSelectedLead(lead);
+        setIsSheetOpen(true);
     };
 
     // ─── Loading State ────────────────────────────────────────────────────────
@@ -165,13 +204,13 @@ export default function FormDetailPage() {
     // ─── Render ───────────────────────────────────────────────────────────────
 
     return (
-        <DashboardPage className="space-y-4">
+        <DashboardPage>
             {/* Header */}
             <motion.div
                 initial={{ y: -10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4 }}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-6 lg:px-10"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-6 lg:px-10 mb-2"
             >
                 <div className="flex items-center gap-3">
                     <button
@@ -222,6 +261,19 @@ export default function FormDetailPage() {
                         </button>
                     </div>
 
+                    <button
+                        onClick={handleDuplicate}
+                        disabled={isDuplicating}
+                        className="inline-flex items-center gap-2 bg-secondary/50 text-foreground hover:bg-secondary/80 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 disabled:opacity-50"
+                    >
+                        {isDuplicating ? (
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <ClipboardDocumentListIcon className="w-4 h-4" />
+                        )}
+                        Duplicate
+                    </button>
+
                     <a
                         href={`/builder?formId=${form.id}`}
                         target="_blank"
@@ -234,70 +286,80 @@ export default function FormDetailPage() {
                 </div>
             </motion.div>
 
-            {/* Tabs */}
-            <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-                className="px-4 md:px-6 lg:px-10"
-            >
-                <div className="flex items-center gap-1 bg-secondary/30 p-1 rounded-2xl w-fit">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
-                                activeTab === tab.key
-                                    ? "bg-background shadow-sm text-foreground"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <tab.icon className="w-4 h-4" />
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-            </motion.div>
-
-            {/* Tab Content */}
-            <AnimatePresence mode="wait">
+            {/* Tabs & Content wrapped for 12px spacing */}
+            <div className="flex flex-col gap-3">
                 <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.25 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
                     className="px-4 md:px-6 lg:px-10"
                 >
-                    {activeTab === "leads" && (
-                        <LeadsTab
-                            leads={leads}
-                            steps={steps}
-                            totalLeads={totalLeads}
-                            totalViews={totalViews}
-                            conversionRate={conversionRate}
-                        />
-                    )}
-                    {activeTab === "settings" && (
-                        <SettingsTab
-                            editName={editName}
-                            setEditName={setEditName}
-                            editWebhook={editWebhook}
-                            setEditWebhook={setEditWebhook}
-                            editStatus={editStatus}
-                            setEditStatus={setEditStatus}
-                            editSubdomain={editSubdomain}
-                            setEditSubdomain={setEditSubdomain}
-                            isSaving={isSaving}
-                            onSave={handleSaveSettings}
-                            shareUrl={shareUrl}
-                            copied={copied}
-                            onCopyLink={handleCopyLink}
-                        />
-                    )}
+                    <div className="flex items-center gap-1 bg-secondary/30 p-1 rounded-2xl w-fit">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+                                    activeTab === tab.key
+                                        ? "bg-background shadow-sm text-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                <tab.icon className="w-4 h-4" />
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                 </motion.div>
-            </AnimatePresence>
+
+                {/* Tab Content */}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.25 }}
+                        className="px-4 md:px-6 lg:px-10"
+                    >
+                        {activeTab === "leads" && (
+                            <LeadsTab
+                                leads={leads}
+                                steps={steps}
+                                totalLeads={totalLeads}
+                                totalViews={totalViews}
+                                conversionRate={conversionRate}
+                                onViewLead={handleViewDetails}
+                            />
+                        )}
+                        {activeTab === "settings" && (
+                            <SettingsTab
+                                editName={editName}
+                                setEditName={setEditName}
+                                editWebhook={editWebhook}
+                                setEditWebhook={setEditWebhook}
+                                editStatus={editStatus}
+                                setEditStatus={setEditStatus}
+                                editSubdomain={editSubdomain}
+                                setEditSubdomain={setEditSubdomain}
+                                isSaving={isSaving}
+                                onSave={handleSaveSettings}
+                                shareUrl={shareUrl}
+                                copied={copied}
+                                onCopyLink={handleCopyLink}
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+
+            <LeadDetailsSheet
+                lead={selectedLead}
+                open={isSheetOpen}
+                onOpenChange={setIsSheetOpen}
+                steps={steps}
+            />
         </DashboardPage>
     );
 }
@@ -309,14 +371,19 @@ function LeadsTab({
     steps,
     totalLeads,
     totalViews,
-    conversionRate
+    conversionRate,
+    onViewLead
 }: {
     leads: Lead[];
     steps: FormStep[];
     totalLeads: number;
     totalViews: number;
     conversionRate: string;
+    onViewLead: (lead: Lead) => void;
 }) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 15;
+
     if (leads.length === 0) {
         return (
             <div className="space-y-6">
@@ -340,13 +407,11 @@ function LeadsTab({
         );
     }
 
-    // Identify steps
-    const contactSteps = steps.filter(s => s.type === "contact");
-    const otherDataSteps = steps.filter(
-        (s) => s.type !== "welcome" && s.type !== "thank-you" && s.type !== "contact"
-    );
+    // Pagination logic
+    const totalPages = Math.ceil(leads.length / pageSize);
+    const paginatedLeads = leads.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-    // Flattened contact headers
+    // Core headers only
     const contactHeaders = [
         { key: "first_name", label: "First Name" },
         { key: "last_name", label: "Last Name" },
@@ -354,38 +419,8 @@ function LeadsTab({
         { key: "phone", label: "Phone" }
     ];
 
-    const renderCellValue = (lead: Lead, step: FormStep) => {
-        const answers = lead.answers || {};
-
-        if (step.type === "multi-choice") {
-            const choiceIndex = answers[`${step.id}_choice`];
-            const opts = step.data?.options || [];
-            const option = typeof opts[choiceIndex] === "object"
-                ? opts[choiceIndex]?.label
-                : opts[choiceIndex];
-            return option || "—";
-        }
-
-        if (step.type === "input") {
-            return answers[`${step.id}_input`] || "—";
-        }
-
-        if (step.type === "address") {
-            const rawAddress = answers[`${step.id}_address`];
-            if (!rawAddress) return "—";
-            try {
-                const parsed = JSON.parse(rawAddress);
-                return parsed.full_address || "—";
-            } catch (e) {
-                return rawAddress;
-            }
-        }
-
-        return "—";
-    };
-
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-10">
             <PerformanceTab
                 totalLeads={totalLeads}
                 totalViews={totalViews}
@@ -395,37 +430,34 @@ function LeadsTab({
             <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-secondary/50">
-                        <table className={cn("w-full text-sm", sansFont)}>
+                        <table className={cn("w-full text-sm min-w-[800px]", sansFont)}>
                             <thead>
                                 <tr className="border-b border-border/50 bg-secondary/10">
                                     <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                                         Submitted
                                     </th>
-                                    {/* Flattened Contact Details First */}
                                     {contactHeaders.map((header) => (
                                         <th
                                             key={header.key}
-                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[150px]"
+                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[120px]"
                                         >
                                             {header.label}
                                         </th>
                                     ))}
-                                    {/* Then other steps */}
-                                    {otherDataSteps.map((step) => (
-                                        <th
-                                            key={step.id}
-                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[150px]"
-                                        >
-                                            {step.title}
-                                        </th>
-                                    ))}
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                        Verified
+                                    </th>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                        Webhook
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
-                                {leads.map((lead) => (
+                                {paginatedLeads.map((lead) => (
                                     <tr
                                         key={lead.id}
-                                        className="group hover:bg-secondary/20 transition-colors"
+                                        className="group hover:bg-secondary/20 transition-colors cursor-pointer"
+                                        onClick={() => onViewLead(lead)}
                                     >
                                         <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                                             {new Date(lead.created_at).toLocaleDateString("en-AU", {
@@ -435,18 +467,35 @@ function LeadsTab({
                                                 minute: "2-digit",
                                             })}
                                         </td>
-                                        {/* Contact Answer Parts */}
                                         {contactHeaders.map((header) => (
-                                            <td key={header.key} className="px-6 py-4 text-foreground truncate max-w-[200px]" title={String(lead.answers?.[header.key] ?? "—")}>
+                                            <td key={header.key} className="px-6 py-4 text-foreground truncate max-w-[180px]" title={String(lead.answers?.[header.key] ?? "—")}>
                                                 {lead.answers?.[header.key] || "—"}
                                             </td>
                                         ))}
-                                        {/* Other Step Values */}
-                                        {otherDataSteps.map((step) => (
-                                            <td key={step.id} className="px-6 py-4 text-foreground truncate max-w-[300px]" title={String(renderCellValue(lead, step))}>
-                                                {renderCellValue(lead, step)}
-                                            </td>
-                                        ))}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className={cn(
+                                                "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tight",
+                                                lead.is_sms_verified
+                                                    ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                                                    : "text-rose-500 bg-rose-500/10 border-rose-500/20"
+                                            )}>
+                                                {lead.is_sms_verified ? 'True' : 'False'}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {lead.webhook_status ? (
+                                                <div className={cn(
+                                                    "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tight",
+                                                    lead.webhook_status >= 200 && lead.webhook_status < 300
+                                                        ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                                                        : "text-rose-500 bg-rose-500/10 border-rose-500/20"
+                                                )}>
+                                                    {lead.webhook_status} {lead.webhook_status === 200 ? 'OK' : 'Error'}
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-muted-foreground italic uppercase tracking-tight whitespace-nowrap">Not Sent</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -454,6 +503,47 @@ function LeadsTab({
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-2 py-4">
+                    <p className="text-sm text-muted-foreground">
+                        Showing <span className="font-medium text-foreground">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, leads.length)}</span> of <span className="font-medium text-foreground">{leads.length}</span> leads
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="px-4 py-2 rounded-xl border border-border bg-background text-sm font-medium hover:bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Previous
+                        </button>
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={cn(
+                                        "w-9 h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200",
+                                        currentPage === page
+                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                            : "hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-4 py-2 rounded-xl border border-border bg-background text-sm font-medium hover:bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
