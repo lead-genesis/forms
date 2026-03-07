@@ -201,6 +201,7 @@ export interface CreateStepInput {
 
 export async function createStep(input: CreateStepInput) {
     const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
 
     const { data, error } = await supabase
         .from("form_steps")
@@ -230,6 +231,7 @@ export interface UpdateStepInput {
 
 export async function updateStep(stepId: string, input: UpdateStepInput) {
     const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
 
     const { data, error } = await supabase
         .from("form_steps")
@@ -248,6 +250,7 @@ export async function updateStep(stepId: string, input: UpdateStepInput) {
 
 export async function deleteStep(stepId: string) {
     const supabase = getClient();
+    if (!supabase) return { error: "Supabase client not initialized" };
 
     const { error } = await supabase
         .from("form_steps")
@@ -265,11 +268,13 @@ export async function deleteStep(stepId: string) {
 /** Batch update step order after drag-to-reorder. */
 export async function reorderSteps(updates: { id: string; order: number }[]) {
     const supabase = getClient();
+    if (!supabase) return { error: "Supabase client not initialized" };
 
     // Run all updates in parallel
+    const client = supabase; // Explicitly capture for the map
     const results = await Promise.all(
         updates.map(({ id, order }) =>
-            supabase
+            client
                 .from("form_steps")
                 .update({ order })
                 .eq("id", id)
@@ -289,6 +294,7 @@ export async function reorderSteps(updates: { id: string; order: number }[]) {
 
 export async function getLeadsByForm(formId: string) {
     const supabase = getClient();
+    if (!supabase) return { data: [], error: "Supabase client not initialized" };
 
     const { data, error } = await supabase
         .from("leads")
