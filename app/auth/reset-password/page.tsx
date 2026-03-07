@@ -50,10 +50,10 @@ export default function ResetPasswordPage() {
         setIsLoading(true);
 
         try {
-            const result = await updatePassword(password);
+            const { error } = await supabase.auth.updateUser({ password });
 
-            if (result?.error) {
-                toast.error(result.error);
+            if (error) {
+                toast.error(error.message);
             } else {
                 toast.success("Password updated successfully!");
                 router.push("/dashboard");
@@ -63,6 +63,7 @@ export default function ResetPasswordPage() {
         } finally {
             setIsLoading(false);
         }
+
     };
 
     return (
