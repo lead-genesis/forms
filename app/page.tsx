@@ -17,11 +17,28 @@ export default function Home() {
   const supabase = createClient();
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        router.push("/auth/reset-password");
+      } else if (event === "SIGNED_IN") {
+        // If we have a code in the URL, let the middleware/callback handle it
+        // Otherwise, redirect to dashboard if signed in
+        if (!window.location.search.includes('code=')) {
+          router.push("/dashboard");
+        }
+      }
+    });
+
+    // Initial check
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
+      if (user && !window.location.href.includes('type=recovery') && !window.location.hash.includes('type=recovery')) {
         router.push("/dashboard");
       }
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [router, supabase]);
   return (
     <div className="flex flex-col min-h-screen bg-background selection:bg-primary/10">
