@@ -33,10 +33,13 @@ export default function Home() {
     // 2. Standard Auth State Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        router.replace("/auth/reset-password");
+        console.log("PASSWORD_RECOVERY event in Home, redirecting with params...");
+        const finalUrl = '/auth/reset-password' + window.location.search + window.location.hash;
+        window.location.href = finalUrl;
       } else if (event === "SIGNED_IN") {
         // Only redirect to dashboard if not a recovery/callback flow
-        if (!window.location.search.includes('code=') && !isRecovery) {
+        const hasTokens = window.location.hash.includes('access_token=') || window.location.search.includes('type=recovery');
+        if (!window.location.search.includes('code=') && !hasTokens) {
           router.push("/dashboard");
         }
       }

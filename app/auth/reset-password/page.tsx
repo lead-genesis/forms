@@ -22,14 +22,36 @@ export default function ResetPasswordPage() {
     const router = useRouter();
     const supabase = createClient();
 
-    // Improved diagnostic and session check
+    // Improved diagnostic and session check + Manual fragment fallback
     useEffect(() => {
         console.log("ResetPasswordPage mounted. URL:", window.location.href);
-        console.log("Hash present:", !!window.location.hash);
-        if (window.location.hash) {
-            console.log("Hash contains access_token:", window.location.hash.includes('access_token='));
-            console.log("Hash contains type=recovery:", window.location.hash.includes('type=recovery'));
-        }
+
+        // Manual fragment parsing for fallback
+        const parseFragment = async () => {
+            const hash = window.location.hash.substring(1);
+            if (!hash) return false;
+
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+                console.log("Found tokens in fragment, attempting manual session set...");
+                const { data, error } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                });
+
+                if (error) {
+                    console.error("Manual session set error:", error.message);
+                } else if (data.session) {
+                    console.log("Manual session set successful!");
+                    setHasSession(true);
+                    return true;
+                }
+            }
+            return false;
+        };
 
         const checkSession = async (retryCount = 0) => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -37,14 +59,19 @@ export default function ResetPasswordPage() {
 
             if (session) {
                 setHasSession(true);
-            } else if (retryCount < 3) {
-                // Retry up to 3 times with increasing delay
-                const delay = (retryCount + 1) * 1000;
-                console.log(`No session yet, retrying in ${delay}ms...`);
-                setTimeout(() => checkSession(retryCount + 1), delay);
             } else {
-                console.log("Maximum session checks reached. No session found.");
-                setHasSession(false);
+                // If no session, try parsing the fragment manually as a fallback
+                const wasManualSuccess = await parseFragment();
+
+                if (!wasManualSuccess && retryCount < 3) {
+                    // Retry up to 3 times with increasing delay
+                    const delay = (retryCount + 1) * 1000;
+                    console.log(`No session yet, retrying in ${delay}ms...`);
+                    setTimeout(() => checkSession(retryCount + 1), delay);
+                } else if (!wasManualSuccess) {
+                    console.log("Maximum session checks reached. No session found.");
+                    setHasSession(false);
+                }
             }
         };
 
