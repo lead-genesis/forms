@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import { FormStep } from "@/components/form/FormStepRenderer";
 import { getFormWithBrand, getFormSteps } from "@/app/actions/forms";
+// Metadata moved to layout.tsx
 
 export default function PublicFormPage() {
     const params = useParams();
@@ -60,11 +61,7 @@ export default function PublicFormPage() {
         })();
     }, [formId]);
 
-    useEffect(() => {
-        if (!isLoading) {
-            document.title = formName ? `${formName} – Genesis Forms` : "Genesis Forms";
-        }
-    }, [formName, isLoading]);
+    // Removed conflicting document.title useEffect
 
     if (isLoading) {
         return (
@@ -104,7 +101,6 @@ export default function PublicFormPage() {
 
     return (
         <div className="min-h-screen bg-secondary/5 flex flex-col">
-            <title>{formName ? `${formName} - Genesis Forms` : "Genesis Forms"}</title>
             <div className="flex-1 flex flex-col">
                 <FormCanvas
                     mode="live"
@@ -116,7 +112,7 @@ export default function PublicFormPage() {
             </div>
 
             <p className="text-center text-xs text-muted-foreground py-4">
-                Powered by Genesis Forms
+                Powered by Genesis Flow
             </p>
         </div>
     );

@@ -6,7 +6,7 @@ export default function SignupPage() {
             <div className="w-full max-w-md bg-white p-8 rounded-xl border border-gray-100 shadow-sm">
                 <div className="mb-8 text-center">
                     <h1 className="text-2xl font-bold text-black font-sans">Create Account</h1>
-                    <p className="text-gray-500 font-sans">Start building with Genesis Forms</p>
+                    <p className="text-gray-500 font-sans">Start building with Genesis Flow</p>
                 </div>
 
                 <form className="space-y-4">

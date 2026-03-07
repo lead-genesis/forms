@@ -53,9 +53,12 @@ export default function DashboardLayout({
         { href: "/dashboard/users", label: "Users", icon: UsersIcon },
     ];
 
+    useEffect(() => {
+        document.title = pageTitle === "Dashboard" ? "Dashboard - Genesis Flow" : `${pageTitle} - Genesis Flow`;
+    }, [pageTitle]);
+
     return (
         <div className="min-h-screen bg-background flex">
-            <title>{pageTitle} - FormState</title>
             {/* Desktop Sidebar */}
             <aside className="w-64 bg-background hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border">
                 {/* Logo */}

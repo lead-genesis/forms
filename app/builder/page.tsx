@@ -106,6 +106,8 @@ function BuilderContent() {
     const [steps, setSteps] = useState<FormStep[]>([]);
     const [currentStepId, setCurrentStepId] = useState<string>("");
     const [webhookUrl, setWebhookUrl] = useState("");
+    const [subdomain, setSubdomain] = useState("");
+    const [status, setStatus] = useState("draft");
     const [isSaving, setIsSaving] = useState(false);
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
@@ -142,6 +144,8 @@ function BuilderContent() {
             const form = formRes.data as any;
             setFormName(form.name ?? "Untitled Form");
             setWebhookUrl(form.webhook_url ?? "");
+            setSubdomain(form.subdomain ?? "");
+            setStatus(form.status ?? "draft");
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -183,6 +187,27 @@ function BuilderContent() {
         debounceRefs.current["form_meta_webhook"] = setTimeout(async () => {
             setIsSaving(true);
             await updateForm(formId, { webhook_url: url });
+            setIsSaving(false);
+        }, 500);
+    }, [formId]);
+
+    const setStatusWithSave = useCallback((newStatus: string) => {
+        setStatus(newStatus);
+        if (!formId) return;
+
+        // Immediately update without debate just like dashboard
+        setIsSaving(true);
+        updateForm(formId, { status: newStatus }).finally(() => setIsSaving(false));
+    }, [formId]);
+
+    const setSubdomainWithSave = useCallback((sub: string) => {
+        setSubdomain(sub);
+        if (!formId) return;
+
+        clearTimeout(debounceRefs.current["form_meta_subdomain"]);
+        debounceRefs.current["form_meta_subdomain"] = setTimeout(async () => {
+            setIsSaving(true);
+            await updateForm(formId, { subdomain: sub });
             setIsSaving(false);
         }, 500);
     }, [formId]);
@@ -297,6 +322,10 @@ function BuilderContent() {
         }
     }, [currentStep, updateStepData, updateStepTitle]);
 
+    useEffect(() => {
+        document.title = formName ? `${formName} - Genesis Flow` : "Builder - Genesis Flow";
+    }, [formName]);
+
     // ── Loading State ──────────────────────────────────────────────────────────
     if (isLoading) {
         return (
@@ -314,7 +343,6 @@ function BuilderContent() {
 
     return (
         <div className="flex flex-col h-screen bg-background overflow-hidden">
-            <title>Builder - FormState</title>
             {/* Header */}
             <BuilderHeader
                 formName={formName}
@@ -322,6 +350,9 @@ function BuilderContent() {
                 brand={brand ?? undefined}
                 formId={formId}
                 isSaving={isSaving}
+                subdomain={subdomain}
+                status={status}
+                onStatusChange={setStatusWithSave}
             />
 
             <div className="flex flex-1 overflow-hidden">
@@ -416,6 +447,8 @@ function BuilderContent() {
                         steps={steps}
                         webhookUrl={webhookUrl}
                         onWebhookChange={setWebhookUrlWithSave}
+                        subdomain={subdomain}
+                        onSubdomainChange={setSubdomainWithSave}
                     />
                 </aside>
             </div>

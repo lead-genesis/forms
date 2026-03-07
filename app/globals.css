@@ -51,17 +51,30 @@
 
 /* ── Google Maps Places Autocomplete Styling ── */
 .pac-container {
-  @apply mt-2 border-border/50 bg-background/90 backdrop-blur-xl shadow-xl rounded-xl font-sans overflow-hidden !important;
+  @apply mt-2 border border-border/20 bg-background rounded-xl font-sans overflow-hidden z-50;
   border-top: none !important;
   margin-top: 8px !important;
-  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1) !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 640px) {
+  .pac-container {
+    left: 16px !important;
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+  }
 }
 
 .pac-item {
-  @apply px-4 py-3 cursor-pointer transition-colors border-t border-border/40 hover:bg-primary/5 flex items-center gap-2 !important;
+  @apply px-4 py-3 cursor-pointer transition-colors border-t border-border/40 hover:bg-primary/5;
   font-family: var(--font-open-sans) !important;
   color: var(--color-foreground) !important;
   font-size: 14px !important;
+  /* Ensure children can truncate */
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .pac-item:first-child {
@@ -69,19 +82,21 @@
 }
 
 .pac-item-query {
-  @apply font-semibold text-foreground !important;
+  @apply font-semibold text-foreground;
   font-size: 14px !important;
+  padding-right: 4px;
 }
 
 .pac-icon {
   margin-right: 8px !important;
   margin-top: 0 !important;
   opacity: 0.5 !important;
-  /* Example to tweak icon if needed */
+  vertical-align: middle !important;
+  transform: translateY(-1px);
 }
 
 .hdpi.pac-logo:after {
-  @apply mx-4 my-2 opacity-50 !important;
+  @apply mx-4 my-2 opacity-50;
 }
 
 .pac-item:hover .pac-icon {

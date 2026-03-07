@@ -122,7 +122,7 @@ export default function OnboardingPage() {
                             >
                                 <div className="space-y-6">
                                     <p className="text-lg font-medium text-blue-400 uppercase tracking-widest">
-                                        Welcome to Genesis Forms.
+                                        Welcome to Genesis Flow.
                                     </p>
                                     <h1 className={cn("text-5xl md:text-6xl font-bold text-white leading-tight tracking-tight", sansFont)}>
                                         Let's get you set up.

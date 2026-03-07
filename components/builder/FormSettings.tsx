@@ -17,11 +17,14 @@ interface FormSettingsProps {
     steps: FormStep[];
     webhookUrl: string;
     onWebhookChange: (url: string) => void;
+    subdomain: string;
+    onSubdomainChange: (sub: string) => void;
 }
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { testWebhookUrl } from "@/app/actions/forms";
 
-export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookChange }: FormSettingsProps) {
+export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookChange, subdomain, onSubdomainChange }: FormSettingsProps) {
     const [copied, setCopied] = React.useState(false);
     const [testing, setTesting] = React.useState(false);
 
@@ -80,69 +83,113 @@ export function FormSettings({ formName, formId, steps, webhookUrl, onWebhookCha
 
 
     return (
-        <div className="p-6 space-y-8">
+        <div className="p-6 space-y-8 flex flex-col h-full">
             <div>
                 <h3 className={cn("text-lg font-bold mb-1", sansFont)}>Form Settings</h3>
                 <p className="text-xs text-muted-foreground">Configure global form behavior and integrations.</p>
             </div>
 
-            <div className="space-y-6">
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Globe className="w-3 h-3 text-primary" />
-                        <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Webhook URL</Label>
-                    </div>
-                    <Input
-                        value={webhookUrl}
-                        onChange={(e) => onWebhookChange(e.target.value)}
-                        placeholder="https://n8n.your-domain.com/webhook/..."
-                        className="bg-secondary/10 border-border/50"
-                    />
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        Every submission will be sent to this URL as a POST request with the form data.
-                    </p>
-
-                    {/* Test webhook button */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-lg gap-2 text-xs h-9"
-                        onClick={testWebhook}
-                        disabled={testing || !webhookUrl}
+            <Tabs defaultValue="webhook" className="w-full flex-1 flex flex-col">
+                <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent p-0 h-auto gap-4 mb-6">
+                    <TabsTrigger
+                        value="webhook"
+                        className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
                     >
-                        {testing ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                            <Zap className="w-3.5 h-3.5" />
-                        )}
-                        {testing ? "Sending..." : "Test Webhook"}
-                    </Button>
-                </div>
+                        Webhook
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="domain"
+                        className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
+                    >
+                        Domain
+                    </TabsTrigger>
+                </TabsList>
 
-                <div className="h-px bg-border" />
-
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                            <Terminal className="w-3 h-3 text-primary" />
-                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Payload Preview</Label>
+                <TabsContent value="webhook" className="space-y-6 mt-0">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Globe className="w-3 h-3 text-primary" />
+                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Webhook URL</Label>
                         </div>
+                        <Input
+                            value={webhookUrl}
+                            onChange={(e) => onWebhookChange(e.target.value)}
+                            placeholder="https://n8n.your-domain.com/webhook/..."
+                            className="bg-secondary/10 border-border/50"
+                        />
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            Every submission will be sent to this URL as a POST request with the form data.
+                        </p>
+
+                        {/* Test webhook button */}
                         <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={copyToClipboard}
+                            variant="outline"
+                            size="sm"
+                            className="w-full rounded-lg gap-2 text-xs h-9"
+                            onClick={testWebhook}
+                            disabled={testing || !webhookUrl}
                         >
-                            {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                            {testing ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <Zap className="w-3.5 h-3.5" />
+                            )}
+                            {testing ? "Sending..." : "Test Webhook"}
                         </Button>
                     </div>
-                    <div className="relative group">
-                        <pre className="p-4 rounded-xl bg-secondary/30 border border-border/50 text-[11px] font-mono overflow-x-auto max-h-[400px] no-scrollbar">
-                            <code className="text-foreground/80">{jsonPayload}</code>
-                        </pre>
+
+                    <div className="h-px bg-border" />
+
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                                <Terminal className="w-3 h-3 text-primary" />
+                                <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Payload Preview</Label>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={copyToClipboard}
+                            >
+                                {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                            </Button>
+                        </div>
+                        <div className="relative group">
+                            <pre className="p-4 rounded-xl bg-secondary/30 border border-border/50 text-[11px] font-mono overflow-x-auto max-h-[400px] no-scrollbar">
+                                <code className="text-foreground/80">{jsonPayload}</code>
+                            </pre>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </TabsContent>
+
+                <TabsContent value="domain" className="space-y-6 mt-0">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Globe className="w-3 h-3 text-primary" />
+                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Custom Subdomain</Label>
+                        </div>
+                        <div className="flex rounded-md shadow-sm">
+                            <Input
+                                value={subdomain}
+                                onChange={(e) => {
+                                    // Remove special characters and spaces, keep lowercase
+                                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                                    onSubdomainChange(val);
+                                }}
+                                placeholder="my-form"
+                                className="bg-secondary/10 border-border/50 rounded-r-none focus-visible:ring-0 focus-visible:ring-offset-0 border-r-0"
+                            />
+                            <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-border/50 bg-muted text-muted-foreground sm:text-sm">
+                                .genesisflow.io
+                            </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            Your form will be accessible at this subdomain. Only lowercase letters, numbers, and hyphens are allowed.
+                        </p>
+                    </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

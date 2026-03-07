@@ -16,11 +16,8 @@ export default function Home() {
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <Logo />
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</Link>
-            <Link href="#about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">About</Link>
-            <Link href="/auth" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Login</Link>
             <Button asChild className="px-6">
-              <Link href="/auth">Get Started</Link>
+              <Link href="/auth">Login</Link>
             </Button>
           </nav>
         </div>
@@ -50,8 +47,8 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className={cn("text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]", sansFont)}
             >
-              The Foundation for <br />
-              <span className="text-muted-foreground italic">Modern Web Apps.</span>
+              Lead Forms, <br />
+              <span className="text-muted-foreground italic">Done Right.</span>
             </motion.h1>
 
             <motion.p
@@ -60,7 +57,7 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
             >
-              A premium, minimalist template built with Next.js, Tailwind CSS, and Framer Motion.
+              A premium, minimalist form builder built specifically to capture more leads.
               Ready to scale your next big idea from zero to one.
             </motion.p>
 
@@ -115,40 +112,13 @@ export default function Home() {
           </motion.div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-24 bg-secondary/20">
-          <div className="container mx-auto px-6">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <h2 className={cn("text-3xl font-bold mb-4", sansFont)}>Everything you need.</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Built with performance and developer experience in mind.
-                Stop worrying about boilerplate and start shipping features.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { icon: Zap, title: "Speed", desc: "Optimized for sub-second loads and blazing fast interaction." },
-                { icon: Shield, title: "Security", desc: "Best-in-class security patterns baked into every layer." },
-                { icon: Globe, title: "Scale", desc: "Architected to handle everything from MVPs to millions of users." }
-              ].map((feature, i) => (
-                <div key={i} className="p-8 rounded-2xl bg-background border border-border/50 hover:border-primary/20 transition-all group">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
-                    <feature.icon className="w-6 h-6" />
-                  </div>
-                  <h3 className={cn("text-xl font-bold mb-2", sansFont)}>{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{feature.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* Footer */}
       <footer className="py-12 border-t border-border">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <Logo />
-          <p className="text-sm text-muted-foreground">© 2026 Genesis Forms. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© 2026 Genesis Flow. All rights reserved.</p>
           <div className="flex gap-6 text-sm font-medium text-muted-foreground">
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>

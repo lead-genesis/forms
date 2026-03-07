@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Share2, Play, Save, Loader2, Check } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
 interface BuilderHeaderProps {
     formName: string;
@@ -14,9 +15,14 @@ interface BuilderHeaderProps {
     brand?: { name: string; logo_url?: string | null };
     formId?: string | null;
     isSaving?: boolean;
+    subdomain?: string;
+    status?: string;
+    onStatusChange?: (status: string) => void;
 }
 
-export function BuilderHeader({ formName, onNameChange, brand, formId, isSaving }: BuilderHeaderProps) {
+export function BuilderHeader({ formName, onNameChange, brand, formId, isSaving, subdomain, status, onStatusChange }: BuilderHeaderProps) {
+    const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+
     const handlePreview = () => {
         if (!formId) {
             toast.error("Save your form first");
@@ -30,10 +36,23 @@ export function BuilderHeader({ formName, onNameChange, brand, formId, isSaving 
             toast.error("Save your form first");
             return;
         }
-        const url = `${window.location.origin}/f/${formId}?preview=true`;
-        navigator.clipboard.writeText(url);
+
+        const shareUrl = subdomain
+            ? `https://${subdomain}.genesisflow.io`
+            : `${window.location.origin}/f/${formId}`;
+
+        navigator.clipboard.writeText(shareUrl);
         toast.success("Link copied to clipboard!");
     };
+
+    const handlePublish = () => {
+        if (onStatusChange) {
+            onStatusChange("active");
+            setIsPublishDialogOpen(false);
+            toast.success("Form published successfully");
+        }
+    };
+
     return (
         <header className="h-16 border-b border-border bg-background px-6 flex items-center justify-between z-10 relative">
             <div className="flex items-center gap-4 z-20">
@@ -86,6 +105,32 @@ export function BuilderHeader({ formName, onNameChange, brand, formId, isSaving 
                     )}
                 </div>
 
+                {/* Status Toggle */}
+                {onStatusChange && (
+                    <div className="flex items-center gap-2 mr-2">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            {status === "active" ? "Active" : "Draft"}
+                        </span>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={status === "active"}
+                            onClick={() => onStatusChange(status === "active" ? "draft" : "active")}
+                            className={cn(
+                                "relative w-9 h-5 flex shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none",
+                                status === "active" ? "bg-emerald-500" : "bg-secondary"
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    "absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200",
+                                    status === "active" ? "translate-x-4" : "translate-x-0"
+                                )}
+                            />
+                        </button>
+                    </div>
+                )}
+
                 <Button variant="outline" size="sm" className="rounded-full gap-2" onClick={handlePreview}>
                     <Play className="w-4 h-4" />
                     Preview
@@ -94,10 +139,32 @@ export function BuilderHeader({ formName, onNameChange, brand, formId, isSaving 
                     <Share2 className="w-4 h-4" />
                     Share
                 </Button>
-                <Button size="sm" className="rounded-full gap-2 px-6">
-                    <Save className="w-4 h-4" />
-                    Publish
-                </Button>
+
+                <Dialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" className="rounded-full gap-2 px-6">
+                            <Save className="w-4 h-4" />
+                            Publish
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Publish Form?</DialogTitle>
+                            <DialogDescription>
+                                This will make your form accessible to the public and start accepting leads.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="mt-4">
+                            <Button variant="outline" onClick={() => setIsPublishDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handlePublish}>
+                                Publish
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
             </div>
         </header>
     );

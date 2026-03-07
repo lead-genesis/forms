@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { FormStepRenderer, FormStep, StepType } from "./FormStepRenderer";
 import { saveLead } from "@/app/actions/leads";
-import { buildWebhookPayload } from "@/lib/webhook";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,25 +89,8 @@ export function FormCanvas({
         // If we're arriving at thank-you, submit the data
         if (nextStep?.type === "thank-you" && !submitted) {
             setSubmitted(true);
-            // Fire webhook if set
-            if (webhookUrl) {
-                try {
-                    const payload = buildWebhookPayload({
-                        formId: formId ?? "unknown",
-                        formName: formName ?? "Untitled",
-                        steps,
-                        answers,
-                    });
-                    await fetch(webhookUrl, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload),
-                    });
-                } catch (e) {
-                    console.error("Webhook error:", e);
-                }
-            }
-            // Save lead to Supabase
+
+            // Save lead to Supabase (which also triggers webhook internally)
             if (formId) {
                 try {
                     await saveLead({ formId, answers });
