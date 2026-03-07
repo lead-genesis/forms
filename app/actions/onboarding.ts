@@ -18,12 +18,12 @@ export async function completeOnboarding(formData: FormData) {
 
     const { error } = await supabase
         .from("profiles")
-        .update({
+        .upsert({
+            id: user.id,
             first_name,
             last_name,
             updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+        });
 
     if (error) {
         return { success: false, error: error.message };
