@@ -17,7 +17,7 @@ import {
     CheckIcon,
     LinkIcon,
 } from "@heroicons/react/24/outline";
-import { getFormWithBrand, getLeadsByForm, updateForm } from "@/app/actions/forms";
+import { getFormWithBrand, getLeadsByForm, updateForm, getFormSteps } from "@/app/actions/forms";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +29,7 @@ interface Form {
     created_at: string;
     brand_id: string;
     subdomain: string | null;
+    views: number;
     brands?: {
         id: string;
         name: string;
@@ -44,11 +45,18 @@ interface Lead {
     answers: Record<string, any>;
 }
 
+interface FormStep {
+    id: string;
+    type: string;
+    title: string;
+    data: any;
+    order: number;
+}
+
 type Tab = "leads" | "performance" | "settings";
 
 const tabs: { key: Tab; label: string; icon: typeof UserGroupIcon }[] = [
     { key: "leads", label: "Leads", icon: UserGroupIcon },
-    { key: "performance", label: "Performance", icon: ChartBarIcon },
     { key: "settings", label: "Settings", icon: Cog6ToothIcon },
 ];
 
@@ -61,6 +69,7 @@ export default function FormDetailPage() {
 
     const [form, setForm] = useState<Form | null>(null);
     const [leads, setLeads] = useState<Lead[]>([]);
+    const [steps, setSteps] = useState<FormStep[]>([]);
     const [activeTab, setActiveTab] = useState<Tab>("leads");
     const [isLoading, setIsLoading] = useState(true);
 
@@ -74,13 +83,15 @@ export default function FormDetailPage() {
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
-        const [formRes, leadsRes] = await Promise.all([
+        const [formRes, leadsRes, stepsRes] = await Promise.all([
             getFormWithBrand(formId),
             getLeadsByForm(formId),
+            getFormSteps(formId),
         ]);
         const f = formRes.data as Form | null;
         setForm(f);
         setLeads(leadsRes.data as Lead[]);
+        setSteps(stepsRes.data as FormStep[]);
         if (f) {
             setEditName(f.name);
             setEditWebhook(f.webhook_url ?? "");
@@ -148,14 +159,13 @@ export default function FormDetailPage() {
     // ─── Computed Stats ───────────────────────────────────────────────────────
 
     const totalLeads = leads.length;
-    // Placeholder for views – you'd track this with analytics
-    const totalViews = totalLeads > 0 ? Math.round(totalLeads * (100 / Math.max(1, Math.random() * 30 + 5))) : 0;
+    const totalViews = form.views || 0;
     const conversionRate = totalViews > 0 ? ((totalLeads / totalViews) * 100).toFixed(1) : "0.0";
 
     // ─── Render ───────────────────────────────────────────────────────────────
 
     return (
-        <DashboardPage className="space-y-6">
+        <DashboardPage className="space-y-4">
             {/* Header */}
             <motion.div
                 initial={{ y: -10, opacity: 0 }}
@@ -260,9 +270,14 @@ export default function FormDetailPage() {
                     transition={{ duration: 0.25 }}
                     className="px-4 md:px-6 lg:px-10"
                 >
-                    {activeTab === "leads" && <LeadsTab leads={leads} />}
-                    {activeTab === "performance" && (
-                        <PerformanceTab totalLeads={totalLeads} totalViews={totalViews} conversionRate={conversionRate} />
+                    {activeTab === "leads" && (
+                        <LeadsTab
+                            leads={leads}
+                            steps={steps}
+                            totalLeads={totalLeads}
+                            totalViews={totalViews}
+                            conversionRate={conversionRate}
+                        />
                     )}
                     {activeTab === "settings" && (
                         <SettingsTab
@@ -289,69 +304,157 @@ export default function FormDetailPage() {
 
 // ─── Tab Components ───────────────────────────────────────────────────────────
 
-function LeadsTab({ leads }: { leads: Lead[] }) {
+function LeadsTab({
+    leads,
+    steps,
+    totalLeads,
+    totalViews,
+    conversionRate
+}: {
+    leads: Lead[];
+    steps: FormStep[];
+    totalLeads: number;
+    totalViews: number;
+    conversionRate: string;
+}) {
     if (leads.length === 0) {
         return (
-            <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                <CardContent className="p-10 flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                        <UserGroupIcon className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <h3 className={cn("text-lg font-bold tracking-tight mb-1", sansFont)}>No leads captured yet</h3>
-                    <p className="text-muted-foreground text-sm max-w-md">
-                        Share your form to start collecting leads. They&apos;ll appear here in real time.
-                    </p>
-                </CardContent>
-            </Card>
+            <div className="space-y-6">
+                <PerformanceTab
+                    totalLeads={totalLeads}
+                    totalViews={totalViews}
+                    conversionRate={conversionRate}
+                />
+                <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
+                    <CardContent className="p-10 flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                            <UserGroupIcon className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <h3 className={cn("text-lg font-bold tracking-tight mb-1", sansFont)}>No leads captured yet</h3>
+                        <p className="text-muted-foreground text-sm max-w-md">
+                            Share your form to start collecting leads. They&apos;ll appear here in real time.
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
 
-    // Extract all unique keys from lead answers
-    const allKeys = Array.from(
-        new Set(leads.flatMap((l) => Object.keys(l.answers || {})))
+    // Identify steps
+    const contactSteps = steps.filter(s => s.type === "contact");
+    const otherDataSteps = steps.filter(
+        (s) => s.type !== "welcome" && s.type !== "thank-you" && s.type !== "contact"
     );
 
+    // Flattened contact headers
+    const contactHeaders = [
+        { key: "first_name", label: "First Name" },
+        { key: "last_name", label: "Last Name" },
+        { key: "email", label: "Email" },
+        { key: "phone", label: "Phone" }
+    ];
+
+    const renderCellValue = (lead: Lead, step: FormStep) => {
+        const answers = lead.answers || {};
+
+        if (step.type === "multi-choice") {
+            const choiceIndex = answers[`${step.id}_choice`];
+            const opts = step.data?.options || [];
+            const option = typeof opts[choiceIndex] === "object"
+                ? opts[choiceIndex]?.label
+                : opts[choiceIndex];
+            return option || "—";
+        }
+
+        if (step.type === "input") {
+            return answers[`${step.id}_input`] || "—";
+        }
+
+        if (step.type === "address") {
+            const rawAddress = answers[`${step.id}_address`];
+            if (!rawAddress) return "—";
+            try {
+                const parsed = JSON.parse(rawAddress);
+                return parsed.full_address || "—";
+            } catch (e) {
+                return rawAddress;
+            }
+        }
+
+        return "—";
+    };
+
     return (
-        <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-            <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-border/50">
-                                <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                    Date
-                                </th>
-                                {allKeys.map((key) => (
-                                    <th key={key} className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                        {key}
+        <div className="space-y-4">
+            <PerformanceTab
+                totalLeads={totalLeads}
+                totalViews={totalViews}
+                conversionRate={conversionRate}
+            />
+
+            <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-secondary/50">
+                        <table className={cn("w-full text-sm", sansFont)}>
+                            <thead>
+                                <tr className="border-b border-border/50 bg-secondary/10">
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                        Submitted
                                     </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {leads.map((lead) => (
-                                <tr key={lead.id} className="border-b border-border/30 last:border-0 hover:bg-secondary/20 transition-colors">
-                                    <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
-                                        {new Date(lead.created_at).toLocaleDateString("en-AU", {
-                                            day: "numeric",
-                                            month: "short",
-                                            year: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                        })}
-                                    </td>
-                                    {allKeys.map((key) => (
-                                        <td key={key} className="px-5 py-3 text-foreground">
-                                            {String(lead.answers?.[key] ?? "—")}
-                                        </td>
+                                    {/* Flattened Contact Details First */}
+                                    {contactHeaders.map((header) => (
+                                        <th
+                                            key={header.key}
+                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[150px]"
+                                        >
+                                            {header.label}
+                                        </th>
+                                    ))}
+                                    {/* Then other steps */}
+                                    {otherDataSteps.map((step) => (
+                                        <th
+                                            key={step.id}
+                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[150px]"
+                                        >
+                                            {step.title}
+                                        </th>
                                     ))}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </CardContent>
-        </Card>
+                            </thead>
+                            <tbody className="divide-y divide-border/30">
+                                {leads.map((lead) => (
+                                    <tr
+                                        key={lead.id}
+                                        className="group hover:bg-secondary/20 transition-colors"
+                                    >
+                                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                                            {new Date(lead.created_at).toLocaleDateString("en-AU", {
+                                                day: "numeric",
+                                                month: "short",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                        </td>
+                                        {/* Contact Answer Parts */}
+                                        {contactHeaders.map((header) => (
+                                            <td key={header.key} className="px-6 py-4 text-foreground truncate max-w-[200px]" title={String(lead.answers?.[header.key] ?? "—")}>
+                                                {lead.answers?.[header.key] || "—"}
+                                            </td>
+                                        ))}
+                                        {/* Other Step Values */}
+                                        {otherDataSteps.map((step) => (
+                                            <td key={step.id} className="px-6 py-4 text-foreground truncate max-w-[300px]" title={String(renderCellValue(lead, step))}>
+                                                {renderCellValue(lead, step)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 
@@ -419,7 +522,7 @@ function SettingsTab({
     onCopyLink: () => void;
 }) {
     return (
-        <div className="max-w-2xl space-y-6">
+        <div className="max-w-2xl space-y-4">
             {/* Form Name */}
             <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
                 <CardContent className="p-6 space-y-4">

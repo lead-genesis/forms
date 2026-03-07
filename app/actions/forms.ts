@@ -17,6 +17,17 @@ const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface Form {
+    id: string;
+    name: string;
+    status: string;
+    webhook_url: string | null;
+    created_at: string;
+    brand_id: string;
+    subdomain: string | null;
+    views: number;
+}
+
 export interface CreateFormInput {
     name: string;
     brand_id: string;
@@ -308,6 +319,38 @@ export async function getLeadsByForm(formId: string) {
     }
 
     return { data: data ?? [], error: null };
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export async function incrementFormViews(formId: string) {
+    const supabase = getClient();
+    if (!supabase) return { error: "Supabase client not initialized" };
+
+    // RPC would be better here: .rpc('increment_form_views', { form_id: formId })
+    // But since we might not have the DB function, we'll do a simple fetch + update 
+    // or use Supabase's increment if available in the client.
+
+    // In current Supabase JS, you can use:
+    const { error } = await supabase.rpc('increment_form_views', { f_id: formId });
+
+    if (error) {
+        // Fallback if RPC doesn't exist: fetch then increment
+        const { data: form } = await supabase
+            .from("forms")
+            .select("views")
+            .eq("id", formId)
+            .single();
+
+        if (form) {
+            await supabase
+                .from("forms")
+                .update({ views: (form.views || 0) + 1 })
+                .eq("id", formId);
+        }
+    }
+
+    return { error: null };
 }
 
 // ─── Update Form ──────────────────────────────────────────────────────────────

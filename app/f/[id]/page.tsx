@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import { FormStep } from "@/components/form/FormStepRenderer";
-import { getFormWithBrand, getFormSteps } from "@/app/actions/forms";
+import { getFormWithBrand, getFormSteps, incrementFormViews } from "@/app/actions/forms";
 // Metadata moved to layout.tsx
 
 export default function PublicFormPage() {
@@ -58,6 +58,11 @@ export default function PublicFormPage() {
 
             setSteps(loadedSteps);
             setIsLoading(false);
+
+            // Increment views if it's a real visit
+            if (!isPreviewSession && form.status === "active") {
+                incrementFormViews(formId);
+            }
         })();
     }, [formId]);
 
