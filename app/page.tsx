@@ -23,7 +23,7 @@ export default function Home() {
       window.location.search.includes('type=recovery');
 
     if (isRecovery) {
-      router.replace('/auth/reset-password');
+      router.replace('/auth/reset-password' + window.location.search + window.location.hash);
       return;
     }
 
