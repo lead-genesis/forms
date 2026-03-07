@@ -89,6 +89,9 @@ export default function SubdomainFormPage() {
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     <p className="text-sm text-muted-foreground">Loading form…</p>
+                    <div className="mt-8 p-2 bg-secondary/10 rounded text-[10px] text-muted-foreground font-mono opacity-50">
+                        DEBUG: subdomain={subdomain} | env_url={!!process.env.NEXT_PUBLIC_SUPABASE_URL ? 'OK' : 'MISSING'}
+                    </div>
                 </div>
             </div>
         );
@@ -109,10 +112,20 @@ export default function SubdomainFormPage() {
     }
 
     if (error || steps.length === 0 || !formId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9dc2d2' }, body: JSON.stringify({ sessionId: '9dc2d2', runId: 'initial', hypothesisId: 'D', location: 'app/form-subdomain/[subdomain]/page.tsx:SubdomainFormPage:notFound', message: 'notFound called', data: { errorState: error, stepsLength: steps.length, formId }, timestamp: Date.now() }) }).catch(() => { });
-        // #endregion
-        notFound();
+        return (
+            <div className="flex items-center justify-center h-screen bg-background">
+                <div className="text-center space-y-3 max-w-sm px-6">
+                    <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl mx-auto flex items-center justify-center mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                    </div>
+                    <h1 className="text-2xl font-bold">Form Not Found</h1>
+                    <p className="text-sm text-muted-foreground">We couldn't find the form you were looking for. It may have been deleted or moved.</p>
+                    <div className="mt-8 p-2 bg-red-500/5 rounded text-[10px] text-red-500 font-mono">
+                        DEBUG: sub={subdomain} | id={formId || 'none'} | steps={steps.length} | err={String(error)}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
