@@ -18,15 +18,23 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl;
     const hostname = req.headers.get('host') || '';
 
-    // Skip internal Next.js paths, static files, and server actions
+    // Skip internal Next.js paths and static files
     if (
         url.pathname.startsWith('/_next') ||
         url.pathname.startsWith('/api') ||
-        url.pathname.includes('.') ||
-        req.headers.has('next-action') ||
-        req.headers.has('x-nextjs-data')
+        url.pathname.includes('.')
     ) {
         return NextResponse.next();
+    }
+
+    // Intercept auth codes and redirect to/auth/callback
+    // This is important for cases where Supabase redirects to the root "/" with a code
+    if (url.searchParams.has('code') && !url.pathname.startsWith('/auth/callback')) {
+        const callbackUrl = new URL('/auth/callback', req.url);
+        url.searchParams.forEach((value, key) => {
+            callbackUrl.searchParams.set(key, value);
+        });
+        return NextResponse.redirect(callbackUrl);
     }
 
     // Prevent infinite loop if already rewritten
