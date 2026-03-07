@@ -27,42 +27,54 @@ export default function SubdomainFormPage() {
         if (!subdomain) return;
 
         (async () => {
-            setIsLoading(true);
+            try {
+                setIsLoading(true);
+                setError(false);
 
-            // First get the form by subdomain
-            const formRes = await getFormBySubdomain(subdomain);
+                // First get the form by subdomain
+                const formRes = await getFormBySubdomain(subdomain);
 
-            if (formRes.error || !formRes.data) {
+                if (formRes.error || !formRes.data) {
+                    console.error("Subdomain form error:", formRes.error);
+                    setError(true);
+                    return;
+                }
+
+                const form = formRes.data as any;
+
+                if (form.status !== "active" && !isPreviewSession) {
+                    setIsInactive(true);
+                    return;
+                }
+
+                // Now get the steps using the actual form ID
+                const stepsRes = await getFormSteps(form.id);
+
+                if (stepsRes.error) {
+                    console.error("Steps fetch error:", stepsRes.error);
+                    setError(true);
+                    return;
+                }
+
+                setFormId(form.id);
+                setFormName(form.name ?? "");
+                setWebhookUrl(form.webhook_url ?? "");
+                if (form.brands) setBrand(form.brands);
+
+                const loadedSteps: FormStep[] = (stepsRes.data as any[] || []).map((s: any) => ({
+                    id: s.id,
+                    type: s.type,
+                    title: s.title,
+                    data: s.data ?? {},
+                }));
+
+                setSteps(loadedSteps);
+            } catch (err) {
+                console.error("Subdomain form crash:", err);
                 setError(true);
+            } finally {
                 setIsLoading(false);
-                return;
             }
-
-            const form = formRes.data as any;
-
-            if (form.status !== "active" && !isPreviewSession) {
-                setIsInactive(true);
-                setIsLoading(false);
-                return;
-            }
-
-            // Now get the steps using the actual form ID
-            const stepsRes = await getFormSteps(form.id);
-
-            setFormId(form.id);
-            setFormName(form.name ?? "");
-            setWebhookUrl(form.webhook_url ?? "");
-            if (form.brands) setBrand(form.brands);
-
-            const loadedSteps: FormStep[] = (stepsRes.data as any[]).map((s: any) => ({
-                id: s.id,
-                type: s.type,
-                title: s.title,
-                data: s.data ?? {},
-            }));
-
-            setSteps(loadedSteps);
-            setIsLoading(false);
         })();
     }, [subdomain, isPreviewSession]);
 

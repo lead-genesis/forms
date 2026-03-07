@@ -3,10 +3,16 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 function getClient() {
-    return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!url || !key) {
+        console.error("Supabase environment variables are missing!");
+        // We return a dummy client that will fail cleanly rather than crashing the process
+        return createSupabaseClient("https://placeholder.supabase.co", "placeholder");
+    }
+
+    return createSupabaseClient(url, key);
 }
 
 const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -116,6 +122,7 @@ export async function getFormWithBrand(formId: string) {
 
 /** Load a single form with its brand details by subdomain (for custom domains). */
 export async function getFormBySubdomain(subdomain: string) {
+    console.log("Fetching form by subdomain:", subdomain);
     const supabase = getClient();
 
     const { data, error } = await supabase
@@ -137,12 +144,14 @@ export async function getFormBySubdomain(subdomain: string) {
         return { data: null, error: error.message };
     }
 
+    console.log("Successfully fetched form:", data.name);
     return { data, error: null };
 }
 
 // ─── Form Steps ───────────────────────────────────────────────────────────────
 
 export async function getFormSteps(formId: string) {
+    console.log("Fetching steps for form ID:", formId);
     const supabase = getClient();
 
     const { data, error } = await supabase
@@ -156,6 +165,7 @@ export async function getFormSteps(formId: string) {
         return { data: [], error: error.message };
     }
 
+    console.log(`Successfully fetched ${data?.length ?? 0} steps`);
     return { data: data ?? [], error: null };
 }
 
