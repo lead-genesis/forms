@@ -17,21 +17,31 @@ export default function Home() {
   const supabase = createClient();
 
   useEffect(() => {
+    // 1. Immediate Aggressive Check for Recovery (handles fragments #type=recovery)
+    const isRecovery =
+      window.location.hash.includes('type=recovery') ||
+      window.location.search.includes('type=recovery');
+
+    if (isRecovery) {
+      router.replace('/auth/reset-password');
+      return;
+    }
+
+    // 2. Standard Auth State Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        router.push("/auth/reset-password");
+        router.replace("/auth/reset-password");
       } else if (event === "SIGNED_IN") {
-        // If we have a code in the URL, let the middleware/callback handle it
-        // Otherwise, redirect to dashboard if signed in
-        if (!window.location.search.includes('code=')) {
+        // Only redirect to dashboard if not a recovery/callback flow
+        if (!window.location.search.includes('code=') && !isRecovery) {
           router.push("/dashboard");
         }
       }
     });
 
-    // Initial check
+    // 3. Initial check for existing session
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && !window.location.href.includes('type=recovery') && !window.location.hash.includes('type=recovery')) {
+      if (user && !isRecovery && !window.location.search.includes('code=')) {
         router.push("/dashboard");
       }
     });
