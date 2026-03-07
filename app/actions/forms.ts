@@ -6,10 +6,8 @@ function getClient() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!url || !key) {
-        console.error("CRITICAL: Supabase environment variables are missing! URL:", !!url, "KEY:", !!key);
-        // We return a dummy client that will fail cleanly rather than crashing the process
-        return createSupabaseClient("https://placeholder.supabase.co", "placeholder");
+    if (!url || !key || url.includes('placeholder')) {
+        return null;
     }
 
     return createSupabaseClient(url, key);
@@ -29,6 +27,7 @@ export interface CreateFormInput {
 
 export async function createForm(input: CreateFormInput) {
     const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
     const userId = input.userId ?? DEMO_USER_ID;
 
     const { data, error } = await supabase
@@ -78,6 +77,7 @@ export async function createForm(input: CreateFormInput) {
 
 export async function getForms(userId?: string) {
     const supabase = getClient();
+    if (!supabase) return { data: [], error: "Supabase client not initialized" };
     const uid = userId ?? DEMO_USER_ID;
 
     const { data, error } = await supabase
@@ -97,6 +97,7 @@ export async function getForms(userId?: string) {
 /** Load a single form with its brand details (for the builder). */
 export async function getFormWithBrand(formId: string) {
     const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
 
     const { data, error } = await supabase
         .from("forms")
@@ -125,6 +126,15 @@ export async function getFormBySubdomain(subdomain: string) {
     console.log("Fetching form by subdomain:", subdomain);
     const supabase = getClient();
 
+    if (!supabase) {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        return {
+            data: null,
+            error: `Env missing: URL=${!!url}, KEY=${!!key}. Placeholder=${url?.includes('placeholder')}`
+        };
+    }
+
     const { data, error } = await supabase
         .from("forms")
         .select(`
@@ -140,7 +150,7 @@ export async function getFormBySubdomain(subdomain: string) {
         .single();
 
     // #region agent log
-    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9dc2d2'},body:JSON.stringify({sessionId:'9dc2d2',runId:'initial',hypothesisId:'B',location:'app/actions/forms.ts:getFormBySubdomain:result',message:'getFormBySubdomain result',data:{subdomain,hasData:!!data,hasError:!!error,errorMessage:error?.message ?? null,formId:(data as any)?.id ?? null,status:(data as any)?.status ?? null},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9dc2d2' }, body: JSON.stringify({ sessionId: '9dc2d2', runId: 'initial', hypothesisId: 'B', location: 'app/actions/forms.ts:getFormBySubdomain:result', message: 'getFormBySubdomain result', data: { subdomain, hasData: !!data, hasError: !!error, errorMessage: error?.message ?? null, formId: (data as any)?.id ?? null, status: (data as any)?.status ?? null }, timestamp: Date.now() }) }).catch(() => { });
     // #endregion
 
     if (error) {
@@ -158,6 +168,10 @@ export async function getFormSteps(formId: string) {
     console.log("Fetching steps for form ID:", formId);
     const supabase = getClient();
 
+    if (!supabase) {
+        return { data: [], error: "Supabase environment variables are missing on the server." };
+    }
+
     const { data, error } = await supabase
         .from("form_steps")
         .select("*")
@@ -165,7 +179,7 @@ export async function getFormSteps(formId: string) {
         .order("order", { ascending: true });
 
     // #region agent log
-    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9dc2d2'},body:JSON.stringify({sessionId:'9dc2d2',runId:'initial',hypothesisId:'C',location:'app/actions/forms.ts:getFormSteps:result',message:'getFormSteps result',data:{formId,stepsCount:data?.length ?? 0,hasError:!!error,errorMessage:error?.message ?? null},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9dc2d2' }, body: JSON.stringify({ sessionId: '9dc2d2', runId: 'initial', hypothesisId: 'C', location: 'app/actions/forms.ts:getFormSteps:result', message: 'getFormSteps result', data: { formId, stepsCount: data?.length ?? 0, hasError: !!error, errorMessage: error?.message ?? null }, timestamp: Date.now() }) }).catch(() => { });
     // #endregion
 
     if (error) {
@@ -301,6 +315,7 @@ export interface UpdateFormInput {
 
 export async function updateForm(formId: string, input: UpdateFormInput) {
     const supabase = getClient();
+    if (!supabase) return { data: null, error: "Supabase client not initialized" };
 
     const { data, error } = await supabase
         .from("forms")
