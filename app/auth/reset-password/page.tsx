@@ -11,12 +11,28 @@ import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { sansFont } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect } from "react";
 
 export default function ResetPasswordPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const supabase = createClient();
+
+    // Initialize Supabase client and check for session
+    // This is critical for consuming the #access_token from the URL
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("Auth event:", event);
+            if (event === "PASSWORD_RECOVERY") {
+                console.log("Recovery session detected");
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [supabase]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
