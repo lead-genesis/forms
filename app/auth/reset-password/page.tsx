@@ -18,16 +18,35 @@ export default function ResetPasswordPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [hasSession, setHasSession] = useState<boolean | null>(null);
     const router = useRouter();
     const supabase = createClient();
 
     // Initialize Supabase client and check for session
     // This is critical for consuming the #access_token from the URL
     useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log("Initial session check:", !!session);
+            setHasSession(!!session);
+
+            if (!session) {
+                // Wait a bit and try one more time - sometimes fragments take a moment to process
+                setTimeout(async () => {
+                    const { data: { session: retrySession } } = await supabase.auth.getSession();
+                    console.log("Retry session check:", !!retrySession);
+                    setHasSession(!!retrySession);
+                }, 1000);
+            }
+        };
+
+        checkSession();
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log("Auth event:", event);
-            if (event === "PASSWORD_RECOVERY") {
-                console.log("Recovery session detected");
+            console.log("Auth event:", event, "Session exists:", !!session);
+            if (event === "PASSWORD_RECOVERY" || session) {
+                console.log("Valid recovery session detected/established");
+                setHasSession(true);
             }
         });
 
@@ -50,20 +69,22 @@ export default function ResetPasswordPage() {
         setIsLoading(true);
 
         try {
-            const { error } = await supabase.auth.updateUser({ password });
+            console.log("Attempting to update password via server action...");
+            const result = await updatePassword(password);
 
-            if (error) {
-                toast.error(error.message);
-            } else {
+            if (result.success) {
                 toast.success("Password updated successfully!");
                 router.push("/dashboard");
+            } else {
+                toast.error(result.error || "Failed to update password");
+                console.error("Password update error:", result.error);
             }
         } catch (error) {
+            console.error("Submit catch error:", error);
             toast.error("An error occurred while updating your password.");
         } finally {
             setIsLoading(false);
         }
-
     };
 
     return (
@@ -82,6 +103,12 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {hasSession === false && (
+                        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm mb-4">
+                            <p className="font-semibold">Authentication session missing.</p>
+                            <p className="mt-1 opacity-90">We couldn't verify your reset request. Please try clicking the link in your email again, or request a new one.</p>
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <label className="text-sm font-medium leading-none" htmlFor="password">New Password</label>
                         <Input
@@ -105,7 +132,7 @@ export default function ResetPasswordPage() {
                         />
                     </div>
 
-                    <Button className="w-full h-11 text-base group" type="submit" disabled={isLoading}>
+                    <Button className="w-full h-11 text-base group" type="submit" disabled={isLoading || hasSession === false}>
                         {isLoading ? "Updating..." : "Update Password"}
                         {!isLoading && <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />}
                     </Button>

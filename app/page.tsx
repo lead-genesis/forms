@@ -23,7 +23,9 @@ export default function Home() {
       window.location.search.includes('type=recovery');
 
     if (isRecovery) {
-      router.replace('/auth/reset-password' + window.location.search + window.location.hash);
+      console.log("Recovery flow detected on home page, redirecting...");
+      const finalUrl = '/auth/reset-password' + window.location.search + window.location.hash;
+      router.replace(finalUrl);
       return;
     }
 
