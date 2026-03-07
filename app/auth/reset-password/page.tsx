@@ -22,30 +22,38 @@ export default function ResetPasswordPage() {
     const router = useRouter();
     const supabase = createClient();
 
-    // Initialize Supabase client and check for session
-    // This is critical for consuming the #access_token from the URL
+    // Improved diagnostic and session check
     useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log("Initial session check:", !!session);
-            setHasSession(!!session);
+        console.log("ResetPasswordPage mounted. URL:", window.location.href);
+        console.log("Hash present:", !!window.location.hash);
+        if (window.location.hash) {
+            console.log("Hash contains access_token:", window.location.hash.includes('access_token='));
+            console.log("Hash contains type=recovery:", window.location.hash.includes('type=recovery'));
+        }
 
-            if (!session) {
-                // Wait a bit and try one more time - sometimes fragments take a moment to process
-                setTimeout(async () => {
-                    const { data: { session: retrySession } } = await supabase.auth.getSession();
-                    console.log("Retry session check:", !!retrySession);
-                    setHasSession(!!retrySession);
-                }, 1000);
+        const checkSession = async (retryCount = 0) => {
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log(`Session check #${retryCount + 1}:`, !!session);
+
+            if (session) {
+                setHasSession(true);
+            } else if (retryCount < 3) {
+                // Retry up to 3 times with increasing delay
+                const delay = (retryCount + 1) * 1000;
+                console.log(`No session yet, retrying in ${delay}ms...`);
+                setTimeout(() => checkSession(retryCount + 1), delay);
+            } else {
+                console.log("Maximum session checks reached. No session found.");
+                setHasSession(false);
             }
         };
 
         checkSession();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log("Auth event:", event, "Session exists:", !!session);
-            if (event === "PASSWORD_RECOVERY" || session) {
-                console.log("Valid recovery session detected/established");
+            console.log("Auth state changed event:", event, "Session exists:", !!session);
+            if (event === "PASSWORD_RECOVERY" || session || event === "SIGNED_IN") {
+                console.log("Recovery session confirmed by event:", event);
                 setHasSession(true);
             }
         });

@@ -20,12 +20,13 @@ export default function Home() {
     // 1. Immediate Aggressive Check for Recovery (handles fragments #type=recovery)
     const isRecovery =
       window.location.hash.includes('type=recovery') ||
-      window.location.search.includes('type=recovery');
+      window.location.search.includes('type=recovery') ||
+      window.location.hash.includes('access_token=');
 
     if (isRecovery) {
-      console.log("Recovery flow detected on home page, redirecting...");
+      console.log("Recovery flow detected on home page, hard redirecting...");
       const finalUrl = '/auth/reset-password' + window.location.search + window.location.hash;
-      router.replace(finalUrl);
+      window.location.href = finalUrl;
       return;
     }
 
