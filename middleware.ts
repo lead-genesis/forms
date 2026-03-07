@@ -16,12 +16,23 @@ export const config = {
 
 export function middleware(req: NextRequest) {
     const url = req.nextUrl;
+    const hostname = req.headers.get('host') || '';
 
-    // Get hostname of request (e.g. demo.genesisflow.io, demo.localhost:3000)
-    let hostname = req.headers.get('host') || '';
+    // Skip internal Next.js paths and static files
+    if (
+        url.pathname.startsWith('/_next') ||
+        url.pathname.startsWith('/api') ||
+        url.pathname.includes('.')
+    ) {
+        return NextResponse.next();
+    }
+
+    // Prevent infinite loop if already rewritten
+    if (url.pathname.startsWith('/form-subdomain/')) {
+        return NextResponse.next();
+    }
 
     // Allowed domains we don't want to rewrite
-    // If working locally, you can add localhost:3000 to your allowed domains
     const allowedDomains = [
         'genesisflow.io',
         'www.genesisflow.io',
@@ -29,29 +40,25 @@ export function middleware(req: NextRequest) {
         'localhost',
     ];
 
-    // Also verify against Vercel deployment URLs to avoid rewriting preview domains
-    if (
-        hostname.includes('vercel.app') ||
-        allowedDomains.includes(hostname)
-    ) {
+    // If it's a base domain or localhost (without subdomain), don't rewrite
+    const isBaseLocal = hostname === 'localhost:3000' || hostname === 'localhost';
+    if (allowedDomains.includes(hostname) || isBaseLocal) {
         return NextResponse.next();
     }
 
-    // If we reach here, we are on a custom subdomain or custom domain.
-    // Extract the subdomain (e.g., 'form1' from 'form1.genesisflow.io')
+    // Extract the subdomain (e.g. 'form1' from 'form1.localhost:3000')
     const pathParts = hostname.split('.');
-
-    // If it's a subdomain like form1.genesisflow.io, pathParts[0] will be 'form1'
-    // If they are using a custom domain later, we might handle it differently.
     const subdomain = pathParts[0];
 
     // Prevent matching against the base domain or www if something slipped through
-    if (subdomain === 'www' || subdomain === 'genesisflow') {
+    if (subdomain === 'www' || subdomain === 'genesisflow' || subdomain === 'localhost') {
         return NextResponse.next();
     }
 
+    console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);
+
     // Rewrite to our hidden dynamic route
-    return NextResponse.rewrite(
-        new URL(`/form-subdomain/${subdomain}${url.pathname}`, req.url)
-    );
+    // Ensure we don't have double slashes
+    const targetPath = `/form-subdomain/${subdomain}${url.pathname === '/' ? '' : url.pathname}`;
+    return NextResponse.rewrite(new URL(targetPath, req.url));
 }
