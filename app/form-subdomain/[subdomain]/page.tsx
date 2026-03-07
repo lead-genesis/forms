@@ -20,7 +20,7 @@ export default function SubdomainFormPage() {
     const [webhookUrl, setWebhookUrl] = useState("");
     const [formName, setFormName] = useState("");
     const [formId, setFormId] = useState("");
-    const [error, setError] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [isInactive, setIsInactive] = useState(false);
 
     useEffect(() => {
@@ -32,14 +32,14 @@ export default function SubdomainFormPage() {
         (async () => {
             try {
                 setIsLoading(true);
-                setError(false);
+                setError(null);
 
                 // First get the form by subdomain
                 const formRes = await getFormBySubdomain(subdomain);
 
                 if (formRes.error || !formRes.data) {
                     console.error("Subdomain form error:", formRes.error);
-                    setError(true);
+                    setError(String(formRes.error || "Form not found"));
                     return;
                 }
 
@@ -55,7 +55,7 @@ export default function SubdomainFormPage() {
 
                 if (stepsRes.error) {
                     console.error("Steps fetch error:", stepsRes.error);
-                    setError(true);
+                    setError(String(stepsRes.error));
                     return;
                 }
 
@@ -74,7 +74,7 @@ export default function SubdomainFormPage() {
                 setSteps(loadedSteps);
             } catch (err) {
                 console.error("Subdomain form crash:", err);
-                setError(true);
+                setError(String(err));
             } finally {
                 setIsLoading(false);
             }
@@ -121,7 +121,7 @@ export default function SubdomainFormPage() {
                     <h1 className="text-2xl font-bold">Form Not Found</h1>
                     <p className="text-sm text-muted-foreground">We couldn't find the form you were looking for. It may have been deleted or moved.</p>
                     <div className="mt-8 p-2 bg-red-500/5 rounded text-[10px] text-red-500 font-mono">
-                        DEBUG: sub={subdomain} | id={formId || 'none'} | steps={steps.length} | err={String(error)}
+                        DEBUG: sub={subdomain} | id={formId || 'none'} | steps={steps.length} | err={error || 'none'}
                     </div>
                 </div>
             </div>
