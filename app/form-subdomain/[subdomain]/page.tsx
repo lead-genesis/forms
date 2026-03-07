@@ -24,6 +24,9 @@ export default function SubdomainFormPage() {
     const [isInactive, setIsInactive] = useState(false);
 
     useEffect(() => {
+        console.log("SubdomainFormPage mounted. Subdomain:", subdomain);
+        console.log("Supabase URL present:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+
         if (!subdomain) return;
 
         (async () => {
@@ -106,6 +109,9 @@ export default function SubdomainFormPage() {
     }
 
     if (error || steps.length === 0 || !formId) {
+        // #region agent log
+        fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '9dc2d2' }, body: JSON.stringify({ sessionId: '9dc2d2', runId: 'initial', hypothesisId: 'D', location: 'app/form-subdomain/[subdomain]/page.tsx:SubdomainFormPage:notFound', message: 'notFound called', data: { errorState: error, stepsLength: steps.length, formId }, timestamp: Date.now() }) }).catch(() => { });
+        // #endregion
         notFound();
     }
 

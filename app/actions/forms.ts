@@ -139,6 +139,10 @@ export async function getFormBySubdomain(subdomain: string) {
         .eq("subdomain", subdomain)
         .single();
 
+    // #region agent log
+    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9dc2d2'},body:JSON.stringify({sessionId:'9dc2d2',runId:'initial',hypothesisId:'B',location:'app/actions/forms.ts:getFormBySubdomain:result',message:'getFormBySubdomain result',data:{subdomain,hasData:!!data,hasError:!!error,errorMessage:error?.message ?? null,formId:(data as any)?.id ?? null,status:(data as any)?.status ?? null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     if (error) {
         console.error("Get form by subdomain error:", error);
         return { data: null, error: error.message };
@@ -159,6 +163,10 @@ export async function getFormSteps(formId: string) {
         .select("*")
         .eq("form_id", formId)
         .order("order", { ascending: true });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7584/ingest/1ce85303-de38-45f1-9b94-642ac7d98597',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9dc2d2'},body:JSON.stringify({sessionId:'9dc2d2',runId:'initial',hypothesisId:'C',location:'app/actions/forms.ts:getFormSteps:result',message:'getFormSteps result',data:{formId,stepsCount:data?.length ?? 0,hasError:!!error,errorMessage:error?.message ?? null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     if (error) {
         console.error("Get form steps error:", error);
