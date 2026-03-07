@@ -7,7 +7,7 @@ function getClient() {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!url || !key) {
-        console.error("Supabase environment variables are missing!");
+        console.error("CRITICAL: Supabase environment variables are missing! URL:", !!url, "KEY:", !!key);
         // We return a dummy client that will fail cleanly rather than crashing the process
         return createSupabaseClient("https://placeholder.supabase.co", "placeholder");
     }

@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import { getFormBySubdomain } from "@/app/actions/forms";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: Promise<{ subdomain: string }> }): Promise<Metadata> {
     const { subdomain } = await params;
 

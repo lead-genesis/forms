@@ -18,11 +18,13 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl;
     const hostname = req.headers.get('host') || '';
 
-    // Skip internal Next.js paths and static files
+    // Skip internal Next.js paths, static files, and server actions
     if (
         url.pathname.startsWith('/_next') ||
         url.pathname.startsWith('/api') ||
-        url.pathname.includes('.')
+        url.pathname.includes('.') ||
+        req.headers.has('next-action') ||
+        req.headers.has('x-nextjs-data')
     ) {
         return NextResponse.next();
     }
@@ -46,9 +48,9 @@ export function middleware(req: NextRequest) {
         return NextResponse.next();
     }
 
-    // Extract the subdomain (e.g. 'form1' from 'form1.localhost:3000')
+    // Extract the subdomain (e.g. 'form1' from 'form1.genesisflow.io')
     const pathParts = hostname.split('.');
-    const subdomain = pathParts[0];
+    const subdomain = pathParts[0].toLowerCase();
 
     // Prevent matching against the base domain or www if something slipped through
     if (subdomain === 'www' || subdomain === 'genesisflow' || subdomain === 'localhost') {
@@ -58,7 +60,8 @@ export function middleware(req: NextRequest) {
     console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);
 
     // Rewrite to our hidden dynamic route
-    // Ensure we don't have double slashes
     const targetPath = `/form-subdomain/${subdomain}${url.pathname === '/' ? '' : url.pathname}`;
-    return NextResponse.rewrite(new URL(targetPath, req.url));
+    const rewriteUrl = new URL(targetPath, req.url);
+
+    return NextResponse.rewrite(rewriteUrl);
 }
