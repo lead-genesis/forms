@@ -8,7 +8,21 @@ import { motion } from "framer-motion";
 import { sansFont } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
 export default function Home() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        router.push("/dashboard");
+      }
+    });
+  }, [router, supabase]);
   return (
     <div className="flex flex-col min-h-screen bg-background selection:bg-primary/10">
       {/* Navigation */}

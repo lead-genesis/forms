@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -21,6 +21,7 @@ import {
     UserGroupIcon,
     TagIcon,
 } from "@heroicons/react/24/outline";
+import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardLayout({
     children,
@@ -28,7 +29,36 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [user, setUser] = useState<{ email?: string; first_name?: string; last_name?: string } | null>(null);
+
+    const supabase = createClient();
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", user.id)
+                    .single();
+
+                setUser({
+                    email: user.email,
+                    first_name: profile?.first_name,
+                    last_name: profile?.last_name,
+                });
+            }
+        };
+        getUser();
+    }, []);
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        router.push("/auth/login");
+    };
 
     // Map routes to page titles
     const pageTitleMap: Record<string, string> = {
@@ -56,6 +86,9 @@ export default function DashboardLayout({
     useEffect(() => {
         document.title = pageTitle === "Dashboard" ? "Dashboard - Genesis Flow" : `${pageTitle} - Genesis Flow`;
     }, [pageTitle]);
+
+    const userDisplayName = user?.first_name ? `${user.first_name}${user.last_name ? ` ${user.last_name}` : ''}` : (user?.email?.split('@')[0] || "User");
+    const userInitials = user?.first_name ? `${user.first_name[0]}${user.last_name?.[0] || ''}` : (user?.email?.[0]?.toUpperCase() || "U");
 
     return (
         <div className="min-h-screen bg-background flex">
@@ -102,14 +135,19 @@ export default function DashboardLayout({
                 <div className="p-3 border-t border-border space-y-1">
                     <Link href="/dashboard/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
                         <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center ring-2 ring-border">
-                            <span className={cn("text-xs font-bold text-foreground/60", sansFont)}>DJ</span>
+                            <span className={cn("text-xs font-bold text-foreground/60", sansFont)}>
+                                {userInitials}
+                            </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">Dylan J.</p>
-                            <p className="text-[11px] text-muted-foreground truncate">dylan@example.com</p>
+                            <p className="text-sm font-medium truncate">{userDisplayName}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{user?.email || 'Loading...'}</p>
                         </div>
                     </Link>
-                    <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors w-full">
+                    <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors w-full"
+                    >
                         <ArrowRightStartOnRectangleIcon className="w-[18px] h-[18px]" />
                         Sign out
                     </button>
@@ -202,14 +240,19 @@ export default function DashboardLayout({
                             <div className="p-3 border-t border-border space-y-1">
                                 <Link href="/dashboard/settings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
                                     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center ring-2 ring-border">
-                                        <span className={cn("text-xs font-bold text-foreground/60", sansFont)}>DJ</span>
+                                        <span className={cn("text-xs font-bold text-foreground/60", sansFont)}>
+                                            {userInitials}
+                                        </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">Dylan J.</p>
-                                        <p className="text-[11px] text-muted-foreground truncate">dylan@example.com</p>
+                                        <p className="text-sm font-medium truncate">{userDisplayName}</p>
+                                        <p className="text-[11px] text-muted-foreground truncate">{user?.email || 'Loading...'}</p>
                                     </div>
                                 </Link>
-                                <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors w-full">
+                                <button
+                                    onClick={handleSignOut}
+                                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors w-full"
+                                >
                                     <ArrowRightStartOnRectangleIcon className="w-[18px] h-[18px]" />
                                     Sign out
                                 </button>

@@ -1,9 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
 import { sansFont } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,65 @@ import {
     UserCircleIcon,
     ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
+import { createClient } from "@/lib/supabase/client";
+import { updateProfile } from "@/app/actions/user";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [profile, setProfile] = useState({
+        first_name: "",
+        last_name: "",
+        email: "",
+    });
+
+    const supabase = createClient();
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profileData } = await supabase
+                    .from("profiles")
+                    .select("*")
+                    .eq("id", user.id)
+                    .single();
+
+                setProfile({
+                    first_name: profileData?.first_name || "",
+                    last_name: profileData?.last_name || "",
+                    email: user.email || "",
+                });
+            }
+            setIsLoading(false);
+        };
+        fetchProfile();
+    }, []);
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        const result = await updateProfile({
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+        });
+
+        if (result.success) {
+            toast.success("Profile updated successfully!");
+        } else {
+            toast.error(result.error || "Failed to update profile.");
+        }
+        setIsSaving(false);
+    };
+
+    if (isLoading) {
+        return (
+            <DashboardPage className="max-w-4xl">
+                <div className="p-8 text-center text-muted-foreground">Loading settings...</div>
+            </DashboardPage>
+        );
+    }
+
     return (
         <DashboardPage className="max-w-4xl">
             <DashboardHeader
@@ -33,20 +90,40 @@ export default function SettingsPage() {
                         <div className="grid sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium">First name</label>
-                                <Input defaultValue="Dylan" className="rounded-xl" />
+                                <Input
+                                    value={profile.first_name}
+                                    onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
+                                    className="rounded-xl"
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium">Last name</label>
-                                <Input defaultValue="J." className="rounded-xl" />
+                                <Input
+                                    value={profile.last_name}
+                                    onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                                    className="rounded-xl"
+                                />
                             </div>
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-sm font-medium">Email</label>
-                            <Input defaultValue="dylan@example.com" type="email" className="rounded-xl" />
+                            <Input
+                                value={profile.email}
+                                disabled
+                                type="email"
+                                className="rounded-xl bg-secondary/30"
+                            />
+                            <p className="text-[10px] text-muted-foreground pl-1">Email cannot be changed here.</p>
                         </div>
 
                         <div className="flex justify-end pt-2">
-                            <Button className="rounded-full px-6">Save changes</Button>
+                            <Button
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="rounded-full px-6"
+                            >
+                                {isSaving ? "Saving..." : "Save changes"}
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -62,7 +139,7 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium">Password</p>
-                                <p className="text-xs text-muted-foreground">Last changed 30 days ago</p>
+                                <p className="text-xs text-muted-foreground">Manage your account security</p>
                             </div>
                             <Button variant="outline" className="text-sm rounded-full px-5">Change</Button>
                         </div>
