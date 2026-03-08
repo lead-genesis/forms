@@ -175,7 +175,7 @@ export function FormCanvas({
     return (
         <div className="flex-1 overflow-y-auto pt-0 pb-20 relative no-scrollbar @container">
             {/* Banner */}
-            <div className="h-[20vh] @sm:h-96 w-full overflow-hidden relative shrink-0 transition-all duration-500">
+            <div className="h-[20vh] @lg:h-96 w-full overflow-hidden relative shrink-0 transition-all duration-500">
                 <img
                     src={bannerSrc}
                     alt="Brand Banner"
@@ -198,7 +198,7 @@ export function FormCanvas({
             </div>
 
             {/* Form Card overlapping the banner */}
-            <div className="relative -mt-16 px-2 @sm:px-8">
+            <div className="relative -mt-16 px-2 @lg:px-8">
                 <div className="w-full max-w-xl mx-auto flex flex-col gap-4">
                     <div className="bg-background rounded-3xl shadow-2xl border border-border/40 min-h-[520px] flex flex-col mb-12 overflow-hidden relative">
                         {/* Back Button */}
@@ -228,7 +228,7 @@ export function FormCanvas({
                             </div>
                         )}
 
-                        <div className="flex-1 p-6 @sm:p-10 @md:p-16 flex flex-col justify-center relative">
+                        <div className="flex-1 p-6 @lg:p-10 @xl:p-16 flex flex-col justify-center relative">
                             {isLoading && (
                                 <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
                                     <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary animate-bounce">
