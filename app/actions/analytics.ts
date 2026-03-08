@@ -21,7 +21,12 @@ export interface DashboardStats {
     avgConversionRate: number;
     topForms: { name: string; count: number; conversionRate: number }[];
     topBrands: { name: string; count: number }[];
-    recentLeads: any[];
+    recentLeads: {
+        id: string;
+        formName: string;
+        brandName: string;
+        createdAt: string;
+    }[];
 }
 
 export async function getDashboardStats(userId?: string) {
@@ -30,45 +35,51 @@ export async function getDashboardStats(userId?: string) {
     const uid = userId ?? DEMO_USER_ID;
 
     try {
-        // 1. Fetch form views and lead counts
+        // 1. Fetch form views and counts of leads per form in one query
+        // We use the count aggregation in the related leads table
         const { data: forms, error: formsError } = await supabase
             .from("forms")
-            .select("id, name, views, brand_id, brands(name)")
+            .select(`
+                id, 
+                name, 
+                views, 
+                brand_id, 
+                brands:brand_id (name),
+                leads:leads (count)
+            `)
             .eq("user_id", uid);
 
         if (formsError) throw formsError;
 
         const totalViews = forms.reduce((acc, f) => acc + (f.views || 0), 0);
-        const formIds = forms.map(f => f.id);
 
-        // 2. Fetch leads for these forms
-        const { data: leads, error: leadsError } = await supabase
-            .from("leads")
-            .select("id, form_id, created_at, forms(name, brand_id, brands(name))")
-            .in("form_id", formIds)
-            .order("created_at", { ascending: false });
-
-        if (leadsError) throw leadsError;
-
-        const totalLeads = leads.length;
-        const avgConversionRate = totalViews > 0 ? (totalLeads / totalViews) * 100 : 0;
-
-        // 3. Calculate Top Performing Forms
+        // 2. Map form stats and calculate total leads
+        let totalLeads = 0;
         const formStats = forms.map(form => {
-            const formLeads = leads.filter(l => l.form_id === form.id).length;
-            const conversionRate = form.views > 0 ? (formLeads / form.views) * 100 : 0;
+            const leadCount = (form.leads as any)?.[0]?.count || 0;
+            totalLeads += leadCount;
+            const conversionRate = form.views > 0 ? (leadCount / form.views) * 100 : 0;
+
             return {
                 name: form.name,
-                count: formLeads,
-                conversionRate: conversionRate
+                count: leadCount,
+                conversionRate: conversionRate,
+                brandName: (form.brands as any)?.name || "Unknown"
             };
-        }).sort((a, b) => b.count - a.count).slice(0, 5);
+        });
 
-        // 4. Calculate Top Performing Brands
+        const avgConversionRate = totalViews > 0 ? (totalLeads / totalViews) * 100 : 0;
+
+        // 3. Top Forms (Sorted by count)
+        const sortedTopForms = [...formStats]
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5)
+            .map(({ name, count, conversionRate }) => ({ name, count, conversionRate }));
+
+        // 4. Calculate Top Brands from the form stats
         const brandMap: Record<string, number> = {};
-        leads.forEach(lead => {
-            const brandName = (lead.forms as any)?.brands?.name || "Unknown";
-            brandMap[brandName] = (brandMap[brandName] || 0) + 1;
+        formStats.forEach(form => {
+            brandMap[form.brandName] = (brandMap[form.brandName] || 0) + form.count;
         });
 
         const topBrands = Object.entries(brandMap)
@@ -76,14 +87,28 @@ export async function getDashboardStats(userId?: string) {
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);
 
-        // 5. Recent Leads (Recent 5)
-        const recentLeads = leads.slice(0, 5).map(lead => ({
+        // 5. Fetch only the most recent 5 leads across all forms
+        const { data: recentLeadsData, error: recentError } = await supabase
+            .from("leads")
+            .select(`
+                id, 
+                created_at, 
+                forms:form_id (
+                    name, 
+                    brands:brand_id (name)
+                )
+            `)
+            .in("form_id", forms.map(f => f.id))
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+        if (recentError) throw recentError;
+
+        const recentLeads = (recentLeadsData || []).map(lead => ({
             id: lead.id,
-            formName: (lead.forms as any)?.name,
-            brandName: (lead.forms as any)?.brands?.name,
-            createdAt: lead.created_at,
-            // Assuming answers might have name/email
-            customer: "Lead #" + lead.id.toString().slice(0, 4)
+            formName: (lead.forms as any)?.name || "Unknown",
+            brandName: (lead.forms as any)?.brands?.name || "Unknown",
+            createdAt: lead.created_at
         }));
 
         return {
@@ -91,10 +116,10 @@ export async function getDashboardStats(userId?: string) {
                 totalLeads,
                 totalViews,
                 avgConversionRate,
-                topForms: formStats,
+                topForms: sortedTopForms,
                 topBrands,
                 recentLeads
-            },
+            } as DashboardStats,
             error: null
         };
 

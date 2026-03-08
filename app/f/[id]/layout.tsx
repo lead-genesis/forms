@@ -1,9 +1,9 @@
 import { Metadata } from "next";
-import { getFormWithBrand } from "@/app/actions/forms";
+import { getForm } from "@/app/actions/forms";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
     const { id } = await params;
-    const { data } = await getFormWithBrand(id);
+    const { data } = await getForm(id);
 
     if (!data) return { title: "Genesis Flow" };
 

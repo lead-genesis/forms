@@ -17,6 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateUserProfile } from "@/app/actions/user";
 import { toast } from "sonner";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface Profile {
     id: string;
@@ -39,12 +46,14 @@ export function UserDetailsSheet({ user, open, onOpenChange }: UserDetailsSheetP
     const [isEditing, setIsEditing] = useState(false);
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [role, setRole] = useState("Member");
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (user) {
             setFirstName(user.first_name || "");
             setLastName(user.last_name || "");
+            setRole(user.role || "Member");
             setIsEditing(false);
         }
     }, [user, open]);
@@ -59,7 +68,8 @@ export function UserDetailsSheet({ user, open, onOpenChange }: UserDetailsSheetP
         try {
             const result = await updateUserProfile(user.id, {
                 first_name: firstName,
-                last_name: lastName
+                last_name: lastName,
+                role: role
             });
 
             if (result.success) {
@@ -127,6 +137,18 @@ export function UserDetailsSheet({ user, open, onOpenChange }: UserDetailsSheetP
                                                 placeholder="Last Name"
                                                 className="rounded-xl"
                                             />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight ml-1">System Role</label>
+                                            <Select value={role} onValueChange={setRole}>
+                                                <SelectTrigger className="rounded-xl bg-secondary/30 border-border/50">
+                                                    <SelectValue placeholder="Select role" />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl border-border/50">
+                                                    <SelectItem value="Member">Member</SelectItem>
+                                                    <SelectItem value="Administrator">Administrator</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     </>
                                 ) : (

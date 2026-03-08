@@ -94,7 +94,7 @@ export const fadeInUp = {
 export const hoverLift = {
     whileHover: { y: -2 },
     transition: { type: "spring", stiffness: 400, damping: 17 },
-};
+} as const;
 
 /* ── Icon Sizing ── */
 

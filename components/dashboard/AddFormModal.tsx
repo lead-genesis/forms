@@ -34,12 +34,17 @@ type Step = "brand" | "name";
 
 export function AddFormModal({ trigger, onCreated }: AddFormModalProps) {
     const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const [step, setStep] = useState<Step>("brand");
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loadingBrands, setLoadingBrands] = useState(false);
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
     const [formName, setFormName] = useState("New Lead Form");
     const [isCreating, setIsCreating] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Fetch brands when modal opens
     useEffect(() => {
@@ -83,6 +88,8 @@ export function AddFormModal({ trigger, onCreated }: AddFormModalProps) {
             setIsCreating(false);
         }
     };
+
+    if (!mounted) return <>{trigger}</>;
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>

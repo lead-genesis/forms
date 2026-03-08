@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Paintbrush, Loader2 } from "lucide-react";
-import { FormStepRenderer, FormStep, StepType } from "./FormStepRenderer";
-import { saveLead, verifyLeadSms, resendLeadSms } from "@/app/actions/leads";
+import { FormStepRenderer, FormStep } from "./FormStepRenderer";
+import { verifyLeadSms, resendLeadSms } from "@/app/actions/leads";
 import { BannerModal } from "../builder/BannerModal";
+import { useFormCanvas } from "@/hooks/useFormCanvas";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,106 +51,25 @@ export function FormCanvas({
     onComplete,
     onBannerChange,
 }: FormCanvasProps) {
-    // ── Live mode state ────────────────────────────────────────────────────────
-    const [liveStepId, setLiveStepId] = useState<string>(steps[0]?.id ?? "");
-    const [history, setHistory] = useState<string[]>([]);
-    const [answers, setAnswers] = useState<Record<string, any>>({});
-    const [submitted, setSubmitted] = useState(false);
-    const [verifiedLeadId, setVerifiedLeadId] = useState<string | null>(null);
+    const {
+        currentStepId,
+        currentStep,
+        currentIndex,
+        answers,
+        history,
+        submitted,
+        setSubmitted,
+        verifiedLeadId,
+        isLoading,
+        handleAnswer,
+        goNext,
+        goBack
+    } = useFormCanvas({ steps, mode, formId, onComplete, activeStepId });
+
     const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const isSubmittingRef = useRef(false);
-
-    // Determine current step based on mode
-    const currentStepId = mode === "preview" ? (activeStepId ?? steps[0]?.id) : (liveStepId || steps[0]?.id);
-    const currentStep = steps.find(s => s.id === currentStepId) || steps[0] || null;
-
-    const currentIndex = steps.findIndex(s => s.id === currentStepId);
-
-    // ── Answer handler ─────────────────────────────────────────────────────────
-    const handleAnswer = useCallback((key: string, value: any) => {
-        setAnswers(prev => ({ ...prev, [key]: value }));
-    }, []);
-
-    // ── Resolve next step with logic ───────────────────────────────────────────
-    const resolveNextStep = useCallback((step: FormStep, optionIndex?: number): string | null => {
-        // Multi-choice: check per-option routing
-        if (step.type === "multi-choice" && optionIndex !== undefined) {
-            const opts = step.data?.options ?? [];
-            const opt = typeof opts[optionIndex] === "object" ? opts[optionIndex] : null;
-            if (opt?.nextStepId && steps.some(s => s.id === opt.nextStepId)) {
-                return opt.nextStepId;
-            }
-        }
-
-        // General logic check
-        const nextId = step.data?.logic?.nextStepId;
-        if (nextId && steps.some(s => s.id === nextId)) return nextId;
-
-        // Default: next in order
-        const idx = steps.findIndex(s => s.id === step.id);
-        return idx < steps.length - 1 ? steps[idx + 1].id : null;
-    }, [steps]);
-
-    // ── Navigate to next step ──────────────────────────────────────────────────
-    const goNext = useCallback(async (optionIndex?: number) => {
-        if (!currentStep) return;
-
-        const nextId = resolveNextStep(currentStep, optionIndex);
-        if (!nextId) return;
-
-        const nextStep = steps.find(s => s.id === nextId);
-
-        // TRIGGER SUBMISSION: If the NEXT step is SMS verification OR the NEXT step is Thank You (and SMS is disabled)
-        // We want the lead created BEFORE they see these steps.
-        // INTEGRITY CHECK: Don't trigger if we are ALREADY on the SMS step (prevents double trigger on verify success)
-        const isArrivingAtSubmissionPoint =
-            (nextStep?.type === "sms-verification" || nextStep?.type === "thank-you") &&
-            currentStep.type !== "sms-verification" &&
-            !submitted &&
-            !isSubmittingRef.current;
-
-        if (isArrivingAtSubmissionPoint && formId) {
-            setIsLoading(true);
-            isSubmittingRef.current = true;
-            try {
-                const res = await saveLead({ formId, answers });
-                if (res.data?.id) {
-                    setVerifiedLeadId(res.data.id);
-                    // If it was just thank-you (no SMS), mark as submitted
-                    if (nextStep?.type === "thank-you") {
-                        setSubmitted(true);
-                        onComplete?.();
-                    }
-                } else {
-                    // Reset if failed so user can try again
-                    isSubmittingRef.current = false;
-                }
-            } catch (e) {
-                console.error("Save lead error:", e);
-                isSubmittingRef.current = false;
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        setHistory(prev => [...prev, currentStepId]);
-        setLiveStepId(nextId);
-    }, [currentStep, currentStepId, resolveNextStep, answers, formId, steps, onComplete, submitted]);
-
-    // ── Navigate backward ──────────────────────────────────────────────────────
-    const goBack = useCallback(() => {
-        setHistory(prev => {
-            if (prev.length === 0) return prev;
-            const newHistory = [...prev];
-            const prevId = newHistory.pop()!;
-            setLiveStepId(prevId);
-            return newHistory;
-        });
-    }, []);
 
     // ── SMS Verification handler ───────────────────────────────────────────
-    const handleSmsVerify = useCallback(async (code: string) => {
+    const handleSmsVerify = async (code: string) => {
         if (!verifiedLeadId) return { success: false, error: "Lead session lost" };
         const res = await verifyLeadSms(verifiedLeadId, code);
         if (res.success) {
@@ -157,13 +77,13 @@ export function FormCanvas({
             goNext(); // Standard advance to thank-you
         }
         return res;
-    }, [verifiedLeadId, goNext]);
+    };
 
     // ── Option select → immediate advance ──────────────────────────────────────
-    const handleOptionSelect = useCallback((optionIndex: number) => {
+    const handleOptionSelect = (optionIndex: number) => {
         // Small delay so the user sees their selection
         setTimeout(() => goNext(optionIndex), 300);
-    }, [goNext]);
+    };
 
     // ── Banner ─────────────────────────────────────────────────────────────────
     const bannerSrc = banner ?? brand?.banner_url ?? "/premium_banner_placeholder_1772712966572.png";

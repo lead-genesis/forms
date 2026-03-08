@@ -14,6 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { inviteUser } from "@/app/actions/user";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { sansFont } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +34,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess }: InviteUserModalP
     const [email, setEmail] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [role, setRole] = useState("Member");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +43,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess }: InviteUserModalP
 
         setIsSubmitting(true);
         try {
-            const result = await inviteUser(email, firstName, lastName);
+            const result = await inviteUser(email, firstName, lastName, role);
             if (result.success) {
                 toast.success("Invitation sent successfully!");
                 setEmail("");
@@ -108,6 +116,20 @@ export function InviteUserModal({ isOpen, onClose, onSuccess }: InviteUserModalP
                             className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:bg-background transition-all focus:ring-2 focus:ring-primary/20"
                         />
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="role" className="text-sm font-semibold pl-1">
+                            System Role
+                        </Label>
+                        <Select value={role} onValueChange={setRole}>
+                            <SelectTrigger id="role" className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:bg-background transition-all">
+                                <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border/50">
+                                <SelectItem value="Member">Member</SelectItem>
+                                <SelectItem value="Administrator">Administrator</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <DialogFooter className="gap-2 sm:gap-0">
                         <Button
                             type="button"
@@ -119,7 +141,7 @@ export function InviteUserModal({ isOpen, onClose, onSuccess }: InviteUserModalP
                         </Button>
                         <Button
                             type="submit"
-                            disabled={isSubmitting || !email}
+                            disabled={isSubmitting || !email || !firstName || !lastName}
                             className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20"
                         >
                             {isSubmitting ? "Sending..." : "Send invite"}

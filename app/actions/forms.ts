@@ -1,19 +1,17 @@
 "use server";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
-function getClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+async function getValidatedUser() {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (!url || !key || url.includes('placeholder')) {
-        return null;
+    if (error || !user) {
+        throw new Error("Unauthorized");
     }
 
-    return createSupabaseClient(url, key);
+    return { supabase, user };
 }
-
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,9 +39,15 @@ export interface CreateFormInput {
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
 export async function createForm(input: CreateFormInput) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
-    const userId = input.userId ?? DEMO_USER_ID;
+    let supabase, user;
+    try {
+        const validated = await getValidatedUser();
+        supabase = validated.supabase;
+        user = validated.user;
+    } catch (e) {
+        return { data: null, error: "Unauthorized" };
+    }
+    const userId = user.id;
 
     // Fetch brand to get default banner
     const { data: brand } = await supabase
@@ -99,15 +103,20 @@ export async function createForm(input: CreateFormInput) {
 }
 
 
-export async function getForms(userId?: string) {
-    const supabase = getClient();
-    if (!supabase) return { data: [], error: "Supabase client not initialized" };
-    const uid = userId ?? DEMO_USER_ID;
+export async function getForms() {
+    let supabase, user;
+    try {
+        const validated = await getValidatedUser();
+        supabase = validated.supabase;
+        user = validated.user;
+    } catch (e) {
+        return { data: [], error: "Unauthorized" };
+    }
+    const uid = user.id;
 
     const { data, error } = await supabase
         .from("forms")
         .select(`*, brands (id, name, logo_url)`)
-        .eq("user_id", uid)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -119,45 +128,41 @@ export async function getForms(userId?: string) {
 }
 
 /** Load a single form with its brand details (for the builder). */
-export async function getFormWithBrand(formId: string) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+export async function getForm(id: string) {
+    console.log("[getForm] Fetching form with ID:", id);
+    try {
+        const supabase = await createClient();
+        const { data, error } = await supabase
+            .from("forms")
+            .select(`
+                *,
+                brands (
+                    id,
+                    name,
+                    logo_url,
+                    banner_url
+                )
+            `)
+            .eq("id", id)
+            .single();
 
-    const { data, error } = await supabase
-        .from("forms")
-        .select(`
-            *,
-            brands (
-                id,
-                name,
-                logo_url,
-                banner_url
-            )
-        `)
-        .eq("id", formId)
-        .single();
+        if (error) {
+            console.error(`[updateForm] Error updating form ${id}:`, error);
+            return { data: null, error: error.message };
+        }
 
-    if (error) {
-        console.error("Get form error:", error);
-        return { data: null, error: error.message };
+        console.log("[getForm] Successfully fetched form:", data?.name);
+        return { data, error: null };
+    } catch (error: any) {
+        console.error("[getForm] Caught exception:", error);
+        return { data: null, error: error.message || "Unknown error" };
     }
-
-    return { data, error: null };
 }
 
 /** Load a single form with its brand details by subdomain (for custom domains). */
 export async function getFormBySubdomain(subdomain: string) {
     console.log("Fetching form by subdomain:", subdomain);
-    const supabase = getClient();
-
-    if (!supabase) {
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        return {
-            data: null,
-            error: `Env missing: URL=${!!url}, KEY=${!!key}. Placeholder=${url?.includes('placeholder')}`
-        };
-    }
+    const supabase = await createClient();
 
     const { data, error } = await supabase
         .from("forms")
@@ -186,27 +191,26 @@ export async function getFormBySubdomain(subdomain: string) {
 // ─── Form Steps ───────────────────────────────────────────────────────────────
 
 export async function getFormSteps(formId: string) {
-    console.log("Fetching steps for form ID:", formId);
-    const supabase = getClient();
+    console.log("[getFormSteps] Fetching steps for form ID:", formId);
+    try {
+        const supabase = await createClient();
+        const { data, error } = await supabase
+            .from("form_steps")
+            .select("*, forms(user_id)")
+            .eq("form_id", formId)
+            .order("order", { ascending: true });
 
-    if (!supabase) {
-        return { data: [], error: "Supabase environment variables are missing on the server." };
+        if (error) {
+            console.error("[getFormSteps] Supabase error:", error);
+            return { data: [], error: error.message };
+        }
+
+        console.log("[getFormSteps] Successfully fetched steps count:", data?.length);
+        return { data: data ?? [], error: null };
+    } catch (error: any) {
+        console.error("[getFormSteps] Caught exception:", error);
+        return { data: [], error: error.message || "Unknown error" };
     }
-
-    const { data, error } = await supabase
-        .from("form_steps")
-        .select("*")
-        .eq("form_id", formId)
-        .order("order", { ascending: true });
-
-
-    if (error) {
-        console.error("Get form steps error:", error);
-        return { data: [], error: error.message };
-    }
-
-    console.log(`Successfully fetched ${data?.length ?? 0} steps`);
-    return { data: data ?? [], error: null };
 }
 
 export interface CreateStepInput {
@@ -218,27 +222,29 @@ export interface CreateStepInput {
 }
 
 export async function createStep(input: CreateStepInput) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+    try {
+        const { supabase } = await getValidatedUser();
+        const { data, error } = await supabase
+            .from("form_steps")
+            .insert({
+                form_id: input.formId,
+                type: input.type,
+                title: input.title,
+                data: input.data,
+                order: input.order,
+            })
+            .select()
+            .single();
 
-    const { data, error } = await supabase
-        .from("form_steps")
-        .insert({
-            form_id: input.formId,
-            type: input.type,
-            title: input.title,
-            data: input.data,
-            order: input.order,
-        })
-        .select()
-        .single();
+        if (error) {
+            console.error("Create step error:", error);
+            return { data: null, error: error.message };
+        }
 
-    if (error) {
-        console.error("Create step error:", error);
-        return { data: null, error: error.message };
+        return { data, error: null };
+    } catch (error: any) {
+        return { data: null, error: error.message || "Unauthorized" };
     }
-
-    return { data, error: null };
 }
 
 export interface UpdateStepInput {
@@ -248,101 +254,106 @@ export interface UpdateStepInput {
 }
 
 export async function updateStep(stepId: string, input: UpdateStepInput) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+    try {
+        const { supabase } = await getValidatedUser();
+        const { data, error } = await supabase
+            .from("form_steps")
+            .update(input)
+            .eq("id", stepId)
+            .select()
+            .single();
 
-    const { data, error } = await supabase
-        .from("form_steps")
-        .update(input)
-        .eq("id", stepId)
-        .select()
-        .single();
+        if (error) {
+            console.error("Update step error:", error);
+            return { data: null, error: error.message };
+        }
 
-    if (error) {
-        console.error("Update step error:", error);
-        return { data: null, error: error.message };
+        return { data, error: null };
+    } catch (error: any) {
+        return { data: null, error: error.message || "Unauthorized" };
     }
-
-    return { data, error: null };
 }
 
 export async function deleteStep(stepId: string) {
-    const supabase = getClient();
-    if (!supabase) return { error: "Supabase client not initialized" };
+    try {
+        const { supabase } = await getValidatedUser();
+        const { error } = await supabase
+            .from("form_steps")
+            .delete()
+            .eq("id", stepId);
 
-    const { error } = await supabase
-        .from("form_steps")
-        .delete()
-        .eq("id", stepId);
+        if (error) {
+            console.error("Delete step error:", error);
+            return { error: error.message };
+        }
 
-    if (error) {
-        console.error("Delete step error:", error);
-        return { error: error.message };
+        return { error: null };
+    } catch (error: any) {
+        return { error: error.message || "Unauthorized" };
     }
-
-    return { error: null };
 }
 
 /** Batch update step order after drag-to-reorder. */
 export async function reorderSteps(updates: { id: string; order: number }[]) {
-    const supabase = getClient();
-    if (!supabase) return { error: "Supabase client not initialized" };
+    try {
+        const { supabase } = await getValidatedUser();
 
-    // Run all updates in parallel
-    const client = supabase; // Explicitly capture for the map
-    const results = await Promise.all(
-        updates.map(({ id, order }) =>
-            client
-                .from("form_steps")
-                .update({ order })
-                .eq("id", id)
-        )
-    );
+        // Run all updates in parallel
+        const results = await Promise.all(
+            updates.map(({ id, order }) =>
+                supabase
+                    .from("form_steps")
+                    .update({ order })
+                    .eq("id", id)
+            )
+        );
 
-    const firstError = results.find(r => r.error);
-    if (firstError?.error) {
-        console.error("Reorder steps error:", firstError.error);
-        return { error: firstError.error.message };
+        const firstError = results.find(r => r.error);
+        if (firstError?.error) {
+            console.error("Reorder steps error:", firstError.error);
+            return { error: firstError.error.message };
+        }
+
+        return { error: null };
+    } catch (error: any) {
+        return { error: error.message || "Unauthorized" };
     }
-
-    return { error: null };
 }
 
 // ─── Leads ────────────────────────────────────────────────────────────────────
 
 export async function getLeadsByForm(formId: string) {
-    const supabase = getClient();
-    if (!supabase) return { data: [], error: "Supabase client not initialized" };
+    try {
+        const { supabase } = await getValidatedUser();
+        const { data, error } = await supabase
+            .from("leads")
+            .select("*")
+            .eq("form_id", formId)
+            .order("created_at", { ascending: false });
 
-    const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .eq("form_id", formId)
-        .order("created_at", { ascending: false });
+        if (error) {
+            console.error("Get leads error:", error);
+            return { data: [], error: error.message };
+        }
 
-    if (error) {
-        console.error("Get leads error:", error);
-        return { data: [], error: error.message };
+        return { data: data ?? [], error: null };
+    } catch (error: any) {
+        return { data: [], error: error.message || "Unauthorized" };
     }
-
-    return { data: data ?? [], error: null };
 }
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
 
 export async function incrementFormViews(formId: string) {
-    const supabase = getClient();
-    if (!supabase) return { error: "Supabase client not initialized" };
+    try {
+        const supabase = await createClient();
 
-    // RPC would be better here: .rpc('increment_form_views', { form_id: formId })
-    // But since we might not have the DB function, we'll do a simple fetch + update 
-    // or use Supabase's increment if available in the client.
+        // 1. Try atomic increment using RPC
+        const { error: rpcError } = await supabase.rpc('increment_form_views', { f_id: formId });
 
-    // In current Supabase JS, you can use:
-    const { error } = await supabase.rpc('increment_form_views', { f_id: formId });
+        if (!rpcError) return { success: true };
 
-    if (error) {
-        // Fallback if RPC doesn't exist: fetch then increment
+        // 2. Fallback to basic update (non-atomic but reliable)
         const { data: form } = await supabase
             .from("forms")
             .select("views")
@@ -355,9 +366,12 @@ export async function incrementFormViews(formId: string) {
                 .update({ views: (form.views || 0) + 1 })
                 .eq("id", formId);
         }
-    }
 
-    return { error: null };
+        return { success: true };
+    } catch (error) {
+        console.error("Increment views error:", error);
+        return { success: false };
+    }
 }
 
 // ─── Update Form ──────────────────────────────────────────────────────────────
@@ -374,84 +388,87 @@ export interface UpdateFormInput {
 }
 
 export async function updateForm(formId: string, input: UpdateFormInput) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+    try {
+        const { supabase, user } = await getValidatedUser();
 
-    // 1. Handle SMS verification step side-effects
-    if (input.sms_verification !== undefined) {
-        const { data: currentForm } = await supabase
-            .from("forms")
-            .select("sms_verification")
-            .eq("id", formId)
-            .single();
+        // 1. Handle SMS verification step side-effects
+        if (input.sms_verification !== undefined) {
+            const { data: currentForm } = await supabase
+                .from("forms")
+                .select("sms_verification")
+                .eq("id", formId)
+                .single();
 
-        if (currentForm && currentForm.sms_verification !== input.sms_verification) {
-            if (input.sms_verification) {
-                // Toggled ON: Add the step
-                const { data: steps } = await supabase
-                    .from("form_steps")
-                    .select("id, order, type")
-                    .eq("form_id", formId)
-                    .order("order", { ascending: true });
+            if (currentForm && currentForm.sms_verification !== input.sms_verification) {
+                if (input.sms_verification) {
+                    // Toggled ON: Add the step
+                    const { data: steps } = await supabase
+                        .from("form_steps")
+                        .select("id, order, type")
+                        .eq("form_id", formId)
+                        .order("order", { ascending: true });
 
-                const thankYouStep = steps?.find(s => s.type === "thank-you");
-                const smsStepExists = steps?.some(s => s.type === "sms-verification");
+                    const thankYouStep = steps?.find(s => s.type === "thank-you");
+                    const smsStepExists = steps?.some(s => s.type === "sms-verification");
 
-                if (!smsStepExists && thankYouStep) {
-                    // Push thank-you step forward
+                    if (!smsStepExists && thankYouStep) {
+                        // Push thank-you step forward
+                        await supabase
+                            .from("form_steps")
+                            .update({ order: thankYouStep.order + 1 })
+                            .eq("id", thankYouStep.id);
+
+                        // Insert SMS step
+                        await supabase.from("form_steps").insert({
+                            form_id: formId,
+                            type: "sms-verification",
+                            title: "SMS Verification",
+                            data: {},
+                            order: thankYouStep.order,
+                        });
+                    }
+                } else {
+                    // Toggled OFF: Remove the step
                     await supabase
                         .from("form_steps")
-                        .update({ order: thankYouStep.order + 1 })
-                        .eq("id", thankYouStep.id);
+                        .delete()
+                        .eq("form_id", formId)
+                        .eq("type", "sms-verification");
 
-                    // Insert SMS step
-                    await supabase.from("form_steps").insert({
-                        form_id: formId,
-                        type: "sms-verification",
-                        title: "SMS Verification",
-                        data: {},
-                        order: thankYouStep.order,
-                    });
-                }
-            } else {
-                // Toggled OFF: Remove the step
-                await supabase
-                    .from("form_steps")
-                    .delete()
-                    .eq("form_id", formId)
-                    .eq("type", "sms-verification");
+                    // Re-order remaining steps to be compact
+                    const { data: remainingSteps } = await supabase
+                        .from("form_steps")
+                        .select("id")
+                        .eq("form_id", formId)
+                        .order("order", { ascending: true });
 
-                // Re-order remaining steps to be compact
-                const { data: remainingSteps } = await supabase
-                    .from("form_steps")
-                    .select("id")
-                    .eq("form_id", formId)
-                    .order("order", { ascending: true });
-
-                if (remainingSteps) {
-                    await Promise.all(
-                        remainingSteps.map((s, i) =>
-                            supabase.from("form_steps").update({ order: i }).eq("id", s.id)
-                        )
-                    );
+                    if (remainingSteps) {
+                        await Promise.all(
+                            remainingSteps.map((s, i) =>
+                                supabase.from("form_steps").update({ order: i }).eq("id", s.id)
+                            )
+                        );
+                    }
                 }
             }
         }
+
+        const { data, error } = await supabase
+            .from("forms")
+            .update(input)
+            .eq("id", formId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Update form error:", error);
+            return { data: null, error: error.message };
+        }
+
+        return { data, error: null };
+    } catch (error: any) {
+        return { data: null, error: error.message || "Unauthorized" };
     }
-
-    const { data, error } = await supabase
-        .from("forms")
-        .update(input)
-        .eq("id", formId)
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Update form error:", error);
-        return { data: null, error: error.message };
-    }
-
-    return { data, error: null };
 }
 
 // ─── Duplicate Form ───────────────────────────────────────────────────────────
@@ -460,8 +477,7 @@ export async function updateForm(formId: string, input: UpdateFormInput) {
  * Generates a unique subdomain by appending suffixes if needed.
  */
 async function generateUniqueSubdomain(baseSubdomain: string): Promise<string> {
-    const supabase = getClient();
-    if (!supabase) return baseSubdomain;
+    const supabase = await createClient();
 
     let candidate = baseSubdomain;
     let attempt = 0;
@@ -500,86 +516,89 @@ async function generateUniqueSubdomain(baseSubdomain: string): Promise<string> {
  * Robustly duplicates a form and all its steps.
  */
 export async function duplicateForm(formId: string) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+    try {
+        const { supabase } = await getValidatedUser();
 
-    // 1. Fetch original form
-    const { data: originalForm, error: fetchError } = await supabase
-        .from("forms")
-        .select("*")
-        .eq("id", formId)
-        .single();
+        // 1. Fetch original form
+        const { data: originalForm, error: fetchError } = await supabase
+            .from("forms")
+            .select("*")
+            .eq("id", formId)
+            .single();
 
-    if (fetchError || !originalForm) {
-        console.error("Fetch original form error:", fetchError);
-        return { data: null, error: fetchError?.message || "Original form not found" };
-    }
-
-    // 2. Prepare new form data
-    const newName = `${originalForm.name} (copy)`;
-    const baseSubdomain = originalForm.subdomain ? `${originalForm.subdomain}-copy` : null;
-    let newSubdomain = null;
-
-    if (baseSubdomain) {
-        newSubdomain = await generateUniqueSubdomain(baseSubdomain);
-    }
-
-    // 3. Insert new form
-    const { data: newForm, error: insertError } = await supabase
-        .from("forms")
-        .insert({
-            user_id: originalForm.user_id,
-            brand_id: originalForm.brand_id,
-            name: newName,
-            status: "draft", // Always default to draft on copy
-            webhook_url: originalForm.webhook_url,
-            subdomain: newSubdomain,
-            views: 0,
-            banner: originalForm.banner,
-            custom_page_title: originalForm.custom_page_title,
-            custom_site_description: originalForm.custom_site_description,
-        })
-        .select()
-        .single();
-
-    if (insertError || !newForm) {
-        console.error("Duplicate form insert error:", insertError);
-        return { data: null, error: insertError?.message || "Failed to create duplicated form" };
-    }
-
-    // 4. Duplicate steps
-    const { data: originalSteps, error: stepsError } = await supabase
-        .from("form_steps")
-        .select("*")
-        .eq("form_id", formId)
-        .order("order", { ascending: true });
-
-    if (stepsError) {
-        console.error("Fetch original steps error:", stepsError);
-        // We still have the form, so maybe not a total failure but good to report
-        return { data: newForm, error: `Form duplicated but steps failed: ${stepsError.message}` };
-    }
-
-    if (originalSteps && originalSteps.length > 0) {
-        const stepsToInsert = originalSteps.map(step => ({
-            form_id: newForm.id,
-            type: step.type,
-            title: step.title,
-            data: step.data,
-            order: step.order,
-        }));
-
-        const { error: batchInsertError } = await supabase
-            .from("form_steps")
-            .insert(stepsToInsert);
-
-        if (batchInsertError) {
-            console.error("Batch insert steps error:", batchInsertError);
-            return { data: newForm, error: `Form duplicated but steps failed to insert: ${batchInsertError.message}` };
+        if (fetchError || !originalForm) {
+            console.error("Fetch original form error:", fetchError);
+            return { data: null, error: fetchError?.message || "Original form not found" };
         }
-    }
 
-    return { data: newForm, error: null };
+        // 2. Prepare new form data
+        const newName = `${originalForm.name} (copy)`;
+        const baseSubdomain = originalForm.subdomain ? `${originalForm.subdomain}-copy` : null;
+        let newSubdomain = null;
+
+        if (baseSubdomain) {
+            newSubdomain = await generateUniqueSubdomain(baseSubdomain);
+        }
+
+        // 3. Insert new form
+        const { data: newForm, error: insertError } = await supabase
+            .from("forms")
+            .insert({
+                user_id: originalForm.user_id,
+                brand_id: originalForm.brand_id,
+                name: newName,
+                status: "draft", // Always default to draft on copy
+                webhook_url: originalForm.webhook_url,
+                subdomain: newSubdomain,
+                views: 0,
+                banner: originalForm.banner,
+                custom_page_title: originalForm.custom_page_title,
+                custom_site_description: originalForm.custom_site_description,
+                sms_verification: originalForm.sms_verification,
+            })
+            .select()
+            .single();
+
+        if (insertError || !newForm) {
+            console.error("Duplicate form insert error:", insertError);
+            return { data: null, error: insertError?.message || "Failed to create duplicated form" };
+        }
+
+        // 4. Duplicate steps
+        const { data: originalSteps, error: stepsError } = await supabase
+            .from("form_steps")
+            .select("*")
+            .eq("form_id", formId)
+            .order("order", { ascending: true });
+
+        if (stepsError) {
+            console.error("Fetch original steps error:", stepsError);
+            return { data: newForm, error: `Form duplicated but steps failed: ${stepsError.message}` };
+        }
+
+        if (originalSteps && originalSteps.length > 0) {
+            const stepsToInsert = originalSteps.map(step => ({
+                form_id: newForm.id,
+                type: step.type,
+                title: step.title,
+                data: step.data,
+                order: step.order,
+            }));
+
+            const { error: batchInsertError } = await supabase
+                .from("form_steps")
+                .insert(stepsToInsert);
+
+            if (batchInsertError) {
+                console.error("Batch insert steps error:", batchInsertError);
+                return { data: newForm, error: `Form duplicated but steps failed to insert: ${batchInsertError.message}` };
+            }
+        }
+
+        return { data: newForm, error: null };
+    } catch (error: any) {
+        return { data: null, error: error.message || "Unauthorized" };
+    }
 }
 
 // ─── Webhooks ─────────────────────────────────────────────────────────────────
@@ -608,12 +627,10 @@ export async function testWebhookUrl(url: string, payload: any) {
 // ─── Image Upload ─────────────────────────────────────────────────────────────
 
 async function uploadImage(
+    supabase: any,
     dataUrl: string,
     path: string
 ): Promise<string | null> {
-    const supabase = getClient();
-    if (!supabase) return null;
-
     try {
         const [meta, base64] = dataUrl.split(",");
         const mimeMatch = meta.match(/:(.*?);/);
@@ -640,37 +657,31 @@ async function uploadImage(
 }
 
 export async function updateFormBanner(formId: string, dataUrl: string) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
+    try {
+        const { supabase, user } = await getValidatedUser();
 
-    // Fetch form to get user_id for path
-    const { data: form } = await supabase
-        .from("forms")
-        .select("user_id")
-        .eq("id", formId)
-        .single();
+        const filePath = `${user.id}/forms/${formId}/banner`;
+        const bannerUrl = await uploadImage(supabase, dataUrl, filePath);
 
-    if (!form) return { data: null, error: "Form not found" };
+        if (!bannerUrl) {
+            return { data: null, error: "Failed to upload image" };
+        }
 
-    const filePath = `${form.user_id}/forms/${formId}/banner`;
-    const bannerUrl = await uploadImage(dataUrl, filePath);
+        const { data, error } = await supabase
+            .from("forms")
+            .update({ banner: bannerUrl })
+            .eq("id", formId)
+            .select()
+            .single();
 
-    if (!bannerUrl) {
-        return { data: null, error: "Failed to upload image" };
+        if (error) {
+            console.error("Update form banner error:", error);
+            return { data: null, error: error.message };
+        }
+
+        return { data, error: null };
+    } catch (error: any) {
+        return { data: null, error: error.message || "Unauthorized" };
     }
-
-    const { data, error } = await supabase
-        .from("forms")
-        .update({ banner: bannerUrl })
-        .eq("id", formId)
-        .select()
-        .single();
-
-    if (error) {
-        console.error("Update form banner error:", error);
-        return { data: null, error: error.message };
-    }
-
-    return { data, error: null };
 }
 

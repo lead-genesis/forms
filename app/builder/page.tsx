@@ -3,14 +3,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { sansFont } from "@/lib/design-system";
 import { BuilderHeader } from "@/components/builder/BuilderHeader";
 import { StepList } from "@/components/builder/StepList";
 import { StepConfig } from "@/components/builder/StepConfig";
 import { FormSettings } from "@/components/builder/FormSettings";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import {
-    getFormWithBrand,
+    getForm,
     getFormSteps,
     createStep,
     updateStep,
@@ -18,81 +17,9 @@ import {
     updateForm,
 } from "@/app/actions/forms";
 import { toast } from "sonner";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type StepType =
-    | "welcome"
-    | "multi-choice"
-    | "address"
-    | "input"
-    | "contact"
-    | "thank-you";
-
-export interface FormStep {
-    id: string;
-    type: StepType;
-    title: string;
-    data: any;
-    /** true while the DB write is in-flight (optimistic) */
-    _pending?: boolean;
-}
-
-/** Default `data` seeds per step type — used for both optimistic UI and DB insert */
-function defaultData(type: StepType): Record<string, any> {
-    switch (type) {
-        case "welcome":
-            return { heading: "Welcome to our form", subheading: "Please fill out the details below", buttonText: "Get Started" };
-        case "contact":
-            return { fields: ["first_name", "last_name", "email", "phone"] };
-        case "multi-choice":
-            return { question: "", options: ["Option 1", "Option 2"] };
-        case "input":
-            return { label: "", placeholder: "" };
-        case "address":
-            return { label: "Where are you located?" };
-        case "thank-you":
-            return { message: "Thanks for your submission!", subtext: "We'll be in touch soon." };
-        default:
-            return {};
-    }
-}
-
-function humanTitle(type: StepType): string {
-    switch (type) {
-        case "welcome": return "Welcome Page";
-        case "contact": return "Contact Details";
-        case "multi-choice": return "Multi Choice";
-        case "input": return "Text Input";
-        case "address": return "Address";
-        case "thank-you": return "Thank You Page";
-        default: return type;
-    }
-}
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
-const DesktopIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <rect width="20" height="14" x="2" y="3" rx="2" />
-        <path d="M8 21h8" />
-        <path d="M12 17v4" />
-    </svg>
-);
-
-const TabletIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <rect width="16" height="20" x="4" y="2" rx="2" />
-        <path d="M12 18h.01" />
-    </svg>
-);
-
-const MobileIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <rect width="10" height="18" x="7" y="3" rx="2" />
-        <path d="M12 17h.01" />
-    </svg>
-);
+import { FormStep, StepType, defaultData, humanTitle } from "@/lib/builder";
+import { ViewportToggle, ViewportMode } from "@/components/builder/ViewportToggle";
+import { useFormAutosave } from "./hooks/useFormAutosave";
 
 // ─── Builder Page ─────────────────────────────────────────────────────────────
 
@@ -112,32 +39,23 @@ function BuilderContent() {
     const [smsVerification, setSmsVerification] = useState(false);
     const [customPageTitle, setCustomPageTitle] = useState("");
     const [customSiteDescription, setCustomSiteDescription] = useState("");
+    const [viewport, setViewport] = useState<ViewportMode>("desktop");
 
-    // Update document title dynamically
+    const { isSaving, debouncedSave, saveField } = useFormAutosave(formId);
+
+    // Consolidate dynamic title updates
     useEffect(() => {
-        const brandName = brand?.name;
-        const currentFormName = formName || "Genesis Flow";
-
-        let title = brandName ? `${currentFormName} - ${brandName}` : currentFormName;
-        if (customPageTitle) {
-            title = brandName ? `${customPageTitle} - ${brandName}` : customPageTitle;
-        }
+        const title = formName || "Form Builder";
         document.title = `${title} (Builder)`;
-    }, [formName, brand, customPageTitle]);
-    const [isSaving, setIsSaving] = useState(false);
-    const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
-
-    // Debounce refs: map of stepId → timeout handle
-    const debounceRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    }, [formName]);
 
     // ── Load form on mount ─────────────────────────────────────────────────────
     useEffect(() => {
         if (!formId) {
-            // No DB form — use in-memory defaults
             const defaults: FormStep[] = [
-                { id: "1", type: "welcome", title: "Welcome Page", data: defaultData("welcome") },
-                { id: "2", type: "contact", title: "Contact Details", data: defaultData("contact") },
-                { id: "3", type: "thank-you", title: "Thank You Page", data: defaultData("thank-you") },
+                { id: "1", type: "welcome", title: humanTitle("welcome"), data: defaultData("welcome") },
+                { id: "2", type: "contact", title: humanTitle("contact"), data: defaultData("contact") },
+                { id: "3", type: "thank-you", title: humanTitle("thank-you"), data: defaultData("thank-you") },
             ];
             setSteps(defaults);
             setCurrentStepId(defaults[0].id);
@@ -147,7 +65,7 @@ function BuilderContent() {
         (async () => {
             setIsLoading(true);
             const [formRes, stepsRes] = await Promise.all([
-                getFormWithBrand(formId),
+                getForm(formId),
                 getFormSteps(formId),
             ]);
 
@@ -181,80 +99,38 @@ function BuilderContent() {
         })();
     }, [formId]);
 
-    // ── Update Page Title Dynamically ──────────────────────────────────────────
-    // Moving this to a JSX <title> tag to avoid Next.js App Router metadata overriding it
-
     const currentStep = steps.find(s => s.id === currentStepId) ?? steps[0];
 
     // ── Autosave Meta ────────────────────────────────────────────────────────
     const setFormNameWithSave = useCallback((name: string) => {
         setFormName(name);
-        if (!formId) return;
-
-        clearTimeout(debounceRefs.current["form_meta"]);
-        debounceRefs.current["form_meta"] = setTimeout(async () => {
-            setIsSaving(true);
-            await updateForm(formId, { name });
-            setIsSaving(false);
-        }, 500);
-    }, [formId]);
+        debouncedSave("name", name);
+    }, [debouncedSave]);
 
     const setWebhookUrlWithSave = useCallback((url: string) => {
         setWebhookUrl(url);
-        if (!formId) return;
-
-        clearTimeout(debounceRefs.current["form_meta_webhook"]);
-        debounceRefs.current["form_meta_webhook"] = setTimeout(async () => {
-            setIsSaving(true);
-            await updateForm(formId, { webhook_url: url });
-            setIsSaving(false);
-        }, 500);
-    }, [formId]);
+        debouncedSave("webhook_url", url);
+    }, [debouncedSave]);
 
     const setStatusWithSave = useCallback((newStatus: string) => {
         setStatus(newStatus);
-        if (!formId) return;
-
-        // Immediately update without debate just like dashboard
-        setIsSaving(true);
-        updateForm(formId, { status: newStatus }).finally(() => setIsSaving(false));
-    }, [formId]);
+        saveField("status", newStatus);
+    }, [saveField]);
 
     const setSubdomainWithSave = useCallback((sub: string) => {
         setSubdomain(sub);
-        if (!formId) return;
-
-        clearTimeout(debounceRefs.current["form_meta_subdomain"]);
-        debounceRefs.current["form_meta_subdomain"] = setTimeout(async () => {
-            setIsSaving(true);
-            await updateForm(formId, { subdomain: sub });
-            setIsSaving(false);
-        }, 500);
-    }, [formId]);
+        debouncedSave("subdomain", sub);
+    }, [debouncedSave]);
 
     const setCustomPageTitleWithSave = useCallback((title: string) => {
         setCustomPageTitle(title);
-        if (!formId) return;
-
-        clearTimeout(debounceRefs.current["form_meta_page_title"]);
-        debounceRefs.current["form_meta_page_title"] = setTimeout(async () => {
-            setIsSaving(true);
-            await updateForm(formId, { custom_page_title: title });
-            setIsSaving(false);
-        }, 500);
-    }, [formId]);
+        debouncedSave("custom_page_title", title);
+    }, [debouncedSave]);
 
     const setCustomSiteDescriptionWithSave = useCallback((desc: string) => {
         setCustomSiteDescription(desc);
-        if (!formId) return;
-
-        clearTimeout(debounceRefs.current["form_meta_site_description"]);
-        debounceRefs.current["form_meta_site_description"] = setTimeout(async () => {
-            setIsSaving(true);
-            await updateForm(formId, { custom_site_description: desc });
-            setIsSaving(false);
-        }, 500);
-    }, [formId]);
+        debouncedSave("custom_site_description", desc);
+    }, [debouncedSave]);
 
     // ── Add Step (optimistic) ──────────────────────────────────────────────────
     const addStep = useCallback(async (type: StepType) => {
@@ -267,31 +143,25 @@ function BuilderContent() {
             _pending: true,
         };
 
-        // 1. Optimistically add to UI
         setSteps(prev => [...prev, newStep]);
         setCurrentStepId(tempId);
 
-        if (!formId) return; // no-DB mode, keep temp ID
+        if (!formId) return;
 
-        // 2. Persist to Supabase
-        setIsSaving(true);
         const { data, error } = await createStep({
             formId,
             type,
             title: newStep.title,
             data: newStep.data,
-            order: steps.length, // append at end
+            order: steps.length,
         });
-        setIsSaving(false);
 
         if (error || !data) {
             toast.error("Failed to create step");
-            // Roll back optimistic step
             setSteps(prev => prev.filter(s => s.id !== tempId));
             return;
         }
 
-        // 3. Replace temp ID with real DB id
         setSteps(prev =>
             prev.map(s =>
                 s.id === tempId
@@ -303,8 +173,9 @@ function BuilderContent() {
     }, [formId, steps.length]);
 
     // ── Update Step Data (debounced) ───────────────────────────────────────────
+    const stepDebounceRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
     const updateStepData = useCallback((stepId: string, newData: any) => {
-        // Merge locally immediately
         setSteps(prev =>
             prev.map(s =>
                 s.id === stepId ? { ...s, data: { ...s.data, ...newData } } : s
@@ -313,19 +184,15 @@ function BuilderContent() {
 
         if (!formId || stepId.startsWith("tmp_")) return;
 
-        // Debounce DB write by 300ms
-        clearTimeout(debounceRefs.current[stepId]);
-        debounceRefs.current[stepId] = setTimeout(async () => {
-            setIsSaving(true);
+        clearTimeout(stepDebounceRefs.current[stepId]);
+        stepDebounceRefs.current[stepId] = setTimeout(async () => {
             const step = steps.find(s => s.id === stepId);
             if (step) {
                 await updateStep(stepId, { data: { ...step.data, ...newData } });
             }
-            setIsSaving(false);
         }, 300);
     }, [formId, steps]);
 
-    // ── Update Step Title (debounced) ──────────────────────────────────────────
     const updateStepTitle = useCallback((stepId: string, title: string) => {
         setSteps(prev =>
             prev.map(s => s.id === stepId ? { ...s, title } : s)
@@ -333,30 +200,21 @@ function BuilderContent() {
 
         if (!formId || stepId.startsWith("tmp_")) return;
 
-        clearTimeout(debounceRefs.current[`${stepId}_title`]);
-        debounceRefs.current[`${stepId}_title`] = setTimeout(async () => {
-            setIsSaving(true);
+        clearTimeout(stepDebounceRefs.current[`${stepId}_title`]);
+        stepDebounceRefs.current[`${stepId}_title`] = setTimeout(async () => {
             await updateStep(stepId, { title });
-            setIsSaving(false);
         }, 300);
     }, [formId]);
 
-    // ── Reorder Steps ──────────────────────────────────────────────────────────
     const handleReorder = useCallback((reordered: FormStep[]) => {
         setSteps(reordered);
-
         if (!formId) return;
-
-        // Batch update order in Supabase (skip temp/pending steps)
         const updates = reordered
             .map((s, i) => ({ id: s.id, order: i }))
             .filter(u => !u.id.startsWith("tmp_"));
-
-        setIsSaving(true);
-        reorderSteps(updates).finally(() => setIsSaving(false));
+        reorderSteps(updates);
     }, [formId]);
 
-    // ── StepConfig unified onUpdate — handles title separately ─────────────────
     const handleConfigUpdate = useCallback((data: any) => {
         if (!currentStep) return;
         if ("title" in data) {
@@ -366,11 +224,6 @@ function BuilderContent() {
         }
     }, [currentStep, updateStepData, updateStepTitle]);
 
-    useEffect(() => {
-        document.title = formName ? `${formName} - Genesis Flow` : "Builder - Genesis Flow";
-    }, [formName]);
-
-    // ── Loading State ──────────────────────────────────────────────────────────
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-background">
@@ -382,12 +235,8 @@ function BuilderContent() {
         );
     }
 
-    // Banner: use brand banner if available, else fallback placeholder
-    const bannerSrc = brand?.banner_url ?? "/premium_banner_placeholder_1772712966572.png";
-
     return (
         <div className="flex flex-col h-screen bg-background overflow-hidden">
-            {/* Header */}
             <BuilderHeader
                 formName={formName}
                 onNameChange={setFormNameWithSave}
@@ -400,7 +249,6 @@ function BuilderContent() {
             />
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Left Sidebar - Step Settings */}
                 <aside className="w-80 border-r border-border bg-background overflow-y-auto hidden lg:block">
                     {currentStep && (
                         <StepConfig
@@ -411,47 +259,8 @@ function BuilderContent() {
                     )}
                 </aside>
 
-                {/* Main Canvas */}
                 <main className="flex-1 relative flex flex-col bg-secondary/20 overflow-hidden items-center justify-center">
-                    {/* Viewport Toggle */}
-                    <div className="absolute top-6 left-6 z-40 bg-background/95 backdrop-blur-md border border-border/60 rounded-full p-1.5 shadow-sm flex items-center gap-1">
-                        <button
-                            onClick={() => setViewport("desktop")}
-                            className={cn(
-                                "p-2 rounded-full transition-all duration-200",
-                                viewport === "desktop"
-                                    ? "bg-foreground text-background shadow-sm"
-                                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                            )}
-                            title="Desktop View"
-                        >
-                            <DesktopIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => setViewport("tablet")}
-                            className={cn(
-                                "p-2 rounded-full transition-all duration-200",
-                                viewport === "tablet"
-                                    ? "bg-foreground text-background shadow-sm"
-                                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                            )}
-                            title="Tablet View"
-                        >
-                            <TabletIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => setViewport("mobile")}
-                            className={cn(
-                                "p-2 rounded-full transition-all duration-200",
-                                viewport === "mobile"
-                                    ? "bg-foreground text-background shadow-sm"
-                                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                            )}
-                            title="Mobile View"
-                        >
-                            <MobileIcon className="w-4 h-4" />
-                        </button>
-                    </div>
+                    <ViewportToggle viewport={viewport} setViewport={setViewport} />
 
                     <div
                         className={cn(
@@ -472,7 +281,6 @@ function BuilderContent() {
                         />
                     </div>
 
-                    {/* Step Navigation */}
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 w-auto min-w-[300px] max-w-[95%] pointer-events-none">
                         <div className="pointer-events-auto">
                             <StepList
@@ -486,7 +294,6 @@ function BuilderContent() {
                     </div>
                 </main>
 
-                {/* Right Sidebar - Form Settings */}
                 <aside className="w-80 border-l border-border bg-background overflow-y-auto hidden lg:block">
                     <FormSettings
                         formName={formName}

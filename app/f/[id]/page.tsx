@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import { FormStep } from "@/components/form/FormStepRenderer";
-import { getFormWithBrand, getFormSteps, incrementFormViews } from "@/app/actions/forms";
+import { getForm, getFormSteps, incrementFormViews } from "@/app/actions/forms";
 // Metadata moved to layout.tsx
 
 export default function PublicFormPage() {
@@ -29,7 +29,7 @@ export default function PublicFormPage() {
         (async () => {
             setIsLoading(true);
             const [formRes, stepsRes] = await Promise.all([
-                getFormWithBrand(formId),
+                getForm(formId),
                 getFormSteps(formId),
             ]);
 

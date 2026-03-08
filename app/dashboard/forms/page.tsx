@@ -122,15 +122,23 @@ export default function FormsPage() {
                                         {form.name}
                                     </h3>
 
-                                    <div className="flex items-center gap-1.5 mt-1.5">
-                                        <ClockIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
-                                        <span className="text-[11px] text-muted-foreground/70">
-                                            {new Date(form.created_at).toLocaleDateString("en-AU", {
-                                                day: "numeric",
-                                                month: "short",
-                                                year: "numeric",
-                                            })}
-                                        </span>
+                                    <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                        <ClockIcon className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 truncate">
+                                            <span className="shrink-0">
+                                                {new Date(form.created_at).toLocaleDateString("en-AU", {
+                                                    day: "numeric",
+                                                    month: "short",
+                                                    year: "numeric",
+                                                })}
+                                            </span>
+                                            {form.brands?.name && (
+                                                <>
+                                                    <span className="text-muted-foreground/40 shrink-0">•</span>
+                                                    <span className="truncate" title={form.brands.name}>{form.brands.name}</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center justify-between mt-3 gap-2">

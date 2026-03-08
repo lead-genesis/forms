@@ -1,19 +1,23 @@
 "use server";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { buildWebhookPayload } from "@/lib/webhook";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 
-function getClient() {
-    return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+async function getValidatedUser() {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+        throw new Error("Unauthorized");
+    }
+
+    return { supabase, user };
 }
 
 export async function saveLead(input: { formId: string; answers: Record<string, any> }) {
-    const supabase = getClient();
+    const supabase = await createClient(); // Use standard createClient
 
     // 1. Fetch form settings first to check for SMS verification and get brand info
     const { data: form } = await supabase
@@ -39,7 +43,7 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
         .single();
 
     if (error) {
-        console.error("Save lead error:", error);
+        console.error(`[saveLead] Error saving lead for form ${input.formId}:`, error);
         return { data: null, error: error.message };
     }
 
@@ -109,7 +113,8 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
  * the immediate verification trigger and the 3-minute fallback.
  */
 export async function triggerLeadWebhook(leadId: string) {
-    const supabase = getClient();
+    const startTime = Date.now();
+    const supabase = await createClient();
 
     // 1. Fetch lead and form data to check if already sent
     const { data: lead, error: leadError } = await supabase
@@ -152,22 +157,44 @@ export async function triggerLeadWebhook(leadId: string) {
     let webhookStatus = null;
     let webhookResponse = null;
 
-    // 3. Send Webhook
-    try {
-        const res = await fetch(form.webhook_url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-        webhookStatus = res.status;
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            webhookResponse = await res.json();
-        } else {
-            webhookResponse = { text: await res.text() };
+    // 3. Send Webhook (with timeout and retry)
+    const sendWebhook = async (attempt = 1): Promise<{ status: number; response: any }> => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        try {
+            const res = await fetch(form.webhook_url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            let response = null;
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                response = await res.json();
+            } else {
+                response = { text: await res.text() };
+            }
+            return { status: res.status, response };
+        } catch (err: any) {
+            clearTimeout(timeoutId);
+            if (attempt < 2 && (err.name === 'AbortError' || err.message.includes('fetch'))) {
+                console.log(`Webhook attempt ${attempt} failed, retrying...`);
+                return sendWebhook(attempt + 1);
+            }
+            throw err;
         }
+    };
+
+    try {
+        const { status, response } = await sendWebhook();
+        webhookStatus = status;
+        webhookResponse = response;
     } catch (webhookFetchError: any) {
-        webhookStatus = 500;
+        webhookStatus = webhookFetchError.name === 'AbortError' ? 408 : 500;
         webhookResponse = { error: webhookFetchError.message || "Failed to fetch" };
     }
 
@@ -176,13 +203,15 @@ export async function triggerLeadWebhook(leadId: string) {
         webhook_status: webhookStatus,
         webhook_response: webhookResponse,
     }).eq("id", leadId);
+    const endTime = Date.now();
+    console.log(`[triggerLeadWebhook] Finished for lead ${leadId} in ${endTime - startTime}ms. Status: ${webhookStatus}`);
 
-    return { success: true, status: webhookStatus };
+    return { success: true, status: webhookStatus, durationMs: endTime - startTime };
 }
 
-export async function getDashboardLeads(userId?: string) {
-    const supabase = getClient();
-    const uid = userId ?? "00000000-0000-0000-0000-000000000001"; // Fallback to DEMO_USER_ID if needed
+export async function getDashboardLeads() {
+    const { supabase, user } = await getValidatedUser();
+    const uid = user.id;
 
     const { data, error } = await supabase
         .from("leads")
@@ -209,21 +238,21 @@ export async function getDashboardLeads(userId?: string) {
 }
 
 export async function updateLead(leadId: string, answers: Record<string, any>) {
-    const supabase = getClient();
+    const { supabase, user } = await getValidatedUser();
 
-    // Fetch current answers first to merge
-    const { data: currentLead, error: fetchError } = await supabase
+    // 1. Fetch lead (internal tool: no user_id restriction)
+    const { data: lead, error: fetchError } = await supabase
         .from("leads")
-        .select("answers")
+        .select("id, answers")
         .eq("id", leadId)
         .single();
 
-    if (fetchError) return { success: false, error: fetchError.message };
+    if (fetchError || !lead) return { success: false, error: fetchError?.message || "Lead not found" };
 
     const { error } = await supabase
         .from("leads")
         .update({
-            answers: { ...currentLead.answers, ...answers }
+            answers: { ...lead.answers, ...answers }
         })
         .eq("id", leadId);
 
@@ -236,7 +265,7 @@ export async function updateLead(leadId: string, answers: Record<string, any>) {
 }
 
 export async function verifyLeadSms(leadId: string, code: string) {
-    const supabase = getClient();
+    const supabase = await createClient();
 
     const { data: lead, error: fetchError } = await supabase
         .from("leads")
@@ -272,7 +301,7 @@ export async function verifyLeadSms(leadId: string, code: string) {
 }
 
 export async function resendLeadSms(leadId: string) {
-    const supabase = getClient();
+    const supabase = await createClient();
 
     // 1. Fetch lead and related data
     const { data: lead, error: fetchError } = await supabase
