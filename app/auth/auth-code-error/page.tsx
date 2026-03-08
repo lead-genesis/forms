@@ -9,7 +9,7 @@ export default function AuthCodeError() {
                 The authentication code provided is invalid or has expired.
                 Please try signing in again or contact support if the problem persists.
             </p>
-            <Button asChild rounded-full px-8>
+            <Button asChild className="rounded-full px-8">
                 <Link href="/auth">Back to Login</Link>
             </Button>
         </div>

@@ -73,8 +73,6 @@ export default function OnboardingPage() {
                 if (isEmailUser && isInvited) {
                     setHasPassword(true);
                 }
-            } else {
-                router.push("/auth");
             }
         };
         checkUserStatus();

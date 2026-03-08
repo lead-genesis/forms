@@ -78,35 +78,55 @@ export async function updateUserProfile(userId: string, data: { first_name?: str
 
 export async function getTeamMembers() {
     try {
-        const supabase = await createClient();
         const adminClient = createAdminClient();
 
-        // 1. Get all profiles
-        const { data: profiles, error: profileError } = await supabase
+        // 1. Get all users from auth (using admin client)
+        const { data: { users: authUsers }, error: authError } = await adminClient.auth.admin.listUsers();
+        if (authError) throw authError;
+
+        // 2. Get all profiles (using admin client to bypass RLS)
+        const { data: profiles, error: profileError } = await adminClient
             .from("profiles")
             .select("*");
 
-        if (profileError) throw profileError;
+        const profileList = profiles || [];
 
-        // 2. Get all users from auth (using admin client)
-        const { data: { users: authUsers }, error: authError } = await adminClient.auth.admin.listUsers();
-
-        if (authError) throw authError;
-
-        // 3. Merge profiles with auth user data (emails)
-        const mergedUsers = (profiles || []).map(profile => {
-            const authUser = authUsers?.find(u => u.id === profile.id);
+        // 3. Merge auth users with profile data
+        const mergedUsers = (authUsers || []).map(authUser => {
+            const profile = profileList.find(p => p.id === authUser.id);
             return {
-                ...profile,
-                email: authUser?.email || profile.email, // Use auth email if available
-                role: profile.role || 'Member', // Default role if not set
-                status: profile.status || 'Active'
+                id: authUser.id,
+                email: authUser.email,
+                first_name: profile?.first_name || null,
+                last_name: profile?.last_name || null,
+                avatar_url: profile?.avatar_url || null,
+                role: (profile as any)?.role || 'Member',
+                status: authUser.confirmed_at ? 'Active' : 'Invited',
+                last_sign_in: authUser.last_sign_in_at
             };
         });
 
         return { data: mergedUsers, error: null };
     } catch (error: any) {
         console.error("Error fetching team members:", error);
+        // Fallback to basic profiles fetch if admin client fails
+        try {
+            const supabase = await createClient();
+            const { data: profiles } = await supabase.from("profiles").select("*");
+            if (profiles && profiles.length > 0) {
+                return {
+                    data: profiles.map(p => ({
+                        ...p,
+                        email: (p as any).email || 'No email access',
+                        role: (p as any).role || 'Member',
+                        status: 'Active'
+                    })),
+                    error: null
+                };
+            }
+        } catch (e) {
+            console.error("Fallback fetch failed:", e);
+        }
         return { data: [], error: error.message };
     }
 }

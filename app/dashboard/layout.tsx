@@ -57,8 +57,6 @@ export default function DashboardLayout({
                     first_name: profile?.first_name,
                     last_name: profile?.last_name,
                 });
-            } else if (pathname !== "/auth") {
-                router.push("/auth");
             }
         };
         getUser();

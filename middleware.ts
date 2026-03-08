@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export const config = {
     matcher: [
@@ -14,9 +15,70 @@ export const config = {
     ],
 };
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
+    let res = NextResponse.next({
+        request: {
+            headers: req.headers,
+        },
+    });
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                get(name: string) {
+                    return req.cookies.get(name)?.value;
+                },
+                set(name: string, value: string, options: CookieOptions) {
+                    req.cookies.set({
+                        name,
+                        value,
+                        ...options,
+                    });
+                    res = NextResponse.next({
+                        request: {
+                            headers: req.headers,
+                        },
+                    });
+                    res.cookies.set({
+                        name,
+                        value,
+                        ...options,
+                    });
+                },
+                remove(name: string, options: CookieOptions) {
+                    req.cookies.set({
+                        name,
+                        value: '',
+                        ...options,
+                    });
+                    res = NextResponse.next({
+                        request: {
+                            headers: req.headers,
+                        },
+                    });
+                    res.cookies.set({
+                        name,
+                        value: '',
+                        ...options,
+                    });
+                },
+            },
+        }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
     const url = req.nextUrl;
     const hostname = req.headers.get('host') || '';
+
+    // Protected routes
+    const isProtectedRoute = url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/builder') || url.pathname.startsWith('/onboarding');
+
+    if (isProtectedRoute && !user) {
+        return NextResponse.redirect(new URL('/auth', req.url));
+    }
 
     // Skip internal Next.js paths and static files
     if (
@@ -24,10 +86,10 @@ export function middleware(req: NextRequest) {
         url.pathname.startsWith('/api') ||
         url.pathname.includes('.')
     ) {
-        return NextResponse.next();
+        return res;
     }
 
-    // Intercept auth codes and redirect to/auth/callback
+    // Intercept auth codes and redirect to /auth/callback
     // This is important for cases where Supabase redirects to the root "/" with a code
     if (url.searchParams.has('code') && !url.pathname.startsWith('/auth/callback')) {
         const callbackUrl = new URL('/auth/callback', req.url);
@@ -39,7 +101,7 @@ export function middleware(req: NextRequest) {
 
     // Prevent infinite loop if already rewritten
     if (url.pathname.startsWith('/form-subdomain/')) {
-        return NextResponse.next();
+        return res;
     }
 
     // Allowed base domains we don't want to rewrite
@@ -56,7 +118,7 @@ export function middleware(req: NextRequest) {
     // If it's a base domain OR a system domain (without subdomain), don't rewrite
     const hostParts = hostname.split('.');
     if (baseDomains.includes(hostname) || (isSystemDomain && hostParts.length <= 3)) {
-        return NextResponse.next();
+        return res;
     }
 
     // Extract the subdomain
@@ -67,8 +129,7 @@ export function middleware(req: NextRequest) {
     if (ignoredSubdomains.includes(subdomain) || isSystemDomain) {
         // If it's a vercel domain and we reach here, we actually don't want to rewrite it 
         // unless it's explicitly a custom setup. For now, let's skip v-loops.
-        if (isSystemDomain) return NextResponse.next();
-        return NextResponse.next();
+        return res;
     }
 
     console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);

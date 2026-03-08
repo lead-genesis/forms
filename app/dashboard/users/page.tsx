@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react";
 import { DashboardPage, DashboardHeader, DashboardControls } from "@/components/dashboard/DashboardPage";
 import {
@@ -134,7 +136,9 @@ export default function UsersPage() {
                                             </div>
                                             <div className="min-w-0">
                                                 <p className={cn("font-semibold text-sm truncate", sansFont)}>
-                                                    {user.first_name} {user.last_name}
+                                                    {user.first_name || user.last_name
+                                                        ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+                                                        : (user.status === 'Invited' ? 'Pending Onboarding' : 'User')}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                                             </div>
@@ -147,10 +151,13 @@ export default function UsersPage() {
                                         <Badge
                                             variant="secondary"
                                             className={cn(
-                                                "rounded-full px-2 py-0 text-[10px] uppercase tracking-wider font-bold bg-emerald-500/10 text-emerald-600 border-0"
+                                                "rounded-full px-2 py-0 text-[10px] uppercase tracking-wider font-bold border-0",
+                                                user.status === 'Active'
+                                                    ? "bg-emerald-500/10 text-emerald-600"
+                                                    : "bg-orange-500/10 text-orange-600"
                                             )}
                                         >
-                                            Active
+                                            {user.status || 'Active'}
                                         </Badge>
                                     </td>
                                     <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
