@@ -25,6 +25,7 @@ interface FormCanvasProps {
     webhookUrl?: string;
     banner?: string | null;
     smsVerification?: boolean;
+    disclaimer?: string;
 
     /** preview mode only — which step to display */
     activeStepId?: string;
@@ -50,6 +51,7 @@ export function FormCanvas({
     activeStepId,
     onComplete,
     onBannerChange,
+    disclaimer,
 }: FormCanvasProps) {
     const {
         currentStepId,
@@ -183,6 +185,13 @@ export function FormCanvas({
                             </AnimatePresence>
                         </div>
                     </div>
+
+                    {/* Footer Disclaimer */}
+                    {disclaimer && (
+                        <p className="text-[10px] text-muted-foreground/60 text-center max-w-sm mx-auto leading-relaxed -mt-6 mb-8 px-4">
+                            {disclaimer}
+                        </p>
+                    )}
                 </div>
             </div>
 

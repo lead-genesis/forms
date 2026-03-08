@@ -28,6 +28,7 @@ export interface Form {
     sms_verification: boolean;
     custom_page_title: string | null;
     custom_site_description: string | null;
+    disclaimer: string | null;
 }
 
 export interface CreateFormInput {
@@ -385,6 +386,7 @@ export interface UpdateFormInput {
     sms_verification?: boolean;
     custom_page_title?: string | null;
     custom_site_description?: string | null;
+    disclaimer?: string | null;
 }
 
 export async function updateForm(formId: string, input: UpdateFormInput) {
@@ -555,6 +557,7 @@ export async function duplicateForm(formId: string) {
                 custom_page_title: originalForm.custom_page_title,
                 custom_site_description: originalForm.custom_site_description,
                 sms_verification: originalForm.sms_verification,
+                disclaimer: originalForm.disclaimer,
             })
             .select()
             .single();

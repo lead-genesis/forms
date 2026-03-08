@@ -39,6 +39,7 @@ function BuilderContent() {
     const [smsVerification, setSmsVerification] = useState(false);
     const [customPageTitle, setCustomPageTitle] = useState("");
     const [customSiteDescription, setCustomSiteDescription] = useState("");
+    const [disclaimer, setDisclaimer] = useState("");
     const [viewport, setViewport] = useState<ViewportMode>("desktop");
 
     const { isSaving, debouncedSave, saveField } = useFormAutosave(formId);
@@ -84,6 +85,7 @@ function BuilderContent() {
             setSmsVerification(form.sms_verification ?? false);
             setCustomPageTitle(form.custom_page_title ?? "");
             setCustomSiteDescription(form.custom_site_description ?? "");
+            setDisclaimer(form.disclaimer ?? "");
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -130,6 +132,11 @@ function BuilderContent() {
     const setCustomSiteDescriptionWithSave = useCallback((desc: string) => {
         setCustomSiteDescription(desc);
         debouncedSave("custom_site_description", desc);
+    }, [debouncedSave]);
+
+    const setDisclaimerWithSave = useCallback((text: string) => {
+        setDisclaimer(text);
+        debouncedSave("disclaimer", text);
     }, [debouncedSave]);
 
     // ── Add Step (optimistic) ──────────────────────────────────────────────────
@@ -278,6 +285,7 @@ function BuilderContent() {
                             banner={banner}
                             onBannerChange={setBanner}
                             activeStepId={currentStepId}
+                            disclaimer={disclaimer}
                         />
                     </div>
 
@@ -309,6 +317,8 @@ function BuilderContent() {
                         onCustomPageTitleChange={setCustomPageTitleWithSave}
                         customSiteDescription={customSiteDescription}
                         onCustomSiteDescriptionChange={setCustomSiteDescriptionWithSave}
+                        disclaimer={disclaimer}
+                        onDisclaimerChange={setDisclaimerWithSave}
                     />
                 </aside>
             </div>

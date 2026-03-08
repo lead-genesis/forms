@@ -25,6 +25,8 @@ interface FormSettingsProps {
     onCustomPageTitleChange: (title: string) => void;
     customSiteDescription: string;
     onCustomSiteDescriptionChange: (desc: string) => void;
+    disclaimer: string;
+    onDisclaimerChange: (text: string) => void;
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,7 +48,9 @@ export function FormSettings({
     customPageTitle,
     onCustomPageTitleChange,
     customSiteDescription,
-    onCustomSiteDescriptionChange
+    onCustomSiteDescriptionChange,
+    disclaimer,
+    onDisclaimerChange
 }: FormSettingsProps) {
     const [copied, setCopied] = React.useState(false);
     const [testing, setTesting] = React.useState(false);
@@ -127,7 +131,7 @@ export function FormSettings({
                         value="verification"
                         className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
                     >
-                        Verification
+                        Settings
                     </TabsTrigger>
                     <TabsTrigger
                         value="seo"
@@ -200,7 +204,7 @@ export function FormSettings({
                     <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-1">
                             <ShieldCheck className="w-3 h-3 text-primary" />
-                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Verification Settings</Label>
+                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">General Settings</Label>
                         </div>
 
                         <div className="p-4 rounded-2xl bg-secondary/10 border border-border/50 space-y-4">
@@ -233,6 +237,24 @@ export function FormSettings({
                                     </div>
                                 </div>
                             )}
+                        </div>
+
+                        <div className="h-px bg-border/50" />
+
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Terminal className="w-3 h-3 text-primary" />
+                                <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Form Disclaimer</Label>
+                            </div>
+                            <Textarea
+                                value={disclaimer}
+                                onChange={(e) => onDisclaimerChange(e.target.value)}
+                                placeholder="e.g. By submitting this form, you agree to our terms and conditions..."
+                                className="bg-secondary/10 border-border/50 min-h-[100px] resize-none"
+                            />
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                This disclaimer will be shown at the bottom of the welcome step.
+                            </p>
                         </div>
                     </div>
                 </TabsContent>

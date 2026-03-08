@@ -22,6 +22,7 @@ export default function PublicFormPage() {
     const [smsVerification, setSmsVerification] = useState(false);
     const [error, setError] = useState(false);
     const [isInactive, setIsInactive] = useState(false);
+    const [disclaimer, setDisclaimer] = useState("");
 
     useEffect(() => {
         if (!formId) return;
@@ -51,6 +52,7 @@ export default function PublicFormPage() {
             setWebhookUrl(form.webhook_url ?? "");
             setBanner(form.banner ?? null);
             setSmsVerification(form.sms_verification ?? false);
+            setDisclaimer(form.disclaimer ?? "");
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -119,12 +121,9 @@ export default function PublicFormPage() {
                     webhookUrl={webhookUrl}
                     banner={banner}
                     smsVerification={smsVerification}
+                    disclaimer={disclaimer}
                 />
             </div>
-
-            <p className="text-center text-xs text-muted-foreground py-4">
-                Powered by Genesis Flow
-            </p>
         </div>
     );
 }
