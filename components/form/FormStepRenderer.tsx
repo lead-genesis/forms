@@ -183,7 +183,7 @@ export function FormStepRenderer({
                                             value={answers[field] ?? ""}
                                             onChange={(e) => handleInputChange(field, e.target.value)}
                                             className={cn(
-                                                "w-full h-10 px-3 rounded-lg border bg-transparent text-sm focus:outline-none focus:ring-2 placeholder:text-muted-foreground/50",
+                                                "w-full h-12 @lg:h-10 px-3 rounded-lg border bg-transparent text-base @lg:text-sm focus:outline-none focus:ring-2 placeholder:text-muted-foreground/50",
                                                 errors[field]
                                                     ? "border-destructive focus:ring-destructive/20"
                                                     : "border-border/50 focus:ring-primary/20 focus:border-primary"
@@ -209,7 +209,7 @@ export function FormStepRenderer({
                                         value={answers[field] ?? ""}
                                         onChange={(e) => handleInputChange(field, e.target.value)}
                                         className={cn(
-                                            "w-full h-10 px-3 rounded-lg border bg-transparent text-sm focus:outline-none focus:ring-2 placeholder:text-muted-foreground/50",
+                                            "w-full h-12 @lg:h-10 px-3 rounded-lg border bg-transparent text-base @lg:text-sm focus:outline-none focus:ring-2 placeholder:text-muted-foreground/50",
                                             errors[field]
                                                 ? "border-destructive focus:ring-destructive/20"
                                                 : "border-border/50 focus:ring-primary/20 focus:border-primary"
@@ -222,12 +222,12 @@ export function FormStepRenderer({
                             </div>
                         ))}
                         {!isPreview && (
-                            <Button className="w-full rounded-lg h-10 mt-2 text-sm font-semibold" onClick={handleContinue}>
+                            <Button className="w-full rounded-lg h-12 @lg:h-10 mt-2 text-base @lg:text-sm font-semibold" onClick={handleContinue}>
                                 Continue
                             </Button>
                         )}
                         {isPreview && (
-                            <Button className="w-full rounded-lg h-10 mt-2 text-sm font-semibold" disabled>Continue</Button>
+                            <Button className="w-full rounded-lg h-12 @lg:h-10 mt-2 text-base @lg:text-sm font-semibold" disabled>Continue</Button>
                         )}
 
                         {data.optInText && (
@@ -310,9 +310,9 @@ export function FormStepRenderer({
                                     value={answers[`${step.id}_input`] ?? ""}
                                     onChange={(e) => handleInputChange(`${step.id}_input`, e.target.value)}
                                     placeholder={data.placeholder || "Type something..."}
-                                    className="w-full h-10 px-3 rounded-lg border border-border/50 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
+                                    className="w-full h-12 @lg:h-10 px-3 rounded-lg border border-border/50 bg-transparent text-base @lg:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
                                 />
-                                <Button className="w-full rounded-lg h-10 text-sm font-semibold" onClick={onNext}>
+                                <Button className="w-full rounded-lg h-12 @lg:h-10 text-base @lg:text-sm font-semibold" onClick={onNext}>
                                     Continue
                                 </Button>
                             </>
@@ -343,9 +343,9 @@ export function FormStepRenderer({
                                     })()}
                                     onChange={(val) => handleInputChange(`${step.id}_address`, val)}
                                     disabled={isPreview}
-                                    className="w-full h-10 px-3 rounded-lg border border-border/50 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
+                                    className="w-full h-12 @lg:h-10 px-3 rounded-lg border border-border/50 bg-transparent text-base @lg:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
                                 />
-                                <Button className="w-full rounded-lg h-10 text-sm font-semibold" onClick={onNext}>
+                                <Button className="w-full rounded-lg h-12 @lg:h-10 text-base @lg:text-sm font-semibold" onClick={onNext}>
                                     Continue
                                 </Button>
                             </>
