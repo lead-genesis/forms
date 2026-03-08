@@ -30,100 +30,132 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
 
     // FIRE AND FORGET - Optimization to reduce transition delay
     // We run the expensive operations (SMS, Webhooks) in the background
-    (async () => {
-        try {
-            const { data: form } = await supabase
-                .from("forms")
-                .select("name, webhook_url, sms_verification, brands(name)")
-                .eq("id", input.formId)
-                .single();
+    const { data: form } = await supabase
+        .from("forms")
+        .select("name, webhook_url, sms_verification, brands(name)")
+        .eq("id", input.formId)
+        .single();
 
-            const brandName = (form?.brands as any)?.name || "Genesis Flow";
+    const brandName = (form?.brands as any)?.name || "Genesis Flow";
 
-            if (form?.sms_verification) {
-                const smsCode = Math.floor(1000 + Math.random() * 9000).toString();
-                await supabase.from("leads").update({ sms_code: smsCode }).eq("id", data.id);
+    if (form?.sms_verification) {
+        const smsCode = Math.floor(1000 + Math.random() * 9000).toString();
+        await supabase.from("leads").update({ sms_code: smsCode }).eq("id", data.id);
 
-                const phoneNumber = input.answers.phone || input.answers.phoneNumber;
-                if (phoneNumber) {
-                    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-sms-verification`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
-                        },
-                        body: JSON.stringify({
-                            phone: phoneNumber,
-                            code: smsCode,
-                            brandName: brandName,
-                        }),
-                    }).catch(err => console.error("SMS trigger error:", err));
-                }
-            }
+        const phoneNumber = input.answers.phone || input.answers.phoneNumber;
+        if (phoneNumber) {
+            // Trigger SMS verification code asynchronously
+            fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-sms-verification`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    phone: phoneNumber,
+                    code: smsCode,
+                    brandName: brandName,
+                }),
+            }).catch(err => console.error("SMS trigger error:", err));
 
-            if (form?.webhook_url) {
-                // If SMS verification is enabled, wait 3 minutes before execution
-                // to allow the user time to complete the verification step.
-                if (form.sms_verification) {
-                    await new Promise(resolve => setTimeout(resolve, 3 * 60 * 1000));
-                }
-
-                // Re-fetch the latest lead data to get the result of SMS verification
-                const { data: latestLead } = await supabase
-                    .from("leads")
-                    .select("answers, is_sms_verified, sms_verified_date")
-                    .eq("id", data.id)
-                    .single();
-
-                const { data: steps } = await supabase
-                    .from("form_steps")
-                    .select("id, title, type, data, order")
-                    .eq("form_id", input.formId)
-                    .order("order", { ascending: true });
-
-                if (steps && steps.length > 0) {
-                    const payload = buildWebhookPayload({
-                        formId: input.formId,
-                        formName: form.name,
-                        steps,
-                        answers: latestLead?.answers || input.answers,
-                        isSmsVerified: latestLead?.is_sms_verified ?? false,
-                        smsVerifiedDate: latestLead?.sms_verified_date,
-                    });
-
-                    let webhookStatus = null;
-                    let webhookResponse = null;
-
-                    try {
-                        const res = await fetch(form.webhook_url, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload),
-                        });
-                        webhookStatus = res.status;
-                        const contentType = res.headers.get("content-type");
-                        if (contentType && contentType.includes("application/json")) {
-                            webhookResponse = await res.json();
-                        } else {
-                            webhookResponse = { text: await res.text() };
-                        }
-                    } catch (webhookFetchError: any) {
-                        webhookStatus = 500;
-                        webhookResponse = { error: webhookFetchError.message || "Failed to fetch" };
-                    }
-
-                    await supabase.from("leads").update({
-                        webhook_status: webhookStatus,
-                        webhook_response: webhookResponse,
-                    }).eq("id", data.id);
-                }
-            }
-        } catch (bgError) {
-            console.error("Background lead tasks error:", bgError);
+            // Trigger the background webhook processor with a 3-minute delay
+            // This ensures the webhook fires after 3 mins even if the user never verifies.
+            fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-webhook`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({
+                    leadId: data.id,
+                    delayMs: 3 * 60 * 1000,
+                }),
+            }).catch(err => console.error("Webhook processor trigger error:", err));
         }
-    })();
+    } else if (form?.webhook_url) {
+        // Immediate webhook if SMS verification is disabled
+        // We await this to ensure it's delivered reliably before the server action finishes
+        await triggerLeadWebhook(data.id);
+    }
 
     return { data, error: null };
+}
+
+/**
+ * Centrally manages webhook delivery for a lead.
+ * Includes a "sent" check to prevent duplicate deliveries between
+ * the immediate verification trigger and the 3-minute fallback.
+ */
+export async function triggerLeadWebhook(leadId: string) {
+    const supabase = getClient();
+
+    // 1. Fetch lead and form data to check if already sent
+    const { data: lead, error: leadError } = await supabase
+        .from("leads")
+        .select("*, forms(id, name, webhook_url)")
+        .eq("id", leadId)
+        .single();
+
+    if (leadError || !lead) {
+        console.error("Trigger webhook lead fetch error:", leadError);
+        return { success: false, error: "Lead not found" };
+    }
+
+    if (lead.webhook_status !== null) {
+        // Webhook already attempted or sent
+        return { success: true, message: "Webhook already processed" };
+    }
+
+    const form = lead.forms as any;
+    if (!form?.webhook_url) {
+        return { success: false, error: "No webhook URL configured" };
+    }
+
+    // 2. Build payload
+    const { data: steps } = await supabase
+        .from("form_steps")
+        .select("id, title, type, data, order")
+        .eq("form_id", form.id)
+        .order("order", { ascending: true });
+
+    const payload = buildWebhookPayload({
+        formId: form.id,
+        formName: form.name,
+        steps: steps || [],
+        answers: lead.answers,
+        isSmsVerified: lead.is_sms_verified ?? false,
+        smsVerifiedDate: lead.sms_verified_date,
+    });
+
+    let webhookStatus = null;
+    let webhookResponse = null;
+
+    // 3. Send Webhook
+    try {
+        const res = await fetch(form.webhook_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        webhookStatus = res.status;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            webhookResponse = await res.json();
+        } else {
+            webhookResponse = { text: await res.text() };
+        }
+    } catch (webhookFetchError: any) {
+        webhookStatus = 500;
+        webhookResponse = { error: webhookFetchError.message || "Failed to fetch" };
+    }
+
+    // 4. Update Lead record
+    await supabase.from("leads").update({
+        webhook_status: webhookStatus,
+        webhook_response: webhookResponse,
+    }).eq("id", leadId);
+
+    return { success: true, status: webhookStatus };
 }
 
 export async function getDashboardLeads(userId?: string) {
@@ -206,6 +238,10 @@ export async function verifyLeadSms(leadId: string, code: string) {
         if (updateError) {
             return { success: false, error: "Failed to update verification status" };
         }
+
+        // Trigger webhook immediately on successful verification
+        // This will be awaited to ensure delivery
+        await triggerLeadWebhook(leadId);
 
         return { success: true };
     }
