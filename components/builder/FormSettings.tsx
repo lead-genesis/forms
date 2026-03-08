@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FormStep } from "@/app/builder/page";
+import { FormStep } from "@/lib/builder";
 import { Terminal, Globe, Copy, Check, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";

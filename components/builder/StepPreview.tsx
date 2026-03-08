@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { FormStep } from "@/app/builder/page";
+import { FormStep } from "@/lib/builder";
 import { motion } from "framer-motion";
 import { sansFont } from "@/lib/design-system";
 import { Button } from "@/components/ui/button";

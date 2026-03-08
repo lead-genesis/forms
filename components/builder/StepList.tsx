@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { FormStep, StepType } from "@/app/builder/page";
+import { FormStep, StepType } from "@/lib/builder";
 import {
     Plus,
     Layout,
