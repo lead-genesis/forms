@@ -98,9 +98,6 @@ export default function SubdomainFormPage() {
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     <p className="text-sm text-muted-foreground">Loading form…</p>
-                    <div className="mt-8 p-2 bg-secondary/10 rounded text-[10px] text-muted-foreground font-mono opacity-50">
-                        DEBUG: subdomain={subdomain} | env_url={!!process.env.NEXT_PUBLIC_SUPABASE_URL ? 'OK' : 'MISSING'}
-                    </div>
                 </div>
             </div>
         );
@@ -129,9 +126,6 @@ export default function SubdomainFormPage() {
                     </div>
                     <h1 className="text-2xl font-bold">Form Not Found</h1>
                     <p className="text-sm text-muted-foreground">We couldn't find the form you were looking for. It may have been deleted or moved.</p>
-                    <div className="mt-8 p-2 bg-red-500/5 rounded text-[10px] text-red-500 font-mono">
-                        DEBUG: sub={subdomain} | id={formId || 'none'} | steps={steps.length} | err={error || 'none'}
-                    </div>
                 </div>
             </div>
         );

@@ -175,7 +175,7 @@ export function FormCanvas({
     return (
         <div className="flex-1 overflow-y-auto pt-0 pb-20 relative no-scrollbar @container">
             {/* Banner */}
-            <div className="h-72 @sm:h-96 w-full overflow-hidden relative shrink-0 transition-all duration-500">
+            <div className="h-[20vh] @sm:h-96 w-full overflow-hidden relative shrink-0 transition-all duration-500">
                 <img
                     src={bannerSrc}
                     alt="Brand Banner"
@@ -198,7 +198,7 @@ export function FormCanvas({
             </div>
 
             {/* Form Card overlapping the banner */}
-            <div className="relative -mt-32 px-4 @sm:px-8">
+            <div className="relative -mt-16 px-2 @sm:px-8">
                 <div className="w-full max-w-xl mx-auto flex flex-col gap-4">
                     <div className="bg-background rounded-3xl shadow-2xl border border-border/40 min-h-[520px] flex flex-col mb-12 overflow-hidden relative">
                         {/* Back Button */}
