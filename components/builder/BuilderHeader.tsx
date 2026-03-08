@@ -41,8 +41,9 @@ export function BuilderHeader({ formName, onNameChange, brand, formId, isSaving,
             ? `https://${subdomain}.genesisflow.io`
             : `${window.location.origin}/f/${formId}`;
 
+        window.open(shareUrl, "_blank");
         navigator.clipboard.writeText(shareUrl);
-        toast.success("Link copied to clipboard!");
+        toast.success("Link opened & copied to clipboard!");
     };
 
     const handlePublish = () => {

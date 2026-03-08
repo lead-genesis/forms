@@ -17,6 +17,8 @@ import {
     ClipboardDocumentListIcon,
     CheckIcon,
     LinkIcon,
+    PlayIcon,
+    ShareIcon,
 } from "@heroicons/react/24/outline";
 import { getFormWithBrand, getLeadsByForm, updateForm, getFormSteps, duplicateForm } from "@/app/actions/forms";
 import { toast } from "sonner";
@@ -157,7 +159,12 @@ export default function FormDetailPage() {
     const handleCopyLink = () => {
         navigator.clipboard.writeText(shareUrl);
         setCopied(true);
+        toast.success("Link copied to clipboard!");
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handlePreview = () => {
+        window.open(`/f/${formId}?preview=true`, "_blank");
     };
 
     const handleViewDetails = (lead: Lead) => {
@@ -264,7 +271,7 @@ export default function FormDetailPage() {
                     <button
                         onClick={handleDuplicate}
                         disabled={isDuplicating}
-                        className="inline-flex items-center gap-2 bg-secondary/50 text-foreground hover:bg-secondary/80 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 disabled:opacity-50"
+                        className="inline-flex items-center gap-2 bg-secondary/50 text-foreground hover:bg-secondary/80 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 disabled:opacity-50"
                     >
                         {isDuplicating ? (
                             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -272,6 +279,31 @@ export default function FormDetailPage() {
                             <ClipboardDocumentListIcon className="w-4 h-4" />
                         )}
                         Duplicate
+                    </button>
+
+                    <button
+                        onClick={handlePreview}
+                        className="inline-flex items-center gap-2 bg-secondary/50 text-foreground hover:bg-secondary/80 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200"
+                    >
+                        <PlayIcon className="w-4 h-4" />
+                        Preview
+                    </button>
+
+                    <button
+                        onClick={handleCopyLink}
+                        className={cn(
+                            "inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 border border-transparent",
+                            copied
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                : "bg-secondary/50 text-foreground hover:bg-secondary/80"
+                        )}
+                    >
+                        {copied ? (
+                            <CheckIcon className="w-4 h-4" />
+                        ) : (
+                            <ShareIcon className="w-4 h-4" />
+                        )}
+                        {copied ? "Copied" : "Share"}
                     </button>
 
                     <a

@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
 import { Card, CardContent } from "@/components/ui/card";
 import { sansFont } from "@/lib/design-system";
-import { DocumentTextIcon, TagIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { DocumentTextIcon, TagIcon, ClockIcon, PlayIcon, ShareIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { AddFormModal } from "@/components/dashboard/AddFormModal";
 import { getForms } from "@/app/actions/forms";
@@ -24,6 +24,7 @@ interface Form {
     status: string;
     created_at: string;
     brand_id: string;
+    subdomain: string | null;
     brands?: {
         id: string;
         name: string;
@@ -132,12 +133,37 @@ export default function FormsPage() {
                                         </span>
                                     </div>
 
-                                    <div className="mt-2">
+                                    <div className="flex items-center justify-between mt-3 gap-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(`/f/${form.id}?preview=true`, "_blank");
+                                                }}
+                                                className="p-1.5 rounded-xl bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
+                                                title="Preview"
+                                            >
+                                                <PlayIcon className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const shareUrl = form.subdomain
+                                                        ? `https://${form.subdomain}.genesisflow.io`
+                                                        : `${window.location.origin}/f/${form.id}`;
+                                                    window.open(shareUrl, "_blank");
+                                                }}
+                                                className="p-1.5 rounded-xl bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
+                                                title="Open Live Form"
+                                            >
+                                                <ShareIcon className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
                                         <span className={cn(
-                                            "text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full",
+                                            "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
                                             form.status === "active"
-                                                ? "bg-emerald-50 text-emerald-600"
-                                                : "bg-secondary/40 text-muted-foreground"
+                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                                : "bg-secondary text-muted-foreground border-border/50"
                                         )}>
                                             {form.status}
                                         </span>

@@ -62,6 +62,19 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
             }
 
             if (form?.webhook_url) {
+                // If SMS verification is enabled, wait 3 minutes before execution
+                // to allow the user time to complete the verification step.
+                if (form.sms_verification) {
+                    await new Promise(resolve => setTimeout(resolve, 3 * 60 * 1000));
+                }
+
+                // Re-fetch the latest lead data to get the result of SMS verification
+                const { data: latestLead } = await supabase
+                    .from("leads")
+                    .select("answers, is_sms_verified, sms_verified_date")
+                    .eq("id", data.id)
+                    .single();
+
                 const { data: steps } = await supabase
                     .from("form_steps")
                     .select("id, title, type, data, order")
@@ -73,7 +86,9 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
                         formId: input.formId,
                         formName: form.name,
                         steps,
-                        answers: input.answers,
+                        answers: latestLead?.answers || input.answers,
+                        isSmsVerified: latestLead?.is_sms_verified ?? false,
+                        smsVerifiedDate: latestLead?.sms_verified_date,
                     });
 
                     let webhookStatus = null;
@@ -182,7 +197,10 @@ export async function verifyLeadSms(leadId: string, code: string) {
     if (lead.sms_code === code) {
         const { error: updateError } = await supabase
             .from("leads")
-            .update({ is_sms_verified: true })
+            .update({
+                is_sms_verified: true,
+                sms_verified_date: new Date().toISOString()
+            })
             .eq("id", leadId);
 
         if (updateError) {

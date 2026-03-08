@@ -15,9 +15,11 @@ interface PayloadInput {
     formName: string;
     steps: FormStep[];
     answers: Record<string, any>;
+    isSmsVerified?: boolean;
+    smsVerifiedDate?: string | null;
 }
 
-export function buildWebhookPayload({ formId, formName, steps, answers }: PayloadInput) {
+export function buildWebhookPayload({ formId, formName, steps, answers, isSmsVerified, smsVerifiedDate }: PayloadInput) {
     const dataSteps = steps.filter(
         s => s.type !== "welcome" && s.type !== "thank-you"
     );
@@ -26,6 +28,8 @@ export function buildWebhookPayload({ formId, formName, steps, answers }: Payloa
         form_id: formId,
         form_name: formName,
         submitted_at: new Date().toISOString(),
+        sms_verification: isSmsVerified ?? false,
+        sms_verified_at: smsVerifiedDate ?? null,
         data: dataSteps.map(s => {
             // Resolve the captured value(s) for this step
             let value: any = null;
@@ -70,6 +74,8 @@ export function buildWebhookPayload({ formId, formName, steps, answers }: Payloa
                 } else {
                     value = null;
                 }
+            } else if (s.type === "sms-verification") {
+                value = isSmsVerified ?? false;
             }
 
             return {

@@ -56,6 +56,7 @@ export function FormStepRenderer({
     onOptionSelect,
     leadId,
 }: FormStepRendererProps) {
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
     const { type, data } = step;
     const isPreview = mode === "preview";
 
@@ -67,6 +68,46 @@ export function FormStepRenderer({
 
     const handleInputChange = (key: string, value: any) => {
         if (!isPreview && onAnswer) onAnswer(key, value);
+        if (errors[key]) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[key];
+                return newErrors;
+            });
+        }
+    };
+
+    const validateEmail = (email: string) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    const validatePhone = (phone: string) => {
+        // Basic phone validation: at least 8 digits, allow +, -, spaces, parens
+        return /^[\d\+\-\s\(\)]{8,}$/.test(phone);
+    };
+
+    const handleContinue = () => {
+        if (type === "contact") {
+            const newErrors: Record<string, string> = {};
+            if (!answers.first_name?.trim()) newErrors.first_name = "Required";
+            if (!answers.last_name?.trim()) newErrors.last_name = "Required";
+            if (!answers.email?.trim()) {
+                newErrors.email = "Required";
+            } else if (!validateEmail(answers.email)) {
+                newErrors.email = "Invalid email";
+            }
+            if (!answers.phone?.trim()) {
+                newErrors.phone = "Required";
+            } else if (!validatePhone(answers.phone)) {
+                newErrors.phone = "Invalid phone";
+            }
+
+            if (Object.keys(newErrors).length > 0) {
+                setErrors(newErrors);
+                return;
+            }
+        }
+        onNext?.();
     };
 
     const renderContent = () => {
@@ -141,8 +182,16 @@ export function FormStepRenderer({
                                             type="text"
                                             value={answers[field] ?? ""}
                                             onChange={(e) => handleInputChange(field, e.target.value)}
-                                            className="w-full h-10 px-3 rounded-lg border border-border/50 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
+                                            className={cn(
+                                                "w-full h-10 px-3 rounded-lg border bg-transparent text-sm focus:outline-none focus:ring-2 placeholder:text-muted-foreground/50",
+                                                errors[field]
+                                                    ? "border-destructive focus:ring-destructive/20"
+                                                    : "border-border/50 focus:ring-primary/20 focus:border-primary"
+                                            )}
                                         />
+                                    )}
+                                    {errors[field] && (
+                                        <p className="text-[10px] text-destructive font-medium pl-0.5 mt-0.5">{errors[field]}</p>
                                     )}
                                 </div>
                             ))}
@@ -159,13 +208,21 @@ export function FormStepRenderer({
                                         type={field === "email" ? "email" : "tel"}
                                         value={answers[field] ?? ""}
                                         onChange={(e) => handleInputChange(field, e.target.value)}
-                                        className="w-full h-10 px-3 rounded-lg border border-border/50 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
+                                        className={cn(
+                                            "w-full h-10 px-3 rounded-lg border bg-transparent text-sm focus:outline-none focus:ring-2 placeholder:text-muted-foreground/50",
+                                            errors[field]
+                                                ? "border-destructive focus:ring-destructive/20"
+                                                : "border-border/50 focus:ring-primary/20 focus:border-primary"
+                                        )}
                                     />
+                                )}
+                                {errors[field] && (
+                                    <p className="text-[10px] text-destructive font-medium pl-0.5 mt-0.5">{errors[field]}</p>
                                 )}
                             </div>
                         ))}
                         {!isPreview && (
-                            <Button className="w-full rounded-lg h-10 mt-2 text-sm font-semibold" onClick={onNext}>
+                            <Button className="w-full rounded-lg h-10 mt-2 text-sm font-semibold" onClick={handleContinue}>
                                 Continue
                             </Button>
                         )}
