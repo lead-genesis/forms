@@ -24,6 +24,7 @@ export default function SubdomainFormPage() {
     const [smsVerification, setSmsVerification] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isInactive, setIsInactive] = useState(false);
+    const [disclaimer, setDisclaimer] = useState("");
 
     useEffect(() => {
         console.log("SubdomainFormPage mounted. Subdomain:", subdomain);
@@ -66,6 +67,7 @@ export default function SubdomainFormPage() {
                 setWebhookUrl(form.webhook_url ?? "");
                 setBanner(form.banner ?? null);
                 setSmsVerification(form.sms_verification ?? false);
+                setDisclaimer(form.disclaimer ?? "");
                 if (form.brands) setBrand(form.brands);
 
                 const loadedSteps: FormStep[] = (stepsRes.data as any[] || []).map((s: any) => ({
@@ -142,12 +144,9 @@ export default function SubdomainFormPage() {
                     webhookUrl={webhookUrl}
                     banner={banner}
                     smsVerification={smsVerification}
+                    disclaimer={disclaimer}
                 />
             </div>
-
-            <p className="text-center text-xs text-muted-foreground py-4">
-                Powered by Genesis Flow
-            </p>
         </div>
     );
 }
