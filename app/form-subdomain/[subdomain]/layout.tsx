@@ -12,11 +12,20 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
             return { title: "Genesis Flow" };
         }
 
+        const brandName = data.brands?.name;
         const formName = data.name || "Genesis Flow";
         const brandLogo = data.brands?.logo_url;
 
+        let title = `${formName} - Genesis Flow`;
+        if (data.custom_page_title) {
+            title = brandName ? `${data.custom_page_title} - ${brandName}` : data.custom_page_title;
+        }
+
+        const description = data.custom_site_description || "High-performance lead generation and form builder";
+
         return {
-            title: formName,
+            title,
+            description,
             icons: brandLogo ? { icon: brandLogo } : undefined
         };
     } catch (err) {

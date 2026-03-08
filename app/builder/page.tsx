@@ -110,6 +110,8 @@ function BuilderContent() {
     const [status, setStatus] = useState("draft");
     const [banner, setBanner] = useState<string | null>(null);
     const [smsVerification, setSmsVerification] = useState(false);
+    const [customPageTitle, setCustomPageTitle] = useState("");
+    const [customSiteDescription, setCustomSiteDescription] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
@@ -150,6 +152,8 @@ function BuilderContent() {
             setStatus(form.status ?? "draft");
             setBanner(form.banner ?? null);
             setSmsVerification(form.sms_verification ?? false);
+            setCustomPageTitle(form.custom_page_title ?? "");
+            setCustomSiteDescription(form.custom_site_description ?? "");
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -212,6 +216,30 @@ function BuilderContent() {
         debounceRefs.current["form_meta_subdomain"] = setTimeout(async () => {
             setIsSaving(true);
             await updateForm(formId, { subdomain: sub });
+            setIsSaving(false);
+        }, 500);
+    }, [formId]);
+
+    const setCustomPageTitleWithSave = useCallback((title: string) => {
+        setCustomPageTitle(title);
+        if (!formId) return;
+
+        clearTimeout(debounceRefs.current["form_meta_page_title"]);
+        debounceRefs.current["form_meta_page_title"] = setTimeout(async () => {
+            setIsSaving(true);
+            await updateForm(formId, { custom_page_title: title });
+            setIsSaving(false);
+        }, 500);
+    }, [formId]);
+
+    const setCustomSiteDescriptionWithSave = useCallback((desc: string) => {
+        setCustomSiteDescription(desc);
+        if (!formId) return;
+
+        clearTimeout(debounceRefs.current["form_meta_site_description"]);
+        debounceRefs.current["form_meta_site_description"] = setTimeout(async () => {
+            setIsSaving(true);
+            await updateForm(formId, { custom_site_description: desc });
             setIsSaving(false);
         }, 500);
     }, [formId]);
@@ -458,6 +486,10 @@ function BuilderContent() {
                         onSubdomainChange={setSubdomainWithSave}
                         smsVerification={smsVerification}
                         onSmsVerificationChange={setSmsVerification}
+                        customPageTitle={customPageTitle}
+                        onCustomPageTitleChange={setCustomPageTitleWithSave}
+                        customSiteDescription={customSiteDescription}
+                        onCustomSiteDescriptionChange={setCustomSiteDescriptionWithSave}
                     />
                 </aside>
             </div>

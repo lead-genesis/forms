@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import { Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AddressAutocompleteProps {
     value?: string;
@@ -14,7 +16,7 @@ interface AddressAutocompleteProps {
 export function AddressAutocomplete({
     value = "",
     onChange,
-    placeholder = "Start typing your address...",
+    placeholder = "Search address",
     className = "",
     disabled = false,
 }: AddressAutocompleteProps) {
@@ -103,17 +105,22 @@ export function AddressAutocomplete({
     }, [disabled, onChange]);
 
     return (
-        <input
-            ref={inputRef}
-            type="text"
-            value={localValue}
-            onChange={(e) => {
-                setLocalValue(e.target.value);
-                onChange(e.target.value);
-            }}
-            placeholder={placeholder}
-            className={className}
-            disabled={disabled}
-        />
+        <div className="relative w-full">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none">
+                <Search className="w-4 h-4" />
+            </div>
+            <input
+                ref={inputRef}
+                type="text"
+                value={localValue}
+                onChange={(e) => {
+                    setLocalValue(e.target.value);
+                    onChange(e.target.value);
+                }}
+                placeholder={placeholder}
+                className={cn(className, "pl-11")}
+                disabled={disabled}
+            />
+        </div>
     );
 }

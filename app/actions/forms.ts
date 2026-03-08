@@ -28,6 +28,8 @@ export interface Form {
     views: number;
     banner: string | null;
     sms_verification: boolean;
+    custom_page_title: string | null;
+    custom_site_description: string | null;
 }
 
 export interface CreateFormInput {
@@ -367,6 +369,8 @@ export interface UpdateFormInput {
     subdomain?: string | null;
     banner?: string | null;
     sms_verification?: boolean;
+    custom_page_title?: string | null;
+    custom_site_description?: string | null;
 }
 
 export async function updateForm(formId: string, input: UpdateFormInput) {
@@ -532,6 +536,8 @@ export async function duplicateForm(formId: string) {
             subdomain: newSubdomain,
             views: 0,
             banner: originalForm.banner,
+            custom_page_title: originalForm.custom_page_title,
+            custom_site_description: originalForm.custom_site_description,
         })
         .select()
         .single();

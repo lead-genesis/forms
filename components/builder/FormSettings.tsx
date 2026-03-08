@@ -21,12 +21,17 @@ interface FormSettingsProps {
     onSubdomainChange: (sub: string) => void;
     smsVerification: boolean;
     onSmsVerificationChange: (enabled: boolean) => void;
+    customPageTitle: string;
+    onCustomPageTitleChange: (title: string) => void;
+    customSiteDescription: string;
+    onCustomSiteDescriptionChange: (desc: string) => void;
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { testWebhookUrl, updateForm } from "@/app/actions/forms";
-import { ShieldCheck, MessageSquare } from "lucide-react";
+import { ShieldCheck, MessageSquare, Search } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 export function FormSettings({
     formName,
@@ -37,7 +42,11 @@ export function FormSettings({
     subdomain,
     onSubdomainChange,
     smsVerification,
-    onSmsVerificationChange
+    onSmsVerificationChange,
+    customPageTitle,
+    onCustomPageTitleChange,
+    customSiteDescription,
+    onCustomSiteDescriptionChange
 }: FormSettingsProps) {
     const [copied, setCopied] = React.useState(false);
     const [testing, setTesting] = React.useState(false);
@@ -115,16 +124,16 @@ export function FormSettings({
                         Webhook
                     </TabsTrigger>
                     <TabsTrigger
-                        value="domain"
-                        className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
-                    >
-                        Domain
-                    </TabsTrigger>
-                    <TabsTrigger
                         value="verification"
                         className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
                     >
                         Verification
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="seo"
+                        className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
+                    >
+                        SEO & Domain
                     </TabsTrigger>
                 </TabsList>
 
@@ -186,32 +195,7 @@ export function FormSettings({
                     </div>
                 </TabsContent>
 
-                <TabsContent value="domain" className="space-y-6 mt-0">
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Globe className="w-3 h-3 text-primary" />
-                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Custom Subdomain</Label>
-                        </div>
-                        <div className="flex rounded-md shadow-sm">
-                            <Input
-                                value={subdomain}
-                                onChange={(e) => {
-                                    // Remove special characters and spaces, keep lowercase
-                                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-                                    onSubdomainChange(val);
-                                }}
-                                placeholder="my-form"
-                                className="bg-secondary/10 border-border/50 rounded-r-none focus-visible:ring-0 focus-visible:ring-offset-0 border-r-0"
-                            />
-                            <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-border/50 bg-muted text-muted-foreground sm:text-sm">
-                                .genesisflow.io
-                            </span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground leading-relaxed">
-                            Your form will be accessible at this subdomain. Only lowercase letters, numbers, and hyphens are allowed.
-                        </p>
-                    </div>
-                </TabsContent>
+
                 <TabsContent value="verification" className="space-y-6 mt-0">
                     <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-1">
@@ -249,6 +233,70 @@ export function FormSettings({
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="seo" className="space-y-8 mt-0">
+                    <div className="space-y-6">
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Globe className="w-3 h-3 text-primary" />
+                                <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Custom Subdomain</Label>
+                            </div>
+                            <div className="flex rounded-md shadow-sm">
+                                <Input
+                                    value={subdomain}
+                                    onChange={(e) => {
+                                        // Remove special characters and spaces, keep lowercase
+                                        const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                                        onSubdomainChange(val);
+                                    }}
+                                    placeholder="my-form"
+                                    className="bg-secondary/10 border-border/50 rounded-r-none focus-visible:ring-0 focus-visible:ring-offset-0 border-r-0"
+                                />
+                                <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-border/50 bg-muted text-muted-foreground sm:text-sm">
+                                    .genesisflow.io
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                Your form will be accessible at this subdomain. Only lowercase letters, numbers, and hyphens are allowed.
+                            </p>
+                        </div>
+
+                        <div className="h-px bg-border/50" />
+
+                        <div className="flex items-center gap-2 mb-1">
+                            <Search className="w-3 h-3 text-primary" />
+                            <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Search Metadata</Label>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-3">
+                                <Label className="text-xs font-semibold italic text-foreground/70">Custom Page Title</Label>
+                                <Input
+                                    value={customPageTitle}
+                                    onChange={(e) => onCustomPageTitleChange(e.target.value)}
+                                    placeholder="e.g. Get your instant quote"
+                                    className="bg-secondary/10 border-border/50"
+                                />
+                                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                    This will appear in the browser tab and search results.
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label className="text-xs font-semibold italic text-foreground/70">Custom Site Description</Label>
+                                <Textarea
+                                    value={customSiteDescription}
+                                    onChange={(e) => onCustomSiteDescriptionChange(e.target.value)}
+                                    placeholder="e.g. Fill out this 2-minute form to get a personalized quote for our services."
+                                    className="bg-secondary/10 border-border/50 min-h-[100px] resize-none"
+                                />
+                                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                    A brief summary that search engines and social platforms use for snippets.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </TabsContent>
