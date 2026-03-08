@@ -14,11 +14,25 @@ function getClient() {
 export async function saveLead(input: { formId: string; answers: Record<string, any> }) {
     const supabase = getClient();
 
+    // 1. Fetch form settings first to check for SMS verification and get brand info
+    const { data: form } = await supabase
+        .from("forms")
+        .select("name, webhook_url, sms_verification, brands(name)")
+        .eq("id", input.formId)
+        .single();
+
+    let smsCode = null;
+    if (form?.sms_verification) {
+        smsCode = Math.floor(1000 + Math.random() * 9000).toString();
+    }
+
+    // 2. Insert lead with sms_code if applicable
     const { data, error } = await supabase
         .from("leads")
         .insert({
             form_id: input.formId,
             answers: input.answers,
+            sms_code: smsCode,
         })
         .select()
         .single();
@@ -28,53 +42,58 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
         return { data: null, error: error.message };
     }
 
-    // FIRE AND FORGET - Optimization to reduce transition delay
-    // We run the expensive operations (SMS, Webhooks) in the background
-    const { data: form } = await supabase
-        .from("forms")
-        .select("name, webhook_url, sms_verification, brands(name)")
-        .eq("id", input.formId)
-        .single();
-
     const brandName = (form?.brands as any)?.name || "Genesis Flow";
 
-    if (form?.sms_verification) {
-        const smsCode = Math.floor(1000 + Math.random() * 9000).toString();
-        await supabase.from("leads").update({ sms_code: smsCode }).eq("id", data.id);
-
+    if (form?.sms_verification && smsCode) {
         const phoneNumber = input.answers.phone || input.answers.phoneNumber;
         if (phoneNumber) {
-            // Trigger SMS verification code asynchronously
-            fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-sms-verification`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
-                },
-                body: JSON.stringify({
-                    phone: phoneNumber,
-                    code: smsCode,
-                    brandName: brandName,
-                }),
-            }).catch(err => console.error("SMS trigger error:", err));
+            // TRIGGERS - We MUST await these to ensure they don't get aborted in serverless environments
+
+            // Trigger SMS verification code
+            try {
+                const smsRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-sms-verification`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        phone: phoneNumber,
+                        code: smsCode,
+                        brandName: brandName,
+                    }),
+                });
+                if (!smsRes.ok) {
+                    const errorText = await smsRes.text();
+                    console.error("SMS trigger failed:", smsRes.status, errorText);
+                }
+            } catch (err) {
+                console.error("SMS trigger fetch error:", err);
+            }
 
             // Trigger the background webhook processor with a 3-minute delay
-            // This ensures the webhook fires after 3 mins even if the user never verifies.
-            fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-webhook`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
-                },
-                body: JSON.stringify({
-                    leadId: data.id,
-                    delayMs: 3 * 60 * 1000,
-                }),
-            }).catch(err => console.error("Webhook processor trigger error:", err));
+            try {
+                const webhookProcRes = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/process-webhook`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        leadId: data.id,
+                        delayMs: 3 * 60 * 1000,
+                    }),
+                });
+                if (!webhookProcRes.ok) {
+                    const errorText = await webhookProcRes.text();
+                    console.error("Webhook processor trigger failed:", webhookProcRes.status, errorText);
+                }
+            } catch (err) {
+                console.error("Webhook processor trigger fetch error:", err);
+            }
         }
     } else if (form?.webhook_url) {
         // Immediate webhook if SMS verification is disabled
-        // We await this to ensure it's delivered reliably before the server action finishes
         await triggerLeadWebhook(data.id);
     }
 
