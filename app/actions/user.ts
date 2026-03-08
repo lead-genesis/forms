@@ -27,13 +27,24 @@ export async function inviteUser(email: string) {
     }
     // Check if the user already exists in auth.users would be good, 
     // but auth.admin.inviteUserByEmail handles conflicts.
-    const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    const { data: inviteData, error } = await supabase.auth.admin.inviteUserByEmail(email, {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/onboarding`,
     });
 
     if (error) {
         console.error("Invite user error:", error);
         return { success: false, error: error.message };
+    }
+
+    // Workaround: Create a stub profile so they show up in the user list immediately
+    if (inviteData?.user) {
+        await supabase
+            .from("profiles")
+            .upsert({
+                id: inviteData.user.id,
+                email: email,
+                updated_at: new Date().toISOString(),
+            });
     }
 
     revalidatePath("/dashboard/users");
@@ -96,7 +107,7 @@ export async function getTeamMembers() {
             const profile = profileList.find(p => p.id === authUser.id);
             return {
                 id: authUser.id,
-                email: authUser.email,
+                email: profile?.email || authUser.email, // Prioritize profile email
                 first_name: profile?.first_name || null,
                 last_name: profile?.last_name || null,
                 avatar_url: profile?.avatar_url || null,

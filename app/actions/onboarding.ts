@@ -22,6 +22,7 @@ export async function completeOnboarding(formData: FormData) {
             id: user.id,
             first_name,
             last_name,
+            email: user.email,
             updated_at: new Date().toISOString(),
         });
 
