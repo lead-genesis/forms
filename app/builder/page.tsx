@@ -112,6 +112,18 @@ function BuilderContent() {
     const [smsVerification, setSmsVerification] = useState(false);
     const [customPageTitle, setCustomPageTitle] = useState("");
     const [customSiteDescription, setCustomSiteDescription] = useState("");
+
+    // Update document title dynamically
+    useEffect(() => {
+        const brandName = brand?.name;
+        const currentFormName = formName || "Genesis Flow";
+
+        let title = brandName ? `${currentFormName} - ${brandName}` : currentFormName;
+        if (customPageTitle) {
+            title = brandName ? `${customPageTitle} - ${brandName}` : customPageTitle;
+        }
+        document.title = `${title} (Builder)`;
+    }, [formName, brand, customPageTitle]);
     const [isSaving, setIsSaving] = useState(false);
     const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
 

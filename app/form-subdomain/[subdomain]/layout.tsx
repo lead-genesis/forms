@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
         const formName = data.name || "Genesis Flow";
         const brandLogo = data.brands?.logo_url;
 
-        let title = `${formName} - Genesis Flow`;
+        let title = brandName ? `${formName} - ${brandName}` : formName;
         if (data.custom_page_title) {
             title = brandName ? `${data.custom_page_title} - ${brandName}` : data.custom_page_title;
         }
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
         const description = data.custom_site_description || "High-performance lead generation and form builder";
 
         return {
-            title,
+            title: { absolute: title },
             description,
             icons: brandLogo ? { icon: brandLogo } : undefined
         };

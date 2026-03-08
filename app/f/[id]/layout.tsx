@@ -14,8 +14,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     // Title logic: 
     // 1. [custom_page_title] - [brand_name]
     // 2. [custom_page_title] (if no brand name)
-    // 3. [form_name] - Genesis Flow (fallback)
-    let title = `${formName} - Genesis Flow`;
+    // 3. [form_name] - [brand_name]
+    // 4. [form_name] (fallback)
+    let title = brandName ? `${formName} - ${brandName}` : formName;
     if (data.custom_page_title) {
         title = brandName ? `${data.custom_page_title} - ${brandName}` : data.custom_page_title;
     }
