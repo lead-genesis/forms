@@ -17,15 +17,24 @@ export async function updatePassword(password: string) {
 
 async function checkIsAdmin() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const { data: profile } = await supabase
+    if (authError || !user) {
+        console.error("checkIsAdmin: Auth error or no user:", authError);
+        return false;
+    }
+
+    const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
+    if (profileError) {
+        console.error("checkIsAdmin: Profile fetch error:", profileError);
+    }
+
+    console.log("checkIsAdmin: User role:", profile?.role);
     return profile?.role === "Administrator";
 }
 
@@ -140,27 +149,45 @@ export async function updateUserProfile(userId: string, data: { first_name?: str
 
 export async function getTeamMembers() {
     // Authorization Check
-    if (!(await checkIsAdmin())) {
-        return { success: false, error: "Unauthorized: Admins only" };
+    const isAdmin = await checkIsAdmin();
+    console.log("getTeamMembers: isAdmin check result:", isAdmin);
+
+    if (!isAdmin) {
+        return { data: [], error: "Unauthorized: Admins only" };
     }
 
     try {
         const adminClient = createAdminClient();
 
         // 1. Get all users from auth
+        console.log("getTeamMembers: Fetching auth users...");
         const { data: { users: authUsers }, error: authError } = await adminClient.auth.admin.listUsers();
-        if (authError) throw authError;
+        if (authError) {
+            console.error("getTeamMembers: Auth list error:", authError);
+            throw authError;
+        }
+        console.log(`getTeamMembers: Found ${authUsers?.length || 0} auth users`);
 
         // 2. Get all profiles (including role)
+        console.log("getTeamMembers: Fetching profiles...");
         const { data: profiles, error: profileError } = await adminClient
             .from("profiles")
             .select("id, email, first_name, last_name, avatar_url, role, updated_at");
 
+        if (profileError) {
+            console.error("getTeamMembers: Profile fetch error:", profileError);
+            throw profileError;
+        }
+
         const profileList = profiles || [];
+        console.log(`getTeamMembers: Found ${profileList.length} profiles`);
 
         // 3. Merge auth users with profile data
         const mergedUsers = (authUsers || []).map(authUser => {
             const profile = profileList.find(p => p.id === authUser.id);
+            if (!profile) {
+                console.warn(`getTeamMembers: No profile found for auth user ${authUser.id} (${authUser.email})`);
+            }
             return {
                 id: authUser.id,
                 email: profile?.email || authUser.email,
@@ -174,10 +201,11 @@ export async function getTeamMembers() {
             };
         });
 
+        console.log(`getTeamMembers: Successfully merged ${mergedUsers.length} users`);
         return { data: mergedUsers, error: null };
     } catch (error: any) {
         console.error("Error fetching team members:", error);
-        return { data: [], error: error.message };
+        return { data: [], error: error.message || "An unexpected error occurred" };
     }
 }
 

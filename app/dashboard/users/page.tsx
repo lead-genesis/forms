@@ -61,7 +61,8 @@ export default function UsersPage() {
 
         if (error) {
             console.error("Error fetching users:", error);
-            toast.error("Failed to fetch team members");
+            toast.error(error || "Failed to fetch team members");
+            setUsers([]);
         } else {
             setUsers(data || []);
         }

@@ -30,6 +30,10 @@ function AuthContent() {
                 toast.error(result.error);
             }
         } catch (err: any) {
+            // Next.js redirect() throws a special error which we should ignore in the toast
+            if (err.message === "NEXT_REDIRECT" || err.digest === "NEXT_REDIRECT") {
+                return;
+            }
             toast.error(err.message || "An unexpected error occurred");
         } finally {
             setIsLoading(false);
