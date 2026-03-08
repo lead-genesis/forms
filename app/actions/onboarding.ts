@@ -13,8 +13,9 @@ export async function completeOnboarding(formData: FormData) {
 
     const first_name = formData.get("first_name") as string;
     const last_name = formData.get("last_name") as string;
-    // We could store project_goals, target_specialty, etc. in profiles if we add columns
-    // For now let's just save the name
+    const project_goals = formData.get("project_goals") as string;
+    const target_specialty = formData.get("target_specialty") as string;
+    const confidence_level = parseInt(formData.get("confidence_level") as string);
 
     const { error } = await supabase
         .from("profiles")
@@ -23,6 +24,9 @@ export async function completeOnboarding(formData: FormData) {
             first_name,
             last_name,
             email: user.email,
+            project_goals,
+            target_specialty,
+            confidence_level,
             updated_at: new Date().toISOString(),
         });
 

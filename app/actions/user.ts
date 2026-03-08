@@ -15,8 +15,8 @@ export async function updatePassword(password: string) {
     return { success: true, error: null };
 }
 
-export async function inviteUser(email: string) {
-    console.log("Invitation request for:", email);
+export async function inviteUser(email: string, firstName: string, lastName: string) {
+    console.log("Invitation request for:", email, firstName, lastName);
     console.log("Service Role Key exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     const supabase = createAdminClient();
@@ -24,11 +24,11 @@ export async function inviteUser(email: string) {
     // Check if it's actually using the fallback
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
         console.warn("CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing! Invitation will fail.");
+        return { success: false, error: "Server configuration error: Missing Service Role Key" };
     }
-    // Check if the user already exists in auth.users would be good, 
-    // but auth.admin.inviteUserByEmail handles conflicts.
+
     const { data: inviteData, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/onboarding`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/onboarding`,
     });
 
     if (error) {
@@ -36,18 +36,40 @@ export async function inviteUser(email: string) {
         return { success: false, error: error.message };
     }
 
-    // Workaround: Create a stub profile so they show up in the user list immediately
+    // Create the actual profile immediately
     if (inviteData?.user) {
-        await supabase
+        const { error: profileError } = await supabase
             .from("profiles")
             .upsert({
                 id: inviteData.user.id,
                 email: email,
+                first_name: firstName,
+                last_name: lastName,
                 updated_at: new Date().toISOString(),
             });
+
+        if (profileError) {
+            console.error("Profile creation error during invite:", profileError);
+        }
     }
 
     revalidatePath("/dashboard/users");
+    return { success: true, error: null };
+}
+
+export async function resendInvite(email: string) {
+    console.log("Resending invitation for:", email);
+    const supabase = createAdminClient();
+
+    const { data: inviteData, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/onboarding`,
+    });
+
+    if (error) {
+        console.error("Resend invite error:", error);
+        return { success: false, error: error.message };
+    }
+
     return { success: true, error: null };
 }
 

@@ -51,7 +51,6 @@ export default function OnboardingPage() {
         const checkUserStatus = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                // If they have a profile already, send them to dashboard
                 const { data: profile } = await supabase
                     .from("profiles")
                     .select("*")
@@ -59,14 +58,23 @@ export default function OnboardingPage() {
                     .single();
 
                 if (profile) {
-                    router.push("/dashboard");
-                    return;
+                    // Pre-fill names if they exist
+                    if (profile.first_name || profile.last_name) {
+                        setFormData(prev => ({
+                            ...prev,
+                            first_name: profile.first_name || "",
+                            last_name: profile.last_name || "",
+                        }));
+                    }
+
+                    // Only redirect if onboarding is actually complete
+                    // We'll check for target_specialty as an indicator
+                    if (profile.target_specialty) {
+                        router.push("/dashboard");
+                        return;
+                    }
                 }
 
-                // Check if they have an email provider (which implies they have or will set a password)
-                // In Supabase, if it's an invite, they might have set it or will.
-                // We'll trust the user's logic: if they arrived here and were invited, 
-                // they likely handled the password already if they're authenticated.
                 const isEmailUser = user.app_metadata.provider === 'email';
                 const isInvited = user.confirmed_at && user.last_sign_in_at;
 
@@ -76,7 +84,7 @@ export default function OnboardingPage() {
             }
         };
         checkUserStatus();
-    }, []);
+    }, [router, supabase]);
 
     const totalSteps = 6; // 0 is welcome, so 1-6 are input steps
 

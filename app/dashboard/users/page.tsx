@@ -23,9 +23,16 @@ import {
     EllipsisHorizontalIcon
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
-import { inviteUser, getTeamMembers } from "@/app/actions/user";
+import { inviteUser, getTeamMembers, resendInvite } from "@/app/actions/user";
 import { InviteUserModal } from "@/components/dashboard/InviteUserModal";
 import { UserDetailsSheet } from "@/components/dashboard/UserDetailsSheet";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface Profile {
     id: string;
@@ -44,24 +51,45 @@ export default function UsersPage() {
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isResending, setIsResending] = useState<string | null>(null);
 
     const supabase = createClient();
 
+    const fetchUsers = async () => {
+        setIsLoading(true);
+        const { data, error } = await getTeamMembers();
+
+        if (error) {
+            console.error("Error fetching users:", error);
+            toast.error("Failed to fetch team members");
+        } else {
+            setUsers(data || []);
+        }
+        setIsLoading(false);
+    };
+
     useEffect(() => {
-        const fetchUsers = async () => {
-            setIsLoading(true);
-            const { data, error } = await getTeamMembers();
-
-            if (error) {
-                console.error("Error fetching users:", error);
-            } else {
-                setUsers(data || []);
-            }
-            setIsLoading(false);
-        };
-
         fetchUsers();
     }, []);
+
+    const handleResendInvite = async (e: React.MouseEvent, email: string) => {
+        e.stopPropagation();
+        if (!email) return;
+
+        setIsResending(email);
+        try {
+            const result = await resendInvite(email);
+            if (result.success) {
+                toast.success("Invitation resent successfully!");
+            } else {
+                toast.error(result.error || "Failed to resend invitation.");
+            }
+        } catch (error) {
+            toast.error("An unexpected error occurred.");
+        } finally {
+            setIsResending(null);
+        }
+    };
 
     const filteredUsers = users.filter(user => {
         const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
@@ -161,9 +189,34 @@ export default function UsersPage() {
                                         </Badge>
                                     </td>
                                     <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
-                                        <Button variant="ghost" size="icon" className="rounded-lg h-8 w-8 text-muted-foreground">
-                                            <EllipsisHorizontalIcon className="w-5 h-5" />
-                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="icon" className="rounded-lg h-8 w-8 text-muted-foreground">
+                                                    <EllipsisHorizontalIcon className="w-5 h-5" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="rounded-xl border-border/50 shadow-xl p-1.5 min-w-[140px]">
+                                                {user.status === 'Invited' && (
+                                                    <DropdownMenuItem
+                                                        className="rounded-lg cursor-pointer text-sm font-medium focus:bg-primary/5 focus:text-primary transition-colors h-10 px-3"
+                                                        onClick={(e) => handleResendInvite(e as any, user.email || '')}
+                                                        disabled={isResending === user.email}
+                                                    >
+                                                        {isResending === user.email ? "Sending..." : "Resend invite"}
+                                                    </DropdownMenuItem>
+                                                )}
+                                                <DropdownMenuItem
+                                                    className="rounded-lg cursor-pointer text-sm font-medium focus:bg-primary/5 transition-colors h-10 px-3"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedUser(user);
+                                                        setIsSheetOpen(true);
+                                                    }}
+                                                >
+                                                    View details
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </td>
                                 </tr>
                             ))
@@ -175,6 +228,7 @@ export default function UsersPage() {
             <InviteUserModal
                 isOpen={isInviteModalOpen}
                 onClose={() => setIsInviteModalOpen(false)}
+                onSuccess={fetchUsers}
             />
 
             <UserDetailsSheet

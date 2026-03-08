@@ -20,22 +20,28 @@ import { cn } from "@/lib/utils";
 interface InviteUserModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
+export function InviteUserModal({ isOpen, onClose, onSuccess }: InviteUserModalProps) {
     const [email, setEmail] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email) return;
+        if (!email || !firstName || !lastName) return;
 
         setIsSubmitting(true);
         try {
-            const result = await inviteUser(email);
+            const result = await inviteUser(email, firstName, lastName);
             if (result.success) {
                 toast.success("Invitation sent successfully!");
                 setEmail("");
+                setFirstName("");
+                setLastName("");
+                onSuccess?.();
                 onClose();
             } else {
                 toast.error(result.error || "Failed to send invitation.");
@@ -59,6 +65,35 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="firstName" className="text-sm font-semibold pl-1">
+                                First Name
+                            </Label>
+                            <Input
+                                id="firstName"
+                                placeholder="Jane"
+                                value={firstName}
+                                onChange={(e) => setFirstName(e.target.value)}
+                                required
+                                className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:bg-background transition-all"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="lastName" className="text-sm font-semibold pl-1">
+                                Last Name
+                            </Label>
+                            <Input
+                                id="lastName"
+                                placeholder="Doe"
+                                value={lastName}
+                                onChange={(e) => setLastName(e.target.value)}
+                                required
+                                className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:bg-background transition-all"
+                            />
+                        </div>
+                    </div>
                     <div className="space-y-2">
                         <Label htmlFor="email" className="text-sm font-semibold pl-1 transition-all">
                             Email address
@@ -71,7 +106,6 @@ export function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             className="h-12 rounded-xl bg-secondary/30 border-border/50 focus:bg-background transition-all focus:ring-2 focus:ring-primary/20"
-                            autoFocus
                         />
                     </div>
                     <DialogFooter className="gap-2 sm:gap-0">
