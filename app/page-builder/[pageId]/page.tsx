@@ -3,19 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-    getPageWithSections,
-    updatePage,
-    uploadPageImage,
-    createSection,
-    updateSection,
-    deleteSection,
-    reorderSections,
-    getBrandPages,
-    BrandPage,
-    BrandSection
-} from "@/app/actions/pages";
+import { getBrandPages, BrandPage, BrandSection, getPageWithSections, updatePage, createSection, updateSection, deleteSection, reorderSections } from "@/app/actions/pages";
 import { getBrand } from "@/app/actions/brands";
+import { getBrandForms, Form as BrandForm } from "@/app/actions/forms";
 import { PageBuilderHeader } from "@/components/page-builder/PageBuilderHeader";
 import { cn } from "@/lib/utils";
 import { SectionList } from "@/components/page-builder/SectionList";
@@ -37,6 +27,7 @@ export default function PageBuilderPage() {
     const [showPageSettings, setShowPageSettings] = useState(true);
     const [viewport, setViewport] = useState<ViewportMode>("desktop");
     const [brandPages, setBrandPages] = useState<BrandPage[]>([]);
+    const [brandForms, setBrandForms] = useState<BrandForm[]>([]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -62,6 +53,9 @@ export default function PageBuilderPage() {
 
                 const { data: pages } = await getBrandPages(pageData.brand_id);
                 setBrandPages(pages || []);
+
+                const { data: forms } = await getBrandForms(pageData.brand_id);
+                setBrandForms(forms || []);
             }
         } catch (err: any) {
             console.error("fetchData error:", err);
@@ -176,6 +170,8 @@ export default function PageBuilderPage() {
                     setShowPageSettings(!showPageSettings);
                 }}
                 pageId={page.id}
+                brandPages={brandPages}
+                onPageSelect={(pageId) => router.push(`/page-builder/${pageId}`)}
             />
 
             <main className="flex-1 flex overflow-hidden relative">
@@ -186,6 +182,7 @@ export default function PageBuilderPage() {
                             <SectionConfig
                                 section={currentSection}
                                 brandPages={brandPages}
+                                brandForms={brandForms}
                                 onChange={(updates) => handleUpdateSection(currentSection.id, updates)}
                                 onDelete={() => handleDeleteSection(currentSection.id)}
                                 onClose={() => setCurrentSectionId(null)}
@@ -206,25 +203,28 @@ export default function PageBuilderPage() {
 
                 {/* Canvas Area (Center) */}
                 <div
-                    className="flex-1 flex flex-col items-center overflow-y-auto p-12 relative bg-zinc-50/10 custom-scrollbar scroll-smooth transition-all duration-500"
+                    className="flex-1 relative flex flex-col items-center overflow-hidden bg-zinc-50/10"
                     style={{ backgroundColor: page?.background_color ? `${page.background_color}10` : undefined }}
                 >
                     <div className="absolute top-8 left-8 z-50">
                         <ViewportToggle viewport={viewport} setViewport={setViewport} />
                     </div>
 
-                    <div className="w-full flex justify-center">
-                        <SectionCanvas
-                            sections={page.sections}
-                            currentSectionId={currentSectionId}
-                            onSectionSelect={(id) => {
-                                setCurrentSectionId(id);
-                            }}
-                            brand={brand}
-                            brandPages={brandPages}
-                            backgroundColor={page?.background_color}
-                            viewport={viewport}
-                        />
+                    <div className="flex-1 w-full overflow-y-auto p-12 custom-scrollbar scroll-smooth transition-all duration-500">
+                        <div className="w-full flex justify-center">
+                            <SectionCanvas
+                                sections={page.sections}
+                                currentSectionId={currentSectionId}
+                                onSectionSelect={(id) => {
+                                    setCurrentSectionId(id);
+                                }}
+                                brand={brand}
+                                brandPages={brandPages}
+                                brandForms={brandForms}
+                                backgroundColor={page?.background_color}
+                                viewport={viewport}
+                            />
+                        </div>
                     </div>
                 </div>
 

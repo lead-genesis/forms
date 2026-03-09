@@ -21,8 +21,31 @@ const icons = [
 export function FeaturesConfig({ data, onDataChange }: FeaturesConfigProps) {
     return (
         <div className="space-y-8">
+            <div className="space-y-3">
+                <label className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Display Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { id: 'features', label: 'Features' },
+                        { id: 'steps', label: 'Steps' },
+                    ].map((type) => (
+                        <button
+                            key={type.id}
+                            onClick={() => onDataChange('type', type.id)}
+                            className={cn(
+                                "py-2.5 rounded-xl border text-[11px] font-bold transition-all",
+                                (data?.type || 'features') === type.id
+                                    ? "bg-zinc-900 border-zinc-900 text-white shadow-sm"
+                                    : "bg-white border-zinc-100 text-zinc-400 hover:border-zinc-200 hover:text-zinc-600"
+                            )}
+                        >
+                            {type.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="space-y-2">
-                <label className="text-[11px] font-bold text-zinc-500 ml-1">Section Heading</label>
+                <label className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Section Heading</label>
                 <input
                     type="text"
                     value={data?.heading || ""}

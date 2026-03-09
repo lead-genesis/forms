@@ -17,12 +17,13 @@ interface SectionCanvasProps {
     onSectionSelect: (id: string) => void;
     brand: any;
     brandPages?: BrandPage[];
+    brandForms?: any[];
     backgroundColor?: string;
     viewport: ViewportMode;
     isPreview?: boolean;
 }
 
-export const SectionCanvas = React.memo(({ sections, currentSectionId, onSectionSelect, brand, brandPages, backgroundColor, viewport, isPreview }: SectionCanvasProps) => {
+export const SectionCanvas = React.memo(({ sections, currentSectionId, onSectionSelect, brand, brandPages, brandForms, backgroundColor, viewport, isPreview }: SectionCanvasProps) => {
     const currentYear = useMemo(() => new Date().getFullYear(), []);
 
     return (
@@ -35,7 +36,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
         )} style={{ backgroundColor: backgroundColor || '#ffffff' }}>
             {/* Browser/Phone Header */}
             {!isPreview && (
-                <div className="h-14 border-b border-zinc-50 flex items-center px-6 shrink-0 bg-white/50 backdrop-blur-sm sticky top-0 z-20">
+                <div className="h-14 border-b border-zinc-50 flex items-center px-6 shrink-0 bg-white/50 backdrop-blur-sm">
                     <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-200" />
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-200" />
@@ -71,12 +72,11 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                                 className={cn(
                                     "relative transition-all duration-300",
                                     !isPreview && "cursor-pointer group",
-                                    !isPreview && (currentSectionId === section.id ? "z-[60]" : "hover:bg-zinc-50/50"),
-                                    section.type === 'header' && "sticky top-0 z-[60]"
+                                    !isPreview && (currentSectionId === section.id ? "z-[60]" : "hover:bg-zinc-50/50")
                                 )}
                                 style={{ backgroundColor: section.data?.backgroundColor }}
                             >
-                                <SectionRenderer section={section} brand={brand} brandPages={brandPages} isPreview={isPreview} />
+                                <SectionRenderer section={section} brand={brand} brandPages={brandPages} brandForms={brandForms} isPreview={isPreview} />
 
                                 {currentSectionId === section.id && (
                                     <>
@@ -117,12 +117,12 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
 
 SectionCanvas.displayName = "SectionCanvas";
 
-function SectionRenderer({ section, brand, brandPages, isPreview }: { section: BrandSection; brand: any; brandPages?: BrandPage[]; isPreview?: boolean }) {
+function SectionRenderer({ section, brand, brandPages, brandForms, isPreview }: { section: BrandSection; brand: any; brandPages?: BrandPage[]; brandForms?: any[]; isPreview?: boolean }) {
     const { data, type } = section;
 
     switch (type) {
         case 'hero':
-            return <HeroRenderer data={data} fontColor={data?.fontColor || '#18181b'} imageUrl={data?.imageUrl} isPreview={isPreview} />;
+            return <HeroRenderer data={data} fontColor={data?.fontColor || '#18181b'} imageUrl={data?.imageUrl} isPreview={isPreview} brandPages={brandPages} brandForms={brandForms} />;
         case 'header':
             return <HeaderRenderer data={data} brand={brand} brandPages={brandPages} />;
         case 'features':

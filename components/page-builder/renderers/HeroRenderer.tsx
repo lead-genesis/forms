@@ -3,20 +3,37 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+import { BrandPage } from "@/app/actions/pages";
+
 interface HeroRendererProps {
     data: any;
     fontColor: string;
     imageUrl?: string;
     isPreview?: boolean;
+    brandPages?: BrandPage[];
+    brandForms?: any[];
 }
 
-export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview }: HeroRendererProps) => {
+export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview, brandPages, brandForms }: HeroRendererProps) => {
     const orientation = data?.orientation || 'background';
+
+    const getButtonHref = () => {
+        const link = data?.buttonLink;
+        const type = data?.buttonLinkType || 'external';
+
+        if (!link) return "#";
+        if (type === 'external') return link;
+        if (type === 'page') return `/${link}`;
+        if (type === 'form') return `/f/${link}`;
+        return link;
+    };
+
+    const buttonHref = getButtonHref();
 
     if (orientation === 'background') {
         return (
             <div
-                className="py-32 px-12 text-center space-y-6 relative overflow-hidden min-h-[600px] flex flex-col justify-center items-center"
+                className="relative overflow-hidden min-h-[600px] flex flex-col justify-center items-center"
                 style={{ color: fontColor }}
             >
                 {imageUrl && (
@@ -25,7 +42,7 @@ export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview }
                         <div className="absolute inset-0 bg-black/40" />
                     </div>
                 )}
-                <div className="relative z-[2] max-w-3xl space-y-6">
+                <div className="relative z-[2] max-w-3xl py-32 px-12 text-center space-y-6">
                     <h1 className="text-6xl font-black tracking-tight leading-[1.05]" style={{ color: imageUrl ? 'white' : fontColor }}>
                         {data?.heading || "Your Brand's Next Big Move"}
                     </h1>
@@ -35,10 +52,10 @@ export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview }
                     {data?.buttonText && (
                         <div className="pt-4">
                             <a
-                                href={data.buttonLink || "#"}
+                                href={buttonHref}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                onClick={(e) => !data.buttonLink && e.preventDefault()}
+                                onClick={(e) => buttonHref === "#" && e.preventDefault()}
                                 className="inline-block bg-zinc-900 text-white px-10 py-4 rounded-2xl font-bold text-sm shadow-2xl active:scale-95 transition-all border border-white/10"
                             >
                                 {data.buttonText}
@@ -68,10 +85,10 @@ export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview }
                 {data?.buttonText && (
                     <div className="pt-2">
                         <a
-                            href={data.buttonLink || "#"}
+                            href={buttonHref}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={(e) => !data.buttonLink && e.preventDefault()}
+                            onClick={(e) => buttonHref === "#" && e.preventDefault()}
                             className="inline-block bg-zinc-900 text-white px-8 py-3.5 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all"
                         >
                             {data.buttonText}

@@ -20,7 +20,6 @@ import {
     DocumentTextIcon,
     UserGroupIcon,
     TagIcon,
-    BookOpenIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
 
@@ -72,7 +71,6 @@ export default function DashboardLayout({
         "/dashboard/forms": "Forms",
         "/dashboard/leads": "Leads",
         "/dashboard/brands": "Brands",
-        "/dashboard/blogs": "Blogs",
         "/dashboard/users": "Users",
         "/dashboard/settings": "Settings",
         "/dashboard/products": "Products",
@@ -100,7 +98,6 @@ export default function DashboardLayout({
             label: "Content",
             items: [
                 { href: "/dashboard/brands", label: "Brands", icon: TagIcon },
-                { href: "/dashboard/blogs", label: "Blogs", icon: BookOpenIcon },
             ],
         },
         {

@@ -4,9 +4,18 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Share2, Eye, Layout, Type, Image, Send, MoreHorizontal, Settings, Loader2, Check, Save } from "lucide-react";
+import { ChevronLeft, Share2, Eye, Layout, Type, Image, Send, MoreHorizontal, Settings, Loader2, Check, Save, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import { BrandPage } from "@/app/actions/pages";
 
 interface PageBuilderHeaderProps {
     title: string;
@@ -17,6 +26,8 @@ interface PageBuilderHeaderProps {
     lastSaved?: string;
     onOpenSettings?: () => void;
     pageId: string;
+    brandPages?: BrandPage[];
+    onPageSelect?: (pageId: string) => void;
 }
 
 export function PageBuilderHeader({
@@ -27,7 +38,9 @@ export function PageBuilderHeader({
     status,
     lastSaved,
     onOpenSettings,
-    pageId
+    pageId,
+    brandPages = [],
+    onPageSelect
 }: PageBuilderHeaderProps) {
     const router = useRouter();
 
@@ -48,16 +61,56 @@ export function PageBuilderHeader({
                 <div className="h-6 w-px bg-zinc-100 mx-2" />
             </div>
 
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm px-4 text-center">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 group">
                 <input
                     type="text"
                     value={title}
                     onChange={(e) => onTitleChange(e.target.value)}
                     className={cn(
-                        "bg-transparent border-none focus:ring-0 text-[13px] font-bold p-0 w-full outline-none text-center text-zinc-900",
+                        "bg-transparent border-none focus:ring-0 text-[13px] font-bold p-0 outline-none text-center text-zinc-900 min-w-[40px]",
                         sansFont
                     )}
+                    style={{ width: `${Math.max(title.length * 8, 40)}px` }}
                 />
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="p-1 hover:bg-zinc-100 rounded-md transition-colors text-zinc-400">
+                            <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-56 z-[1000]">
+                        <DropdownMenuLabel className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-1.5">
+                            Brand Pages
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {brandPages.length > 0 ? (
+                            brandPages.map((p) => (
+                                <DropdownMenuItem
+                                    key={p.id}
+                                    onClick={() => onPageSelect?.(p.id)}
+                                    className={cn(
+                                        "flex items-center gap-2 cursor-pointer py-2",
+                                        p.id === pageId && "bg-zinc-50 font-bold text-zinc-900"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-1.5 h-1.5 rounded-full shrink-0",
+                                        p.id === pageId ? "bg-zinc-900" : "bg-transparent"
+                                    )} />
+                                    <span className="truncate">{p.title}</span>
+                                    {p.is_index && (
+                                        <span className="ml-auto text-[9px] bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tight">Home</span>
+                                    )}
+                                </DropdownMenuItem>
+                            ))
+                        ) : (
+                            <div className="px-2 py-4 text-center text-xs text-zinc-400">
+                                No other pages found
+                            </div>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             <div className="flex items-center gap-3 z-20">

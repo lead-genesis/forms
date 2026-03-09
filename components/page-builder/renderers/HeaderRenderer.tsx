@@ -12,34 +12,53 @@ interface HeaderRendererProps {
 
 export const HeaderRenderer = React.memo(({ data, brand, brandPages }: HeaderRendererProps) => {
     const navigation = data?.navigation || [];
+    const logoToUse = data?.customLogoUrl || brand?.logo_url;
+    const logoHeight = data?.logoHeight || 32;
+    const navFontSize = data?.navFontSize || 13;
+
     return (
-        <header className="h-20 px-8 md:px-12 flex items-center justify-between border-b border-zinc-100 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+        <header className="h-20 px-8 md:px-12 flex items-center justify-between border-b border-zinc-100 bg-white">
             <div className="flex items-center gap-3">
-                {brand?.logo_url ? (
-                    <img src={brand.logo_url} alt={brand.name} className="h-8 w-auto" />
+                {logoToUse ? (
+                    <img
+                        src={logoToUse}
+                        alt={brand?.name}
+                        className="w-auto object-contain"
+                        style={{ height: `${logoHeight}px` }}
+                    />
                 ) : (
-                    <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center text-white scale-90">
-                        <span className="text-[14px] font-black">{brand?.name?.[0] || 'B'}</span>
+                    <div
+                        className="bg-zinc-900 rounded-xl flex items-center justify-center text-white"
+                        style={{ width: `${logoHeight * 1.25}px`, height: `${logoHeight * 1.25}px` }}
+                    >
+                        <span style={{ fontSize: `${logoHeight * 0.45}px` }} className="font-black">
+                            {brand?.name?.[0] || 'B'}
+                        </span>
                     </div>
                 )}
-                <span className="font-bold text-zinc-900 tracking-tight">{brand?.name || "Brand"}</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-8">
                 {navigation.length > 0 ? (
                     navigation.map((pageId: string) => {
                         const page = brandPages?.find(p => p.id === pageId);
+                        const href = page ? (page.is_index ? '/' : `/${page.slug}`) : '#';
                         return (
-                            <span key={pageId} className="text-[13px] font-medium text-zinc-500 hover:text-zinc-900 cursor-pointer transition-colors">
+                            <a
+                                key={pageId}
+                                href={href}
+                                className="font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+                                style={{ fontSize: `${navFontSize}px` }}
+                            >
                                 {page?.title || 'Link'}
-                            </span>
+                            </a>
                         );
                     })
                 ) : (
                     <>
-                        <span className="text-[13px] font-medium text-zinc-400">Home</span>
-                        <span className="text-[13px] font-medium text-zinc-400">About</span>
-                        <span className="text-[13px] font-medium text-zinc-400">Contact</span>
+                        <span className="font-medium text-zinc-400" style={{ fontSize: `${navFontSize}px` }}>Home</span>
+                        <span className="font-medium text-zinc-400" style={{ fontSize: `${navFontSize}px` }}>About</span>
+                        <span className="font-medium text-zinc-400" style={{ fontSize: `${navFontSize}px` }}>Contact</span>
                     </>
                 )}
             </nav>

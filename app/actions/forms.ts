@@ -128,6 +128,23 @@ export async function getForms() {
     return { data: data ?? [], error: null };
 }
 
+export async function getBrandForms(brandId: string) {
+    try {
+        const supabase = await createClient();
+        const { data, error } = await supabase
+            .from("forms")
+            .select("*")
+            .eq("brand_id", brandId)
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return { data: data ?? [], error: null };
+    } catch (error: any) {
+        console.error("getBrandForms error:", error);
+        return { data: [], error: error.message };
+    }
+}
+
 /** Load a single form with its brand details (for the builder). */
 export async function getForm(id: string) {
     console.log("[getForm] Fetching form with ID:", id);
