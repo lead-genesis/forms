@@ -5,6 +5,12 @@ import { Menu, X } from "lucide-react";
 import { BrandPage } from "@/app/actions/pages";
 import { cn } from "@/lib/utils";
 
+interface NavLink {
+    id: string;
+    label: string;
+    href: string;
+}
+
 interface HeaderRendererProps {
     data: any;
     brand: any;
@@ -92,7 +98,7 @@ export const HeaderRenderer = React.memo(({ data, brand, brandPages, forceMobile
                 </a>
 
                 <nav className={cn("items-center gap-8", forceMobile ? "hidden" : "hidden md:flex")}>
-                    {links.map((link) => (
+                    {links.map((link: NavLink) => (
                         <a
                             key={link.id}
                             href={link.href}
@@ -147,7 +153,7 @@ export const HeaderRenderer = React.memo(({ data, brand, brandPages, forceMobile
                     </div>
 
                     <nav className="flex-1 overflow-y-auto py-3 px-3">
-                        {links.map((link) => (
+                        {links.map((link: NavLink) => (
                             <a
                                 key={link.id}
                                 href={link.href}
