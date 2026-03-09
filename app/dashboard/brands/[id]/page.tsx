@@ -1,19 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
 import { Card, CardContent } from "@/components/ui/card";
-import { sansFont } from "@/lib/design-system";
-import { DocumentTextIcon, PlusIcon, Cog6ToothIcon, NewspaperIcon } from "@heroicons/react/24/outline";
+import {
+    sansFont,
+    tableBase,
+    tableHead,
+    tableHeadCell,
+    tableRow,
+    tableCell,
+} from "@/lib/design-system";
+import { DocumentTextIcon, PlusIcon, Cog6ToothIcon, NewspaperIcon, GlobeAltIcon, Bars3Icon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
-import { getBrandPages, createPage, setPageAsIndex, BrandPage } from "@/app/actions/pages";
-import { getBrand, updateBrand, verifyDomainDNS } from "@/app/actions/brands";
+import { getBrandPages, createPage, setPageAsIndex, migrateBrandBlogPages, BrandPage } from "@/app/actions/pages";
+import { getBrand, updateBrand, updateBrandHeaderConfig, verifyDomainDNS } from "@/app/actions/brands";
 import { getBlogs } from "@/app/actions/blogs";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Edit2, Save, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react";
+import { Edit2, Save, CheckCircle2, AlertCircle, RefreshCcw, Globe, ArrowRight, Upload, Loader2, X, Monitor, Tablet, Smartphone } from "lucide-react";
+import { uploadPageImage } from "@/app/actions/pages";
+import { HeaderRenderer } from "@/components/page-builder/renderers/HeaderRenderer";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,7 +35,7 @@ const fadeInUp = {
     show: { y: 0, opacity: 1, transition: { duration: 0.4 } },
 };
 
-type Tab = 'pages' | 'blogs' | 'settings';
+type Tab = 'pages' | 'blogs' | 'header' | 'domain' | 'settings';
 
 export default function BrandDetailsPage() {
     const params = useParams();
@@ -52,9 +61,26 @@ export default function BrandDetailsPage() {
     // Settings state
     const [brandName, setBrandName] = useState("");
     const [brandDesc, setBrandDesc] = useState("");
+    const [logoUrl, setLogoUrl] = useState("");
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+    const logoInputRef = useRef<HTMLInputElement>(null);
     const [customDomain, setCustomDomain] = useState("");
     const [subdomain, setSubdomain] = useState("");
+    const [seoTitle, setSeoTitle] = useState("");
+    const [seoDescription, setSeoDescription] = useState("");
+    const [ogImageUrl, setOgImageUrl] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [isSavingDomain, setIsSavingDomain] = useState(false);
+
+    // Header config state
+    const [headerLogoUrl, setHeaderLogoUrl] = useState("");
+    const [headerLogoHeight, setHeaderLogoHeight] = useState(32);
+    const [headerNavigation, setHeaderNavigation] = useState<string[]>([]);
+    const [headerNavFontSize, setHeaderNavFontSize] = useState(13);
+    const [isSavingHeader, setIsSavingHeader] = useState(false);
+    const [isUploadingHeaderLogo, setIsUploadingHeaderLogo] = useState(false);
+    const headerLogoInputRef = useRef<HTMLInputElement>(null);
+    const [headerPreviewViewport, setHeaderPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
     const [isVerifying, setIsVerifying] = useState(false);
     const [dnsStatus, setDnsStatus] = useState<{
         a: boolean;
@@ -82,11 +108,28 @@ export default function BrandDetailsPage() {
             setBrand(brandRes.data);
             setBrandName(brandRes.data.name);
             setBrandDesc(brandRes.data.description || "");
+            setLogoUrl(brandRes.data.logo_url || "");
             setCustomDomain(brandRes.data.custom_domain || "");
             setSubdomain(brandRes.data.subdomain || "");
+            setSeoTitle(brandRes.data.seo_title || "");
+            setSeoDescription(brandRes.data.seo_description || "");
+            setOgImageUrl(brandRes.data.og_image_url || brandRes.data.logo_url || "");
+            const hc = brandRes.data.header_config || {};
+            setHeaderLogoUrl(hc.customLogoUrl || "");
+            setHeaderLogoHeight(hc.logoHeight || 32);
+            setHeaderNavigation(hc.navigation || []);
+            setHeaderNavFontSize(hc.navFontSize || 13);
         }
         if (pagesRes.data) {
-            setPages(pagesRes.data);
+            const hasBlogList = pagesRes.data.some((p: BrandPage) => p.type === 'blog_list');
+            const hasBlogTemplate = pagesRes.data.some((p: BrandPage) => p.type === 'blog');
+            if (!hasBlogList || !hasBlogTemplate) {
+                await migrateBrandBlogPages(brandId);
+                const { data: refreshed } = await getBrandPages(brandId);
+                setPages(refreshed || []);
+            } else {
+                setPages(pagesRes.data);
+            }
         }
         if (blogsRes.data) {
             setBlogs(blogsRes.data);
@@ -99,7 +142,7 @@ export default function BrandDetailsPage() {
 
     const handleCreatePage = async (type: BrandPage['type'] = 'landing') => {
         setIsCreating(true);
-        const title = type === 'landing' ? 'New Landing Page' : type === 'blog' ? 'New Blog Post' : 'New Page';
+        const title = type === 'landing' ? 'New Landing Page' : type === 'blog' ? 'New Blog Post' : type === 'blog_list' ? 'Blog List' : 'New Page';
         const { data, error } = await createPage(brandId, title, type);
 
         if (error) {
@@ -113,30 +156,111 @@ export default function BrandDetailsPage() {
 
     const handleUpdateSettings = async () => {
         setIsSaving(true);
-        const { error, vercelRegistered, vercelSkipped } = await updateBrand(brandId, {
+        const { error } = await updateBrand(brandId, {
             name: brandName,
             description: brandDesc,
-            custom_domain: customDomain || null,
-            subdomain: subdomain || null
+            logo_url: logoUrl || null,
+            seo_title: seoTitle || null,
+            seo_description: seoDescription || null,
+            og_image_url: ogImageUrl || null,
         });
 
         if (error) {
             toast.error(error);
         } else {
             toast.success("Settings updated");
+            setBrand({ ...brand, name: brandName, description: brandDesc, logo_url: logoUrl, seo_title: seoTitle, seo_description: seoDescription, og_image_url: ogImageUrl });
+        }
+        setIsSaving(false);
+    };
+
+    const handleUpdateDomain = async () => {
+        setIsSavingDomain(true);
+        const { error, vercelRegistered, vercelSkipped } = await updateBrand(brandId, {
+            custom_domain: customDomain || null,
+            subdomain: subdomain || null,
+        });
+
+        if (error) {
+            toast.error(error);
+        } else {
+            toast.success("Domain settings updated");
             if (vercelRegistered) {
-                toast.success("Domain registered with Vercel. It should appear in your project's Domains tab.");
+                toast.success("Both apex and www domains registered with Vercel.");
             }
             if (vercelSkipped) {
                 toast.warning(
                     "Domain saved here but not added to Vercel. Add VERCEL_API_TOKEN and VERCEL_PROJECT_ID to your environment variables to register it in the Vercel dashboard."
                 );
             }
-            setBrand({ ...brand, name: brandName, description: brandDesc, custom_domain: customDomain, subdomain: subdomain });
-            // Reset DNS status when domain changes
+            setBrand({ ...brand, custom_domain: customDomain, subdomain: subdomain });
             setDnsStatus(null);
         }
-        setIsSaving(false);
+        setIsSavingDomain(false);
+    };
+
+    const handleSaveHeaderConfig = async () => {
+        setIsSavingHeader(true);
+        const headerConfig = {
+            customLogoUrl: headerLogoUrl || null,
+            logoHeight: headerLogoHeight,
+            navigation: headerNavigation,
+            navFontSize: headerNavFontSize,
+        };
+        const { error } = await updateBrandHeaderConfig(brandId, headerConfig);
+        if (error) {
+            toast.error(error);
+        } else {
+            toast.success("Header configuration saved");
+            setBrand({ ...brand, header_config: headerConfig });
+        }
+        setIsSavingHeader(false);
+    };
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingLogo(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64 = reader.result as string;
+            const { url, error } = await uploadPageImage(brandId, base64);
+            if (error) {
+                toast.error(error);
+            } else if (url) {
+                setLogoUrl(url);
+                toast.success("Logo uploaded!");
+            }
+            setIsUploadingLogo(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleHeaderLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingHeaderLogo(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64 = reader.result as string;
+            const { url, error } = await uploadPageImage(brandId, base64);
+            if (error) {
+                toast.error(error);
+            } else if (url) {
+                setHeaderLogoUrl(url);
+                toast.success("Logo uploaded!");
+            }
+            setIsUploadingHeaderLogo(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const toggleHeaderNavPage = (pageId: string) => {
+        setHeaderNavigation(prev =>
+            prev.includes(pageId) ? prev.filter(id => id !== pageId) : [...prev, pageId]
+        );
     };
 
     const handleVerifyDNS = async () => {
@@ -161,7 +285,14 @@ export default function BrandDetailsPage() {
         setIsVerifying(false);
     };
 
-    const isConnected = dnsStatus ? (customDomain.toLowerCase().startsWith('www.') ? dnsStatus.cname : dnsStatus.a) : false;
+    const domainPair = customDomain ? (() => {
+        const clean = customDomain.toLowerCase().replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+        const isWww = clean.startsWith("www.");
+        const apex = isWww ? clean.slice(4) : clean;
+        return { apex, www: `www.${apex}`, primary: clean, secondary: isWww ? apex : `www.${clean}` };
+    })() : null;
+
+    const isConnected = dnsStatus ? (dnsStatus.a && dnsStatus.cname) : false;
     const isPartial = dnsStatus && !isConnected && (dnsStatus.a || dnsStatus.cname);
 
     const handleSetAsIndex = async (pageId: string) => {
@@ -176,7 +307,7 @@ export default function BrandDetailsPage() {
         }
     };
 
-    const filteredPages = pages.filter(p => p.type === 'landing' || p.type === 'content' || p.type === 'blog');
+    const filteredPages = pages.filter(p => p.type === 'landing' || p.type === 'content' || p.type === 'blog' || p.type === 'blog_list');
     const sortedPages = [...filteredPages].sort((a, b) => Number(b.is_index ?? 0) - Number(a.is_index ?? 0));
 
     /** Truncate rich text (JSON or string) to plain text for table preview. */
@@ -203,7 +334,7 @@ export default function BrandDetailsPage() {
                 subtitle={brand ? brand.description || "Manage your brand pages and settings." : "Manage your brand pages and settings."}
             >
                 <div className="flex items-center gap-3">
-                    {activeTab !== 'settings' && mounted && (
+                    {activeTab !== 'settings' && activeTab !== 'domain' && activeTab !== 'header' && mounted && (
                         activeTab === 'blogs' ? (
                             <Link
                                 href={`/dashboard/blogs/new?brand_id=${brandId}`}
@@ -261,6 +392,26 @@ export default function BrandDetailsPage() {
                         Blogs
                     </button>
                     <button
+                        onClick={() => setActiveTab('header')}
+                        className={cn(
+                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
+                            activeTab === 'header' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <Bars3Icon className="w-4 h-4" />
+                        Header
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('domain')}
+                        className={cn(
+                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
+                            activeTab === 'domain' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <GlobeAltIcon className="w-4 h-4" />
+                        Domain
+                    </button>
+                    <button
                         onClick={() => setActiveTab('settings')}
                         className={cn(
                             "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
@@ -285,6 +436,534 @@ export default function BrandDetailsPage() {
                                 <div key={i} className="h-40 rounded-2xl bg-secondary/30 animate-pulse" />
                             ))}
                         </motion.div>
+                    ) : activeTab === 'header' ? (
+                        <motion.div
+                            key="header"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex gap-8 items-stretch max-w-[1080px]"
+                        >
+                            {/* Left: Settings */}
+                            <div className="w-[420px] shrink-0 space-y-6">
+                                <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
+                                    <CardContent className="p-8 space-y-6">
+                                        <div>
+                                            <h4 className="text-lg font-bold mb-1">Site Header</h4>
+                                            <p className="text-xs text-muted-foreground">Configure your header once — it applies across all pages for this brand.</p>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-foreground px-1">Header Logo</label>
+                                                <div className="space-y-3">
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={headerLogoUrl}
+                                                            onChange={(e) => setHeaderLogoUrl(e.target.value)}
+                                                            placeholder="Paste logo URL..."
+                                                            className={cn(
+                                                                "flex-1 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium",
+                                                                headerLogoUrl && !headerLogoUrl.startsWith('http') && !headerLogoUrl.startsWith('/') && "border-red-200 bg-red-50/30"
+                                                            )}
+                                                        />
+                                                        <input
+                                                            type="file"
+                                                            ref={headerLogoInputRef}
+                                                            onChange={handleHeaderLogoUpload}
+                                                            className="hidden"
+                                                            accept="image/*"
+                                                        />
+                                                        <button
+                                                            onClick={() => headerLogoInputRef.current?.click()}
+                                                            disabled={isUploadingHeaderLogo}
+                                                            className="px-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center"
+                                                        >
+                                                            {isUploadingHeaderLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                                        </button>
+                                                    </div>
+
+                                                    {headerLogoUrl && (
+                                                        <div className="h-20 w-full rounded-xl border border-border/50 bg-secondary/10 overflow-hidden relative flex items-center justify-center p-4">
+                                                            <img src={headerLogoUrl} alt="Logo preview" className="max-h-full max-w-full object-contain" />
+                                                            <button
+                                                                onClick={() => setHeaderLogoUrl('')}
+                                                                className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur shadow-sm rounded-lg text-muted-foreground hover:text-red-500 transition-colors"
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-baseline px-1">
+                                                    <label className="text-sm font-semibold text-foreground">Logo Size</label>
+                                                    <span className="text-xs font-mono text-muted-foreground">{headerLogoHeight}px</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="16"
+                                                    max="80"
+                                                    step="2"
+                                                    value={headerLogoHeight}
+                                                    onChange={(e) => setHeaderLogoHeight(parseInt(e.target.value))}
+                                                    className="w-full h-1.5 bg-secondary/30 rounded-lg appearance-none cursor-pointer accent-primary"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-border/40 space-y-4">
+                                            <div>
+                                                <h4 className="text-lg font-bold mb-1">Navigation Links</h4>
+                                                <p className="text-xs text-muted-foreground">Select which pages appear in the header navigation across your site.</p>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-baseline px-1">
+                                                    <label className="text-sm font-semibold text-foreground">Nav Font Size</label>
+                                                    <span className="text-xs font-mono text-muted-foreground">{headerNavFontSize}px</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="10"
+                                                    max="24"
+                                                    step="1"
+                                                    value={headerNavFontSize}
+                                                    onChange={(e) => setHeaderNavFontSize(parseInt(e.target.value))}
+                                                    className="w-full h-1.5 bg-secondary/30 rounded-lg appearance-none cursor-pointer accent-primary"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-2">
+                                                {pages.length > 0 ? pages.map((page) => (
+                                                    <button
+                                                        key={page.id}
+                                                        onClick={() => toggleHeaderNavPage(page.id)}
+                                                        className={cn(
+                                                            "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
+                                                            headerNavigation.includes(page.id)
+                                                                ? "bg-primary border-primary text-primary-foreground shadow-md"
+                                                                : "bg-background border-border/50 text-foreground hover:border-border"
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-bold">{page.title}</span>
+                                                            <span className={cn(
+                                                                "text-[9px] uppercase tracking-wider font-semibold opacity-60",
+                                                                headerNavigation.includes(page.id) ? "text-primary-foreground/60" : "text-muted-foreground"
+                                                            )}>
+                                                                /{page.slug}
+                                                            </span>
+                                                        </div>
+                                                        {headerNavigation.includes(page.id) && (
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
+                                                        )}
+                                                    </button>
+                                                )) : (
+                                                    <div className="p-8 text-center border-2 border-dashed border-border/30 rounded-2xl">
+                                                        <p className="text-xs text-muted-foreground italic">No pages found. Create pages first to add navigation links.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={handleSaveHeaderConfig}
+                                            disabled={isSavingHeader}
+                                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                        >
+                                            <Save className="w-4 h-4" />
+                                            {isSavingHeader ? "Saving..." : "Save Header"}
+                                        </button>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Right: Live Preview */}
+                            <div className="flex-1 min-w-0 flex flex-col">
+                                <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col flex-1">
+                                    <div className="px-5 py-3.5 border-b border-border/40 flex items-center justify-between bg-secondary/10">
+                                        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Preview</span>
+                                        <div className="flex items-center gap-1 bg-background border border-border/50 rounded-lg p-0.5">
+                                            {([
+                                                { id: 'desktop' as const, icon: Monitor, label: 'Desktop' },
+                                                { id: 'tablet' as const, icon: Tablet, label: 'Tablet' },
+                                                { id: 'mobile' as const, icon: Smartphone, label: 'Mobile' },
+                                            ]).map((vp) => (
+                                                <button
+                                                    key={vp.id}
+                                                    onClick={() => setHeaderPreviewViewport(vp.id)}
+                                                    className={cn(
+                                                        "p-1.5 rounded-md transition-all",
+                                                        headerPreviewViewport === vp.id
+                                                            ? "bg-foreground text-background shadow-sm"
+                                                            : "text-muted-foreground hover:text-foreground"
+                                                    )}
+                                                    title={vp.label}
+                                                >
+                                                    <vp.icon className="w-3.5 h-3.5" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-zinc-50/50 flex justify-center p-6 flex-1">
+                                        <div
+                                            className={cn(
+                                                "bg-white rounded-2xl shadow-lg shadow-black/5 overflow-hidden transition-all duration-500 ease-out border border-zinc-200/60 relative",
+                                                headerPreviewViewport === 'desktop' && "w-full",
+                                                headerPreviewViewport === 'tablet' && "w-[768px] max-w-full",
+                                                headerPreviewViewport === 'mobile' && "w-[375px] max-w-full"
+                                            )}
+                                        >
+                                            {/* Faux browser chrome */}
+                                            <div className="h-9 border-b border-zinc-100 flex items-center px-4 bg-white/80">
+                                                <div className="flex gap-1.5">
+                                                    <div className="w-2 h-2 rounded-full bg-zinc-200" />
+                                                    <div className="w-2 h-2 rounded-full bg-zinc-200" />
+                                                    <div className="w-2 h-2 rounded-full bg-zinc-200" />
+                                                </div>
+                                                <div className="mx-auto bg-zinc-100/80 px-3 py-1 rounded-full">
+                                                    <span className="text-[9px] font-medium text-zinc-400 tabular-nums lowercase tracking-tight">
+                                                        {brand?.name?.toLowerCase().replace(/\s/g, '') || "brand"}.com
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <HeaderRenderer
+                                                data={{
+                                                    customLogoUrl: headerLogoUrl || null,
+                                                    logoHeight: headerLogoHeight,
+                                                    navigation: headerNavigation,
+                                                    navFontSize: headerNavFontSize,
+                                                }}
+                                                brand={brand}
+                                                brandPages={pages}
+                                                forceMobile={headerPreviewViewport === 'mobile' || headerPreviewViewport === 'tablet'}
+                                                contained
+                                            />
+
+                                            {/* Placeholder body */}
+                                            <div className="p-6 space-y-3">
+                                                <div className="h-4 bg-zinc-100 rounded-full w-3/4" />
+                                                <div className="h-3 bg-zinc-50 rounded-full w-full" />
+                                                <div className="h-3 bg-zinc-50 rounded-full w-5/6" />
+                                                <div className="h-3 bg-zinc-50 rounded-full w-2/3" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {headerPreviewViewport !== 'desktop' && (
+                                        <div className="px-5 py-3 border-t border-border/30 bg-secondary/5">
+                                            <p className="text-[11px] text-muted-foreground text-center">
+                                                Tap the <strong>menu icon</strong> in the preview to test the mobile slide-out navigation.
+                                            </p>
+                                        </div>
+                                    )}
+                                </Card>
+                            </div>
+                        </motion.div>
+                    ) : activeTab === 'domain' ? (
+                        <motion.div
+                            key="domain"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="max-w-3xl space-y-6"
+                        >
+                            <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
+                                <CardContent className="p-8 space-y-6">
+                                    <h4 className="text-lg font-bold mb-4">Domain & Subdomain</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold text-foreground px-1">Subdomain</label>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={subdomain}
+                                                    onChange={(e) => setSubdomain(e.target.value)}
+                                                    className="flex-1 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                                    placeholder="my-brand"
+                                                />
+                                                <span className="text-sm text-muted-foreground font-medium">.genesisflow.io</span>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground px-1">Your site will be accessible at this subdomain.</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold text-foreground px-1">Custom Domain</label>
+                                            <input
+                                                type="text"
+                                                value={customDomain}
+                                                onChange={(e) => setCustomDomain(e.target.value)}
+                                                className="w-full bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                                placeholder="www.example.com"
+                                            />
+                                            <p className="text-[11px] text-muted-foreground px-1">Enter your own domain (e.g., example.com).</p>
+                                        </div>
+                                    </div>
+
+                                    {customDomain && domainPair && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            className="mt-6 space-y-4"
+                                        >
+                                            <div className="rounded-2xl border border-border/50 overflow-hidden">
+                                                <div className="flex items-center justify-between px-5 py-3.5 bg-secondary/20 border-b border-border/50">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Globe className="w-4 h-4 text-muted-foreground" />
+                                                        <h5 className="text-sm font-bold text-foreground">Connected Domains</h5>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleVerifyDNS}
+                                                        disabled={isVerifying}
+                                                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                                                    >
+                                                        {isVerifying ? (
+                                                            <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                                                        ) : (
+                                                            <RefreshCcw className="w-3.5 h-3.5" />
+                                                        )}
+                                                        {isVerifying ? "Checking..." : "Verify DNS"}
+                                                    </button>
+                                                </div>
+
+                                                <p className="px-5 pt-3 pb-1 text-xs text-muted-foreground">
+                                                    Both domains are automatically registered with Vercel. The secondary domain redirects to your primary.
+                                                </p>
+
+                                                <div className="divide-y divide-border/30">
+                                                    {/* Apex domain row */}
+                                                    <div className="px-5 py-4 flex items-center gap-4">
+                                                        <div className={cn(
+                                                            "w-2.5 h-2.5 rounded-full shrink-0 transition-colors",
+                                                            !dnsStatus ? "bg-muted-foreground/30" : dnsStatus.a ? "bg-emerald-500" : "bg-red-500"
+                                                        )} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-semibold text-foreground truncate">{domainPair.apex}</span>
+                                                                {domainPair.primary === domainPair.apex && (
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary uppercase tracking-wide shrink-0">Primary</span>
+                                                                )}
+                                                                {domainPair.primary !== domainPair.apex && (
+                                                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground uppercase tracking-wide shrink-0 flex items-center gap-1">
+                                                                        <ArrowRight className="w-2.5 h-2.5" />Redirect
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-1.5">
+                                                                <span className="text-xs text-muted-foreground">A Record</span>
+                                                                <span className="text-xs text-muted-foreground/40">|</span>
+                                                                <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">@ → 76.76.21.21</code>
+                                                            </div>
+                                                        </div>
+                                                        <div className="shrink-0 text-right">
+                                                            {!dnsStatus ? (
+                                                                <span className="text-xs text-muted-foreground">Not checked</span>
+                                                            ) : dnsStatus.a ? (
+                                                                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />Connected
+                                                                </span>
+                                                            ) : (
+                                                                <div>
+                                                                    <span className="flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                                                                        <AlertCircle className="w-3.5 h-3.5" />Not detected
+                                                                    </span>
+                                                                    {dnsStatus.detectedA?.length > 0 && (
+                                                                        <p className="text-[10px] text-red-400 mt-0.5">Found: {dnsStatus.detectedA[0]}</p>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* WWW domain row */}
+                                                    <div className="px-5 py-4 flex items-center gap-4">
+                                                        <div className={cn(
+                                                            "w-2.5 h-2.5 rounded-full shrink-0 transition-colors",
+                                                            !dnsStatus ? "bg-muted-foreground/30" : dnsStatus.cname ? "bg-emerald-500" : "bg-red-500"
+                                                        )} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-semibold text-foreground truncate">{domainPair.www}</span>
+                                                                {domainPair.primary === domainPair.www && (
+                                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary uppercase tracking-wide shrink-0">Primary</span>
+                                                                )}
+                                                                {domainPair.primary !== domainPair.www && (
+                                                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground uppercase tracking-wide shrink-0 flex items-center gap-1">
+                                                                        <ArrowRight className="w-2.5 h-2.5" />Redirect
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-1.5">
+                                                                <span className="text-xs text-muted-foreground">CNAME</span>
+                                                                <span className="text-xs text-muted-foreground/40">|</span>
+                                                                <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">www → cname.genesisflow.io</code>
+                                                            </div>
+                                                        </div>
+                                                        <div className="shrink-0 text-right">
+                                                            {!dnsStatus ? (
+                                                                <span className="text-xs text-muted-foreground">Not checked</span>
+                                                            ) : dnsStatus.cname ? (
+                                                                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />Connected
+                                                                </span>
+                                                            ) : (
+                                                                <div>
+                                                                    <span className="flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                                                                        <AlertCircle className="w-3.5 h-3.5" />Not detected
+                                                                    </span>
+                                                                    {dnsStatus.detectedCname?.length > 0 && (
+                                                                        <p className="text-[10px] text-red-400 mt-0.5">Found: {dnsStatus.detectedCname[0]}</p>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Subdomain row */}
+                                                    {subdomain && (
+                                                        <div className="px-5 py-4 flex items-center gap-4">
+                                                            <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-emerald-500" />
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-semibold text-foreground truncate">{subdomain}.genesisflow.io</span>
+                                                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground uppercase tracking-wide shrink-0">Subdomain</span>
+                                                                </div>
+                                                                <p className="text-xs text-muted-foreground mt-1">Managed automatically — no DNS setup needed</p>
+                                                            </div>
+                                                            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 shrink-0">
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />Active
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Vercel SSL / Platform Status */}
+                                            {dnsStatus?.vercel && (
+                                                <div className={cn(
+                                                    "flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border",
+                                                    dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                        ? "bg-emerald-500/5 border-emerald-500/20"
+                                                        : dnsStatus.vercel.misconfigured
+                                                            ? "bg-red-500/5 border-red-500/20"
+                                                            : "bg-amber-500/5 border-amber-500/20"
+                                                )}>
+                                                    {dnsStatus.vercel.verified && dnsStatus.vercel.configured ? (
+                                                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                                                    ) : (
+                                                        <AlertCircle className={cn(
+                                                            "w-5 h-5 shrink-0",
+                                                            dnsStatus.vercel.misconfigured ? "text-red-500" : "text-amber-500"
+                                                        )} />
+                                                    )}
+                                                    <div className="flex-1">
+                                                        <p className={cn(
+                                                            "text-sm font-semibold",
+                                                            dnsStatus.vercel.verified && dnsStatus.vercel.configured ? "text-emerald-600"
+                                                                : dnsStatus.vercel.misconfigured ? "text-red-600" : "text-amber-600"
+                                                        )}>
+                                                            {dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                ? "SSL Active — Serving HTTPS traffic"
+                                                                : dnsStatus.vercel.misconfigured
+                                                                    ? "Misconfigured — Check DNS records"
+                                                                    : !dnsStatus.vercel.verified
+                                                                        ? "Verification Pending"
+                                                                        : "Provisioning SSL..."}
+                                                        </p>
+                                                        <p className={cn(
+                                                            "text-xs mt-0.5",
+                                                            dnsStatus.vercel.verified && dnsStatus.vercel.configured ? "text-emerald-600/70"
+                                                                : dnsStatus.vercel.misconfigured ? "text-red-600/70" : "text-amber-600/70"
+                                                        )}>
+                                                            {dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                ? "Both domains are live with automatic HTTPS."
+                                                                : dnsStatus.vercel.misconfigured
+                                                                    ? "DNS records are pointing elsewhere. Update your A and CNAME records."
+                                                                    : !dnsStatus.vercel.verified
+                                                                        ? "Waiting for domain ownership verification. See issues below."
+                                                                        : "SSL certificates are being provisioned. This typically takes 1-2 minutes."}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {dnsStatus && isConnected && !dnsStatus.vercel && (
+                                                <div className="flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border bg-emerald-500/5 border-emerald-500/20">
+                                                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-emerald-600">All DNS Records Connected</p>
+                                                        <p className="text-xs text-emerald-600/70 mt-0.5">Both apex and www are correctly pointed to our servers.</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {dnsStatus && isPartial && (
+                                                <div className="flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border bg-amber-500/5 border-amber-500/20">
+                                                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-amber-600">Partial Configuration</p>
+                                                        <p className="text-xs text-amber-600/70 mt-0.5">
+                                                            {dnsStatus.a && !dnsStatus.cname
+                                                                ? `Apex domain is connected but www.${domainPair.apex} needs a CNAME record.`
+                                                                : `www is connected but ${domainPair.apex} needs an A record pointing to 76.76.21.21.`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {dnsStatus && !isConnected && !isPartial && (
+                                                <div className="flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border bg-red-500/5 border-red-500/20">
+                                                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-red-600">DNS Records Not Detected</p>
+                                                        <p className="text-xs text-red-600/70 mt-0.5">Add the DNS records shown above in your domain registrar, then click Verify DNS.</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {dnsStatus?.errors && dnsStatus.errors.length > 0 && (
+                                                <div className="px-5 py-3.5 rounded-2xl border bg-red-500/5 border-red-500/20 flex gap-3.5 items-start">
+                                                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                                    <div className="space-y-1.5">
+                                                        <p className="text-sm font-semibold text-red-600">Issues Found</p>
+                                                        <ul className="text-xs text-red-500/80 space-y-1 list-disc list-inside">
+                                                            {dnsStatus.errors.map((err, i) => (
+                                                                <li key={i}>{err}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {!dnsStatus && (
+                                                <div className="px-5 py-4 rounded-2xl bg-secondary/10 border border-border/30">
+                                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                                        Add these DNS records at your domain registrar, then click <b>Verify DNS</b> above.
+                                                        Both the apex (<code className="text-[11px] font-mono bg-secondary/50 px-1 py-0.5 rounded">{domainPair.apex}</code>) and www
+                                                        (<code className="text-[11px] font-mono bg-secondary/50 px-1 py-0.5 rounded">{domainPair.www}</code>) will be registered
+                                                        with Vercel. The secondary domain automatically redirects to your primary.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+
+                                    <button
+                                        onClick={handleUpdateDomain}
+                                        disabled={isSavingDomain}
+                                        className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        {isSavingDomain ? "Saving..." : "Save Domain Settings"}
+                                    </button>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
                     ) : activeTab === 'settings' ? (
                         <motion.div
                             key="settings"
@@ -296,6 +975,60 @@ export default function BrandDetailsPage() {
                             <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
                                 <CardContent className="p-8 space-y-6">
                                     <h4 className="text-lg font-bold mb-4">General Settings</h4>
+
+                                    {/* Brand Logo */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-foreground px-1">Brand Logo</label>
+                                        <div className="flex items-start gap-4">
+                                            <div className="relative shrink-0">
+                                                <div className={cn(
+                                                    "w-20 h-20 rounded-2xl border-2 overflow-hidden flex items-center justify-center bg-secondary/20 transition-all",
+                                                    logoUrl ? "border-border/50" : "border-dashed border-border/60"
+                                                )}>
+                                                    {logoUrl ? (
+                                                        <img src={logoUrl} alt="Brand logo" className="w-full h-full object-contain p-1" />
+                                                    ) : (
+                                                        <Upload className="w-6 h-6 text-muted-foreground/40" />
+                                                    )}
+                                                </div>
+                                                {logoUrl && (
+                                                    <button
+                                                        onClick={() => setLogoUrl('')}
+                                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-background border border-border/50 rounded-full flex items-center justify-center shadow-sm text-muted-foreground hover:text-red-500 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 space-y-2">
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={logoUrl}
+                                                        onChange={(e) => setLogoUrl(e.target.value)}
+                                                        placeholder="Paste logo URL..."
+                                                        className="flex-1 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        ref={logoInputRef}
+                                                        onChange={handleLogoUpload}
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                    />
+                                                    <button
+                                                        onClick={() => logoInputRef.current?.click()}
+                                                        disabled={isUploadingLogo}
+                                                        className="px-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center"
+                                                    >
+                                                        {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                                <p className="text-[11px] text-muted-foreground px-1">Used on the brand card and as the default social preview image.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-foreground px-1">Brand Name</label>
@@ -320,241 +1053,67 @@ export default function BrandDetailsPage() {
                                     </div>
 
                                     <div className="pt-4 border-t border-border/40">
-                                        <h4 className="text-lg font-bold mb-4">Domain & Subdomain</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <h4 className="text-lg font-bold mb-1">SEO & Meta Data</h4>
+                                        <p className="text-xs text-muted-foreground mb-4">Controls how your brand appears in search engines and social media previews.</p>
+                                        <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-foreground px-1">Subdomain</label>
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={subdomain}
-                                                        onChange={(e) => setSubdomain(e.target.value)}
-                                                        className="flex-1 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                                        placeholder="my-brand"
-                                                    />
-                                                    <span className="text-sm text-muted-foreground font-medium">.genesisflow.io</span>
-                                                </div>
-                                                <p className="text-[11px] text-muted-foreground px-1">Your site will be accessible at this subdomain.</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-foreground px-1">Custom Domain</label>
+                                                <label className="text-sm font-semibold text-foreground px-1">SEO Title</label>
                                                 <input
                                                     type="text"
-                                                    value={customDomain}
-                                                    onChange={(e) => setCustomDomain(e.target.value)}
+                                                    value={seoTitle}
+                                                    onChange={(e) => setSeoTitle(e.target.value)}
                                                     className="w-full bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                                    placeholder="www.example.com"
+                                                    placeholder="Custom title for search engines"
+                                                    maxLength={120}
                                                 />
-                                                <p className="text-[11px] text-muted-foreground px-1">Enter your own domain (e.g., example.com).</p>
+                                                <div className="flex items-center justify-between px-1">
+                                                    <p className="text-[11px] text-muted-foreground">Overrides the brand name in search results and browser tabs.</p>
+                                                    <span className={cn("text-[11px] font-medium", seoTitle.length > 60 ? "text-amber-500" : "text-muted-foreground")}>{seoTitle.length}/120</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-foreground px-1">Meta Description</label>
+                                                <textarea
+                                                    value={seoDescription}
+                                                    onChange={(e) => setSeoDescription(e.target.value)}
+                                                    rows={3}
+                                                    className="w-full bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium resize-none"
+                                                    placeholder="Brief description shown in search engine results"
+                                                    maxLength={320}
+                                                />
+                                                <div className="flex items-center justify-between px-1">
+                                                    <p className="text-[11px] text-muted-foreground">Appears beneath the title in Google results. Aim for 50–160 characters.</p>
+                                                    <span className={cn("text-[11px] font-medium", seoDescription.length > 160 ? "text-amber-500" : "text-muted-foreground")}>{seoDescription.length}/320</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-foreground px-1">Open Graph Image URL</label>
+                                                <input
+                                                    type="url"
+                                                    value={ogImageUrl}
+                                                    onChange={(e) => setOgImageUrl(e.target.value)}
+                                                    className="w-full bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                                    placeholder="https://example.com/og-image.png"
+                                                />
+                                                <p className="text-[11px] text-muted-foreground px-1">Image shown when your site is shared on social media. Recommended: 1200x630px.</p>
+                                                {ogImageUrl && (
+                                                    <div className="mt-2 rounded-xl border border-border/50 overflow-hidden bg-secondary/10">
+                                                        {ogImageUrl === brand?.logo_url && (
+                                                            <div className="px-4 py-2 bg-secondary/30 border-b border-border/30 flex items-center gap-2">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                                                                <span className="text-[11px] font-medium text-muted-foreground">Using your brand logo as the default social preview image</span>
+                                                            </div>
+                                                        )}
+                                                        <img
+                                                            src={ogImageUrl}
+                                                            alt="OG preview"
+                                                            className="w-full max-h-48 object-contain bg-secondary/5 p-2"
+                                                            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-
-                                        {customDomain && (
-                                            <motion.div
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                className="mt-6 p-5 bg-primary/5 rounded-2xl border border-primary/10"
-                                            >
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div>
-                                                        <h5 className="text-sm font-bold text-primary mb-1">DNS Setup Instructions</h5>
-                                                        <p className="text-[10px] text-muted-foreground">Setup both for a seamless experience. <b>Verification will pass if at least one is correctly pointed.</b></p>
-                                                    </div>
-                                                    <button
-                                                        onClick={handleVerifyDNS}
-                                                        disabled={isVerifying}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-[10px] font-bold transition-all disabled:opacity-50"
-                                                    >
-                                                        {isVerifying ? (
-                                                            <RefreshCcw className="w-3 h-3 animate-spin" />
-                                                        ) : (
-                                                            <CheckCircle2 className="w-3 h-3" />
-                                                        )}
-                                                        Verify Configuration
-                                                    </button>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {/* A Record Card */}
-                                                    <div className={cn(
-                                                        "flex flex-col gap-1.5 p-3 rounded-xl border relative overflow-hidden transition-all bg-background/80 border-primary/20 ring-1 ring-primary/10"
-                                                    )}>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Type</span>
-                                                            </div>
-                                                            <span className="text-[10px] font-bold text-foreground">A Record</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Host</span>
-                                                            <span className="text-[10px] font-bold text-foreground">@</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Expected Value</span>
-                                                            <code className="text-[10px] font-mono bg-secondary px-1.5 py-0.5 rounded">76.76.21.21</code>
-                                                        </div>
-                                                        {dnsStatus && (
-                                                            <>
-                                                                <div className="flex items-center justify-between mt-1 pt-1 border-t border-border/20">
-                                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Detected</span>
-                                                                    <code className={cn(
-                                                                        "text-[10px] font-mono px-1.5 py-0.5 rounded",
-                                                                        dnsStatus.a ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"
-                                                                    )}>
-                                                                        {dnsStatus.detectedA?.[0] || "None found"}
-                                                                    </code>
-                                                                </div>
-                                                                <div className={cn(
-                                                                    "absolute inset-y-0 right-0 w-1 flex items-center justify-center transition-all",
-                                                                    dnsStatus.a ? "bg-emerald-500" : dnsStatus.detectedA?.length ? "bg-amber-500" : "bg-red-500"
-                                                                )} />
-                                                            </>
-                                                        )}
-                                                    </div>
-
-                                                    {/* CNAME Card */}
-                                                    <div className={cn(
-                                                        "flex flex-col gap-1.5 p-3 rounded-xl border relative overflow-hidden transition-all bg-background/80 border-primary/20 ring-1 ring-primary/10"
-                                                    )}>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Type</span>
-                                                            </div>
-                                                            <span className="text-[10px] font-bold text-foreground">CNAME</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Host</span>
-                                                            <span className="text-[10px] font-bold text-foreground">www</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Expected Value</span>
-                                                            <code className="text-[10px] font-mono bg-secondary px-1.5 py-0.5 rounded">cname.genesisflow.io</code>
-                                                        </div>
-                                                        {dnsStatus && (
-                                                            <>
-                                                                <div className="flex items-center justify-between mt-1 pt-1 border-t border-border/20">
-                                                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Detected</span>
-                                                                    <code className={cn(
-                                                                        "text-[10px] font-mono px-1.5 py-0.5 rounded",
-                                                                        dnsStatus.cname ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"
-                                                                    )}>
-                                                                        {dnsStatus.detectedCname?.[0] || "None found"}
-                                                                    </code>
-                                                                </div>
-                                                                <div className={cn(
-                                                                    "absolute inset-y-0 right-0 w-1 flex items-center justify-center transition-all",
-                                                                    dnsStatus.cname ? "bg-emerald-500" : dnsStatus.detectedCname?.length ? "bg-amber-500" : "bg-red-500"
-                                                                )} />
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {dnsStatus?.vercel && (
-                                                    <div className="mt-4">
-                                                        <div className={cn(
-                                                            "flex items-center gap-3 p-3 rounded-xl border",
-                                                            dnsStatus.vercel.verified && dnsStatus.vercel.configured
-                                                                ? "bg-emerald-500/5 border-emerald-500/10"
-                                                                : dnsStatus.vercel.misconfigured
-                                                                    ? "bg-red-500/5 border-red-500/10"
-                                                                    : "bg-amber-500/5 border-amber-500/10"
-                                                        )}>
-                                                            {dnsStatus.vercel.verified && dnsStatus.vercel.configured ? (
-                                                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                                                            ) : (
-                                                                <AlertCircle className={cn(
-                                                                    "w-4 h-4 shrink-0",
-                                                                    dnsStatus.vercel.misconfigured ? "text-red-500" : "text-amber-500"
-                                                                )} />
-                                                            )}
-                                                            <div>
-                                                                <p className={cn(
-                                                                    "text-[10px] font-bold",
-                                                                    dnsStatus.vercel.verified && dnsStatus.vercel.configured
-                                                                        ? "text-emerald-600"
-                                                                        : dnsStatus.vercel.misconfigured
-                                                                            ? "text-red-600"
-                                                                            : "text-amber-600"
-                                                                )}>
-                                                                    {dnsStatus.vercel.verified && dnsStatus.vercel.configured
-                                                                        ? "Domain Active — SSL provisioned"
-                                                                        : dnsStatus.vercel.misconfigured
-                                                                            ? "Domain Misconfigured"
-                                                                            : !dnsStatus.vercel.verified
-                                                                                ? "Domain Verification Pending"
-                                                                                : "Provisioning SSL Certificate..."}
-                                                                </p>
-                                                                <p className={cn(
-                                                                    "text-[9px]",
-                                                                    dnsStatus.vercel.verified && dnsStatus.vercel.configured
-                                                                        ? "text-emerald-600/80"
-                                                                        : dnsStatus.vercel.misconfigured
-                                                                            ? "text-red-600/80"
-                                                                            : "text-amber-600/80"
-                                                                )}>
-                                                                    {dnsStatus.vercel.verified && dnsStatus.vercel.configured
-                                                                        ? "Your domain is live and serving traffic with HTTPS."
-                                                                        : dnsStatus.vercel.misconfigured
-                                                                            ? "DNS records point elsewhere. Double-check your A/CNAME records above."
-                                                                            : !dnsStatus.vercel.verified
-                                                                                ? "Check the errors below for verification steps."
-                                                                                : "SSL is being provisioned. This usually takes a few minutes."}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <p className="mt-4 text-[9px] text-muted-foreground bg-secondary/20 p-2 rounded-lg italic">
-                                                    Note: For the best experience, we recommend setting up both the <b>apex domain</b> ({customDomain.replace('www.', '')}) and the <b>www subdomain</b>. Browsers will automatically redirect users to your brand's primary site regardless of which one they use.
-                                                </p>
-
-                                                {dnsStatus && dnsStatus.errors && dnsStatus.errors.length > 0 && (
-                                                    <div className="mt-4 p-3 bg-red-500/5 rounded-xl border border-red-500/10 flex gap-3 items-start">
-                                                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                                                        <div className="space-y-1">
-                                                            <p className="text-[10px] font-bold text-red-600">Verification Issues</p>
-                                                            <ul className="text-[9px] text-red-500/80 list-disc list-inside">
-                                                                {dnsStatus.errors.map((err, i) => (
-                                                                    <li key={i}>{err}</li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {dnsStatus && isConnected && (
-                                                    <div className="mt-4 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex gap-3 items-start">
-                                                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                                        <div>
-                                                            <p className="text-[10px] font-bold text-emerald-600">Connected</p>
-                                                            <p className="text-[9px] text-emerald-600/80">Your domain is correctly pointed to our servers.</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {dnsStatus && isPartial && (
-                                                    <div className="mt-4 p-3 bg-amber-500/5 rounded-xl border border-amber-500/10 flex gap-3 items-start">
-                                                        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                                                        <div>
-                                                            <p className="text-[10px] font-bold text-amber-600">Partial Configuration</p>
-                                                            <p className="text-[9px] text-amber-600/80">We detected some records, but the primary setup for {customDomain} is not yet correct.</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {dnsStatus && !isConnected && !isPartial && (
-                                                    <div className="mt-4 p-3 bg-red-500/5 rounded-xl border border-red-500/10 flex gap-3 items-start">
-                                                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                                                        <div>
-                                                            <p className="text-[10px] font-bold text-red-600">Not Detected</p>
-                                                            <p className="text-[9px] text-red-600/80">We couldn't find the required DNS records for your domain yet.</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </motion.div>
-                                        )}
                                     </div>
 
                                     <button
@@ -600,34 +1159,34 @@ export default function BrandDetailsPage() {
                             ) : (
                                 <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead>
-                                                <tr className="border-b border-border/50 bg-secondary/20">
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Headline</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Sub headline</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Blog content</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Image</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Brand</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground w-20" />
+                                        <table className={tableBase + " border-collapse min-w-full"}>
+                                            <thead className={tableHead}>
+                                                <tr>
+                                                    <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Headline</th>
+                                                    <th className={tableHeadCell + " px-4"}>Sub headline</th>
+                                                    <th className={tableHeadCell + " px-4"}>Blog content</th>
+                                                    <th className={tableHeadCell + " px-4"}>Image</th>
+                                                    <th className={tableHeadCell + " px-4"}>Brand</th>
+                                                    <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right w-20"}></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {blogs.map((blog) => (
                                                     <tr
                                                         key={blog.id}
-                                                        className="border-b border-border/30 hover:bg-secondary/10 transition-colors cursor-pointer"
+                                                        className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
                                                         onClick={() => router.push(`/dashboard/blogs/${blog.id}`)}
                                                     >
-                                                        <td className="px-4 py-3 font-medium text-foreground max-w-[200px] truncate">
+                                                        <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4 font-medium text-foreground max-w-[200px] truncate"}>
                                                             {blog.title || "—"}
                                                         </td>
-                                                        <td className="px-4 py-3 text-muted-foreground max-w-[180px] truncate">
+                                                        <td className={tableCell + " px-4 text-muted-foreground max-w-[180px] truncate"}>
                                                             {blog.excerpt || "—"}
                                                         </td>
-                                                        <td className="px-4 py-3 text-muted-foreground max-w-[220px]">
+                                                        <td className={tableCell + " px-4 text-muted-foreground max-w-[220px]"}>
                                                             <span className="line-clamp-2">{contentPreview(blog.content)}</span>
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className={tableCell + " px-4"}>
                                                             {blog.featured_image ? (
                                                                 <img
                                                                     src={blog.featured_image}
@@ -638,10 +1197,10 @@ export default function BrandDetailsPage() {
                                                                 <span className="text-muted-foreground text-xs">—</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-muted-foreground">
+                                                        <td className={tableCell + " px-4 text-muted-foreground"}>
                                                             {blog.brands?.name ?? "—"}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
                                                             <Link
                                                                 href={`/dashboard/blogs/${blog.id}`}
                                                                 className="p-2 hover:bg-secondary/30 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex"
@@ -689,35 +1248,34 @@ export default function BrandDetailsPage() {
                                     </Card>
                                 </div>
                             ) : (
-                                <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead>
-                                                <tr className="border-b border-border/50 bg-secondary/20">
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Page</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Slug</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Index</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Type</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground">Status</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground hidden sm:table-cell">Updated</th>
-                                                    <th className="px-4 py-3 font-semibold text-foreground w-20" />
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {sortedPages.map((page) => (
+                                <div className="w-full overflow-x-auto">
+                                    <table className={tableBase + " border-collapse min-w-full"}>
+                                        <thead className={tableHead}>
+                                            <tr>
+                                                <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Page</th>
+                                                <th className={tableHeadCell + " px-4"}>Slug</th>
+                                                <th className={tableHeadCell + " px-4"}>Index</th>
+                                                <th className={tableHeadCell + " px-4"}>Type</th>
+                                                <th className={tableHeadCell + " px-4"}>Status</th>
+                                                <th className={tableHeadCell + " px-4 hidden sm:table-cell"}>Updated</th>
+                                                <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right w-20"}></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedPages.map((page) => (
                                                     <tr
                                                         key={page.id}
-                                                        className="border-b border-border/30 hover:bg-secondary/10 transition-colors cursor-pointer"
+                                                        className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
                                                         onClick={() => router.push(`/page-builder/${page.id}`)}
                                                     >
-                                                        <td className="px-4 py-3">
+                                                        <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
                                                             <div className="flex items-center gap-3">
                                                                 <div className={cn(
                                                                     "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
                                                                     page.type === "landing" ? "bg-blue-500/10 text-blue-600" :
-                                                                    page.type === "blog" ? "bg-purple-500/10 text-purple-600" : "bg-secondary text-muted-foreground"
+                                                                    (page.type === "blog" || page.type === "blog_list") ? "bg-purple-500/10 text-purple-600" : "bg-secondary text-muted-foreground"
                                                                 )}>
-                                                                    {page.type === "blog" ? (
+                                                                    {(page.type === "blog" || page.type === "blog_list") ? (
                                                                         <NewspaperIcon className="w-4 h-4" />
                                                                     ) : (
                                                                         <DocumentTextIcon className="w-4 h-4" />
@@ -728,10 +1286,10 @@ export default function BrandDetailsPage() {
                                                                 </span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
+                                                        <td className={tableCell + " px-4 text-muted-foreground font-mono text-xs"}>
                                                             /{page.slug}
                                                         </td>
-                                                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                                        <td className={tableCell + " px-4"} onClick={(e) => e.stopPropagation()}>
                                                             {page.is_index ? (
                                                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-tight">
                                                                     Index
@@ -747,16 +1305,16 @@ export default function BrandDetailsPage() {
                                                                 </button>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className={tableCell + " px-4"}>
                                                             <span className={cn(
                                                                 "text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-tight",
                                                                 page.type === "landing" ? "bg-blue-500/10 text-blue-600" :
-                                                                page.type === "blog" ? "bg-purple-500/10 text-purple-600" : "bg-secondary text-muted-foreground"
+                                                                (page.type === "blog" || page.type === "blog_list") ? "bg-purple-500/10 text-purple-600" : "bg-secondary text-muted-foreground"
                                                             )}>
-                                                                {page.type === "blog" ? "Blog" : page.type === "landing" ? "Landing" : "Content"}
+                                                                {page.type === "blog" ? "Blog" : page.type === "blog_list" ? "Blog List" : page.type === "landing" ? "Landing" : "Content"}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className={tableCell + " px-4"}>
                                                             <span className={cn(
                                                                 "text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight",
                                                                 page.is_published ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary text-muted-foreground"
@@ -764,10 +1322,10 @@ export default function BrandDetailsPage() {
                                                                 {page.is_published ? "Published" : "Draft"}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">
+                                                        <td className={tableCell + " px-4 text-muted-foreground text-xs hidden sm:table-cell"}>
                                                             {new Date(page.updated_at).toLocaleDateString()}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
                                                             <Link
                                                                 href={`/page-builder/${page.id}`}
                                                                 className="p-2 hover:bg-secondary/30 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex"
@@ -781,8 +1339,7 @@ export default function BrandDetailsPage() {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
-                                </Card>
+                                </div>
                             )}
                         </motion.div>
                     )}

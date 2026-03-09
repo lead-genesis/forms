@@ -159,6 +159,98 @@ export async function getVercelProjectDomain(domain: string): Promise<{ data: Ve
     }
 }
 
+// ─── Domain Pair Helpers ──────────────────────────────────────────────────────
+
+/**
+ * Given any domain input, return the apex and www variant.
+ * The "primary" is whatever the user typed; the "secondary" is the counterpart.
+ */
+export function getDomainPair(domain: string): { primary: string; secondary: string; apex: string; www: string } {
+    const clean = domain.toLowerCase().replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+    const isWww = clean.startsWith("www.");
+    const apex = isWww ? clean.slice(4) : clean;
+    const www = `www.${apex}`;
+    return {
+        primary: clean,
+        secondary: isWww ? apex : www,
+        apex,
+        www,
+    };
+}
+
+/**
+ * Register both apex and www domains with Vercel.
+ * The primary domain is added first, then the secondary is added with a redirect
+ * to the primary so visitors hitting either URL reach the same destination.
+ */
+export async function addDomainPairToVercel(domain: string): Promise<{
+    registered: string[];
+    errors: string[];
+}> {
+    const { primary, secondary } = getDomainPair(domain);
+    const registered: string[] = [];
+    const errors: string[] = [];
+
+    const addOne = async (name: string, redirect?: string) => {
+        const existing = await getVercelProjectDomain(name);
+        if (existing.data) {
+            registered.push(name);
+            return;
+        }
+
+        const body: Record<string, string> = { name };
+        if (redirect) body.redirect = redirect;
+
+        try {
+            const res = await fetch(
+                `${VERCEL_API_BASE}/v10/projects/${projectId()}/domains${teamQuery()}`,
+                {
+                    method: "POST",
+                    headers: getHeaders(),
+                    body: JSON.stringify(body),
+                }
+            );
+            const json = await res.json();
+
+            if (!res.ok) {
+                if (json?.error?.code === "domain_already_in_use") {
+                    errors.push(`"${name}" is already in use by another Vercel project.`);
+                } else {
+                    errors.push(`${name}: ${json?.error?.message || `Vercel API error (${res.status})`}`);
+                }
+                return;
+            }
+            registered.push(name);
+        } catch (err) {
+            errors.push(`${name}: ${(err as Error).message}`);
+        }
+    };
+
+    // Primary first (no redirect)
+    await addOne(primary);
+    // Secondary redirects to primary
+    await addOne(secondary, primary);
+
+    return { registered, errors };
+}
+
+/**
+ * Remove both apex and www domains from the Vercel project.
+ */
+export async function removeDomainPairFromVercel(domain: string): Promise<{ errors: string[] }> {
+    const { apex, www } = getDomainPair(domain);
+    const errors: string[] = [];
+
+    for (const d of [apex, www]) {
+        const result = await removeDomainFromVercel(d);
+        if (result.error) {
+            errors.push(`${d}: ${result.error}`);
+        }
+    }
+
+    return { errors };
+}
+
 /**
  * Trigger domain verification on Vercel (after DNS is configured).
  */

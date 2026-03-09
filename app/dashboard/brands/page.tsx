@@ -38,20 +38,20 @@ function BrandsSkeleton() {
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="border-b border-border/50">
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <tr>
+                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
                                     Brand
                                 </th>
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
+                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50 hidden sm:table-cell">
                                     Description
                                 </th>
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">
+                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50 hidden md:table-cell">
                                     Verticals
                                 </th>
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
+                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50 hidden lg:table-cell">
                                     Created
                                 </th>
-                                <th className="w-12" />
+                                <th className="w-12 border-b border-border/50" />
                             </tr>
                         </thead>
                         <tbody>

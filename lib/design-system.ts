@@ -55,23 +55,23 @@ export const containerMaxWidth = "max-w-5xl mx-auto";
 export const sidebarWidth = "w-64";
 
 export const navLinkBase =
-    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative";
+    "group flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 relative";
 
 export const navLinkActive = "bg-secondary text-foreground";
 
 export const navLinkInactive =
-    "text-muted-foreground hover:text-foreground hover:bg-secondary/60";
+    "text-muted-foreground hover:text-foreground hover:bg-secondary/50";
 
 /** Nav section label */
-export const navSectionLabel = "text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50";
+export const navSectionLabel = "text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40";
 
 /* ── Table Styles ── */
 
 export const tableBase = "w-full text-sm text-left";
 
-export const tableHead = "bg-secondary/50";
+export const tableHead = "";
 
-export const tableHeadCell = "py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-wider";
+export const tableHeadCell = "py-4 text-left text-[11px] font-bold text-muted-foreground uppercase tracking-wider border-b border-border/50";
 
 export const tableRow = "border-b border-border/40 transition-colors hover:bg-muted/30";
 

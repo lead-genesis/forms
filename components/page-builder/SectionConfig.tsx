@@ -231,6 +231,40 @@ function SectionTypeConfig({
                     </ConfigField>
                 </div>
             );
+        case 'blog_list':
+            return (
+                <div className="space-y-6">
+                    <p className="text-xs text-zinc-500 bg-teal-50 p-4 rounded-xl border border-teal-100">
+                        This section automatically displays your published blog posts in a grid layout.
+                    </p>
+                    <ConfigField label="Heading">
+                        <input
+                            type="text"
+                            value={data?.heading || ""}
+                            onChange={(e) => onDataChange('heading', e.target.value)}
+                            placeholder="Blog"
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                        />
+                    </ConfigField>
+                    <ConfigField label="Description">
+                        <textarea
+                            value={data?.description || ""}
+                            onChange={(e) => onDataChange('description', e.target.value)}
+                            placeholder="Insights, stories, and updates from our team."
+                            rows={3}
+                            className="w-full bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all resize-none"
+                        />
+                    </ConfigField>
+                </div>
+            );
+        case 'blog_content':
+            return (
+                <div className="space-y-6">
+                    <p className="text-xs text-zinc-500 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                        This section automatically renders your blog post content. The layout includes the title, date, featured image, body, and author footer.
+                    </p>
+                </div>
+            );
         default:
             return <div className="text-zinc-400 text-xs italic">Configuration for this section type is not yet available.</div>;
     }

@@ -4,7 +4,14 @@ import { useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { sansFont } from "@/lib/design-system";
+import {
+    sansFont,
+    tableBase,
+    tableHead,
+    tableHeadCell,
+    tableRow,
+    tableCell,
+} from "@/lib/design-system";
 import { TagIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { BrandModal } from "@/components/dashboard/BrandModal";
@@ -69,40 +76,30 @@ export function BrandListClient({ initialBrands: brands }: BrandListClientProps)
     }
 
     return (
-        <motion.div variants={fadeInUp} className="px-4 md:px-6 lg:px-10">
-            <Card className={cn(
-                "border-border/50 shadow-sm rounded-2xl overflow-hidden transition-opacity duration-200",
-                isPending ? "opacity-50" : "opacity-100"
-            )}>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-border/50 bg-muted/30">
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Brand
-                                </th>
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
-                                    Description
-                                </th>
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">
-                                    Verticals
-                                </th>
-                                <th className="text-left py-4 px-5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
-                                    Created
-                                </th>
-                                <th className="w-12" />
+        <motion.div variants={fadeInUp} className={cn("px-4 md:px-6 lg:px-10", isPending && "opacity-50")}>
+            <div className="w-full overflow-x-auto">
+                <table className={tableBase + " border-collapse min-w-full"}>
+                        <thead className={tableHead}>
+                            <tr>
+                                <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Brand</th>
+                                <th className={tableHeadCell + " px-4 hidden sm:table-cell"}>Description</th>
+                                <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Verticals</th>
+                                <th className={tableHeadCell + " px-4 hidden lg:table-cell"}>Created</th>
+                                <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}></th>
                             </tr>
                         </thead>
                         <tbody>
                             {brands.map((brand) => (
                                 <tr
                                     key={brand.id}
-                                    className="border-b border-border/30 last:border-0 group hover:bg-muted/20 transition-colors"
+                                    className={cn(tableRow, "group cursor-pointer transition-colors active:bg-secondary/20")}
+                                    onClick={() => router.push(`/dashboard/brands/${brand.id}`)}
                                 >
-                                    <td className="py-4 px-5">
+                                    <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
                                         <Link
                                             href={`/dashboard/brands/${brand.id}`}
                                             className="flex items-center gap-3 no-underline text-foreground"
+                                            onClick={(e) => e.stopPropagation()}
                                         >
                                             <div className="relative w-10 h-10 rounded-xl border border-border/50 bg-secondary/30 overflow-hidden flex-shrink-0">
                                                 {brand.logo_url ? (
@@ -122,12 +119,12 @@ export function BrandListClient({ initialBrands: brands }: BrandListClientProps)
                                             <span className={cn("font-semibold", sansFont)}>{brand.name}</span>
                                         </Link>
                                     </td>
-                                    <td className="py-4 px-5 hidden sm:table-cell text-muted-foreground text-sm max-w-[200px]">
+                                    <td className={tableCell + " px-4 hidden sm:table-cell text-muted-foreground text-sm max-w-[200px]"}>
                                         <span className="line-clamp-2">
                                             {brand.description || "—"}
                                         </span>
                                     </td>
-                                    <td className="py-4 px-5 hidden md:table-cell">
+                                    <td className={tableCell + " px-4 hidden md:table-cell"}>
                                         {brand.verticals && brand.verticals.length > 0 ? (
                                             <div className="flex flex-wrap gap-1">
                                                 {brand.verticals.slice(0, 3).map((v) => (
@@ -148,10 +145,10 @@ export function BrandListClient({ initialBrands: brands }: BrandListClientProps)
                                             <span className="text-muted-foreground text-sm">—</span>
                                         )}
                                     </td>
-                                    <td className="py-4 px-5 hidden lg:table-cell text-muted-foreground text-sm">
+                                    <td className={tableCell + " px-4 hidden lg:table-cell text-muted-foreground text-sm"}>
                                         {format(new Date(brand.created_at), "MMM d, yyyy")}
                                     </td>
-                                    <td className="py-4 px-5">
+                                    <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"} onClick={(e) => e.stopPropagation()}>
                                         <Link
                                             href={`/dashboard/brands/${brand.id}`}
                                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -164,19 +161,18 @@ export function BrandListClient({ initialBrands: brands }: BrandListClientProps)
                             ))}
                         </tbody>
                     </table>
-                </div>
-                <div className="border-t border-border/50 p-3 bg-muted/20">
-                    <BrandModal
-                        trigger={
-                            <button className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/50">
-                                <TagIcon className="w-4 h-4" />
-                                Add Brand
-                            </button>
-                        }
-                        onCreated={refreshBrands}
-                    />
-                </div>
-            </Card>
+            </div>
+            <div className="border-t border-border/50 p-3">
+                <BrandModal
+                    trigger={
+                        <button className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-secondary/50">
+                            <TagIcon className="w-4 h-4" />
+                            Add Brand
+                        </button>
+                    }
+                    onCreated={refreshBrands}
+                />
+            </div>
         </motion.div>
     );
 }

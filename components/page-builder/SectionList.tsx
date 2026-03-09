@@ -8,7 +8,6 @@ import {
     Square,
     CheckCircle2,
     Type,
-    Layout,
     Layers,
     FileText,
     Share2
@@ -25,19 +24,19 @@ interface SectionListProps {
 }
 
 const SECTION_TYPES: { type: BrandSection['type']; label: string; icon: any; color: string }[] = [
-    { type: "header", label: "Header Section", icon: Layout, color: "text-indigo-500" },
     { type: "hero", label: "Hero Section", icon: Square, color: "text-blue-500" },
     { type: "features", label: "Features", icon: Layers, color: "text-purple-500" },
     { type: "text", label: "Text Block", icon: Type, color: "text-orange-500" },
+    { type: "blog_list", label: "Blog List", icon: Layers, color: "text-teal-500" },
     { type: "blog_content", label: "Blog Content", icon: FileText, color: "text-emerald-500" },
     { type: "form_embed", label: "Embed Form", icon: Share2, color: "text-red-500" },
 ];
 
 const SECTION_TYPE_META: Record<string, { icon: any; color: string }> = {
-    "header": { icon: Layout, color: "text-indigo-500" },
     "hero": { icon: Square, color: "text-blue-500" },
     "features": { icon: Layers, color: "text-purple-500" },
     "text": { icon: Type, color: "text-orange-500" },
+    "blog_list": { icon: Layers, color: "text-teal-500" },
     "blog_content": { icon: FileText, color: "text-emerald-500" },
     "form_embed": { icon: Share2, color: "text-red-500" },
 };

@@ -12,6 +12,7 @@ import { FeaturesRenderer } from "./renderers/FeaturesRenderer";
 import { TextRenderer } from "./renderers/TextRenderer";
 import { FormEmbedRenderer } from "./renderers/FormEmbedRenderer";
 import { BlogContentRenderer } from "./renderers/BlogContentRenderer";
+import { BlogListRenderer } from "./renderers/BlogListRenderer";
 
 interface SectionCanvasProps {
     sections: BrandSection[];
@@ -23,10 +24,13 @@ interface SectionCanvasProps {
     backgroundColor?: string;
     viewport: ViewportMode;
     isPreview?: boolean;
+    blogs?: any[];
+    blog?: any;
 }
 
-export const SectionCanvas = React.memo(({ sections, currentSectionId, onSectionSelect, brand, brandPages, brandForms, backgroundColor, viewport, isPreview }: SectionCanvasProps) => {
+export const SectionCanvas = React.memo(({ sections, currentSectionId, onSectionSelect, brand, brandPages, brandForms, backgroundColor, viewport, isPreview, blogs, blog }: SectionCanvasProps) => {
     const currentYear = useMemo(() => new Date().getFullYear(), []);
+    const filteredSections = useMemo(() => sections.filter(s => s.type !== 'header'), [sections]);
 
     return (
         <div className={cn(
@@ -53,9 +57,12 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                 </div>
             )}
 
+            {/* Brand Header Preview */}
+            <HeaderRenderer data={brand?.header_config || {}} brand={brand} brandPages={brandPages} />
+
             {/* Sections Area */}
             <div className="flex-1 flex flex-col">
-                {sections.length === 0 ? (
+                {filteredSections.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-20 text-center space-y-4">
                         <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-200">
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M12 8v8" /><path d="M8 12h8" /></svg>
@@ -67,7 +74,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                     </div>
                 ) : (
                     <div className="flex flex-col">
-                        {sections.map((section) => (
+                        {filteredSections.map((section) => (
                             <div
                                 key={section.id}
                                 onClick={() => !isPreview && onSectionSelect(section.id)}
@@ -78,7 +85,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                                 )}
                                 style={{ backgroundColor: section.data?.backgroundColor }}
                             >
-                                <SectionRenderer section={section} brand={brand} brandPages={brandPages} brandForms={brandForms} isPreview={isPreview} />
+                                <SectionRenderer section={section} brand={brand} brandPages={brandPages} brandForms={brandForms} isPreview={isPreview} blogs={blogs} blog={blog} />
 
                                 {currentSectionId === section.id && (
                                     <>
@@ -119,7 +126,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
 
 SectionCanvas.displayName = "SectionCanvas";
 
-function SectionRenderer({ section, brand, brandPages, brandForms, isPreview }: { section: BrandSection; brand: any; brandPages?: BrandPage[]; brandForms?: any[]; isPreview?: boolean }) {
+function SectionRenderer({ section, brand, brandPages, brandForms, isPreview, blogs, blog }: { section: BrandSection; brand: any; brandPages?: BrandPage[]; brandForms?: any[]; isPreview?: boolean; blogs?: any[]; blog?: any }) {
     const { data, type } = section;
 
     switch (type) {
@@ -133,8 +140,10 @@ function SectionRenderer({ section, brand, brandPages, brandForms, isPreview }: 
             return <TextRenderer data={data} />;
         case 'form_embed':
             return <FormEmbedRenderer data={data} />;
+        case 'blog_list':
+            return <BlogListRenderer data={data} brand={brand} blogs={blogs} isPreview={isPreview} />;
         case 'blog_content':
-            return <BlogContentRenderer />;
+            return <BlogContentRenderer blog={blog} brand={brand} isPreview={isPreview} />;
         default:
             return <div className="p-8 text-center text-zinc-400 italic">Unknown section type: {type}</div>;
     }

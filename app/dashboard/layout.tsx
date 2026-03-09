@@ -85,24 +85,9 @@ export default function DashboardLayout({
             label: "Main",
             items: [
                 { href: "/dashboard", label: "Overview", icon: Squares2X2Icon },
-            ],
-        },
-        {
-            label: "Lead generation",
-            items: [
                 { href: "/dashboard/forms", label: "Forms", icon: DocumentTextIcon },
                 { href: "/dashboard/leads", label: "Leads", icon: UserGroupIcon },
-            ],
-        },
-        {
-            label: "Content",
-            items: [
                 { href: "/dashboard/brands", label: "Brands", icon: TagIcon },
-            ],
-        },
-        {
-            label: "Team",
-            items: [
                 { href: "/dashboard/users", label: "Users", icon: UsersIcon },
             ],
         },
@@ -118,22 +103,22 @@ export default function DashboardLayout({
     return (
         <div className="min-h-screen bg-background flex">
             {/* Desktop Sidebar */}
-            <aside className="w-64 bg-background hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border">
+            <aside className="w-64 bg-secondary/20 hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border/60">
                 {/* Logo */}
-                <div className="h-16 flex items-center px-6 mb-4">
+                <div className="h-14 flex items-center px-5 mt-2">
                     <Link href="/dashboard">
                         <Logo />
                     </Link>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 px-3 overflow-y-auto space-y-6">
+                <nav className="flex-1 px-3 pt-2 overflow-y-auto space-y-4">
                     {navGroups.map((group) => (
                         <div key={group.label}>
-                            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                            <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
                                 {group.label}
                             </p>
-                            <div className="space-y-0.5">
+                            <div className="space-y-px">
                                 {group.items.map((item) => {
                                     const isActive = pathname === item.href;
                                     return (
@@ -141,15 +126,15 @@ export default function DashboardLayout({
                                             key={item.href}
                                             href={item.href}
                                             className={cn(
-                                                "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative",
+                                                "group flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all duration-150",
                                                 isActive
                                                     ? "bg-secondary text-foreground"
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                             )}
                                         >
                                             <item.icon className={cn(
-                                                "w-[18px] h-[18px] transition-transform duration-200",
-                                                !isActive && "group-hover:scale-110"
+                                                "w-[18px] h-[18px] shrink-0 transition-colors duration-150",
+                                                isActive ? "text-foreground" : "text-muted-foreground/70 group-hover:text-foreground"
                                             )} />
                                             {item.label}
                                         </Link>
@@ -161,23 +146,23 @@ export default function DashboardLayout({
                 </nav>
 
                 {/* Bottom section */}
-                <div className="p-3 border-t border-border space-y-1">
-                    <Link href="/dashboard/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center ring-2 ring-border">
-                            <span className={cn("text-xs font-bold text-foreground/60", sansFont)}>
+                <div className="p-3 border-t border-border/60">
+                    <Link href="/dashboard/settings" className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer">
+                        <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center ring-1 ring-border/80">
+                            <span className={cn("text-[10px] font-bold text-foreground/60", sansFont)}>
                                 {userInitials}
                             </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{userDisplayName}</p>
-                            <p className="text-[11px] text-muted-foreground truncate">{user?.email || 'Loading...'}</p>
+                            <p className="text-[13px] font-medium truncate leading-tight">{userDisplayName}</p>
+                            <p className="text-[10px] text-muted-foreground/70 truncate leading-tight">{user?.email || 'Loading...'}</p>
                         </div>
                     </Link>
                     <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors w-full"
+                        className="flex items-center gap-2.5 px-3 py-1.5 mt-0.5 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors w-full"
                     >
-                        <ArrowRightStartOnRectangleIcon className="w-[18px] h-[18px]" />
+                        <ArrowRightStartOnRectangleIcon className="w-4 h-4" />
                         Sign out
                     </button>
                 </div>
@@ -202,10 +187,10 @@ export default function DashboardLayout({
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
                             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                            className="fixed inset-y-0 left-0 w-72 bg-background z-50 md:hidden flex flex-col shadow-2xl border-r border-border"
+                            className="fixed inset-y-0 left-0 w-72 bg-secondary/20 z-50 md:hidden flex flex-col shadow-2xl border-r border-border/60"
                         >
                             {/* Header with close */}
-                            <div className="h-14 flex items-center justify-between px-4">
+                            <div className="h-14 flex items-center justify-between px-4 mt-2">
                                 <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                                     <Logo />
                                 </Link>
@@ -218,7 +203,7 @@ export default function DashboardLayout({
                             </div>
 
                             {/* Nav */}
-                            <nav className="flex-1 px-3 py-2 overflow-y-auto">
+                            <nav className="flex-1 px-3 pt-2 overflow-y-auto">
                                 <motion.div
                                     variants={{
                                         hidden: { opacity: 0 },
@@ -226,16 +211,16 @@ export default function DashboardLayout({
                                     }}
                                     initial="hidden"
                                     animate="show"
-                                    className="space-y-6"
+                                    className="space-y-4"
                                 >
                                     {navGroups.map((group) => (
                                         <div key={group.label}>
-                                            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                                            <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
                                                 {group.label}
                                             </p>
                                             <motion.ul
                                                 variants={{ hidden: {}, show: {} }}
-                                                className="space-y-1"
+                                                className="space-y-px"
                                             >
                                                 {group.items.map((item) => {
                                                     const isActive = pathname === item.href;
@@ -251,15 +236,15 @@ export default function DashboardLayout({
                                                                 href={item.href}
                                                                 onClick={() => setMobileMenuOpen(false)}
                                                                 className={cn(
-                                                                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                                                                    "group flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[15px] font-medium transition-all duration-150",
                                                                     isActive
                                                                         ? "bg-secondary text-foreground"
-                                                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                                                                 )}
                                                             >
                                                                 <item.icon className={cn(
-                                                                    "w-[18px] h-[18px]",
-                                                                    isActive ? "text-foreground" : "text-muted-foreground"
+                                                                    "w-[18px] h-[18px] shrink-0 transition-colors duration-150",
+                                                                    isActive ? "text-foreground" : "text-muted-foreground/70 group-hover:text-foreground"
                                                                 )} />
                                                                 {item.label}
                                                             </Link>
@@ -273,23 +258,23 @@ export default function DashboardLayout({
                             </nav>
 
                             {/* Bottom */}
-                            <div className="p-3 border-t border-border space-y-1">
-                                <Link href="/dashboard/settings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center ring-2 ring-border">
-                                        <span className={cn("text-xs font-bold text-foreground/60", sansFont)}>
+                            <div className="p-3 border-t border-border/60">
+                                <Link href="/dashboard/settings" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer">
+                                    <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center ring-1 ring-border/80">
+                                        <span className={cn("text-[10px] font-bold text-foreground/60", sansFont)}>
                                             {userInitials}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{userDisplayName}</p>
-                                        <p className="text-[11px] text-muted-foreground truncate">{user?.email || 'Loading...'}</p>
+                                        <p className="text-[13px] font-medium truncate leading-tight">{userDisplayName}</p>
+                                        <p className="text-[10px] text-muted-foreground/70 truncate leading-tight">{user?.email || 'Loading...'}</p>
                                     </div>
                                 </Link>
                                 <button
                                     onClick={handleSignOut}
-                                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors w-full"
+                                    className="flex items-center gap-2.5 px-3 py-1.5 mt-0.5 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors w-full"
                                 >
-                                    <ArrowRightStartOnRectangleIcon className="w-[18px] h-[18px]" />
+                                    <ArrowRightStartOnRectangleIcon className="w-4 h-4" />
                                     Sign out
                                 </button>
                             </div>

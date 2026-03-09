@@ -143,40 +143,50 @@ export async function updateBrand(brandId: string, rawUpdates: Partial<CreateBra
         }
 
         if (hasVercelConfig()) {
-            const { addDomainToVercel, removeDomainFromVercel, getVercelProjectDomain } = await import("@/lib/vercel/domains");
+            const { addDomainPairToVercel, removeDomainPairFromVercel } = await import("@/lib/vercel/domains");
 
             if (domainChanged && oldDomain) {
-                const removeResult = await removeDomainFromVercel(oldDomain);
-                if (removeResult.error) {
-                    console.error("Failed to remove old domain from Vercel:", removeResult.error);
+                const removeResult = await removeDomainPairFromVercel(oldDomain);
+                if (removeResult.errors.length) {
+                    console.error("Failed to remove old domain pair from Vercel:", removeResult.errors);
                 }
             }
 
-            // Sync current custom domain to Vercel on every save (so re-saving after adding env vars registers it)
             if (newDomain) {
-                const existing = await getVercelProjectDomain(newDomain);
-                if (existing.data) {
+                const pairResult = await addDomainPairToVercel(newDomain);
+                if (pairResult.errors.length && !pairResult.registered.length) {
+                    return { data: null, error: `Domain registration failed: ${pairResult.errors.join("; ")}` };
+                }
+                if (pairResult.registered.length) {
                     vercelRegistered = true;
-                } else {
-                    const addResult = await addDomainToVercel(newDomain);
-                    if (addResult.error) {
-                        return { data: null, error: `Domain registration failed: ${addResult.error}` };
-                    }
-                    vercelRegistered = true;
+                }
+                if (pairResult.errors.length) {
+                    console.warn("Partial domain pair registration:", pairResult.errors);
                 }
             }
         }
 
-        const { data, error } = await supabase
-            .from("brands")
-            .update({
+        const updatePayload: Record<string, unknown> = {
                 name: rawUpdates.name,
                 description: rawUpdates.description,
                 verticals: rawUpdates.verticals,
                 custom_domain: rawUpdates.custom_domain,
                 subdomain: rawUpdates.subdomain,
+                seo_title: rawUpdates.seo_title,
+                seo_description: rawUpdates.seo_description,
+                og_image_url: rawUpdates.og_image_url || null,
                 updated_at: new Date().toISOString()
-            })
+        };
+        if (rawUpdates.logo_url !== undefined) {
+            updatePayload.logo_url = rawUpdates.logo_url || null;
+        }
+        if (rawUpdates.header_config !== undefined) {
+            updatePayload.header_config = rawUpdates.header_config;
+        }
+
+        const { data, error } = await supabase
+            .from("brands")
+            .update(updatePayload)
             .eq("id", brandId)
             .select()
             .single();
@@ -273,6 +283,33 @@ export async function getBrandByDomain(host: string) {
     }
 }
 
+export async function updateBrandHeaderConfig(brandId: string, headerConfig: Record<string, unknown>) {
+    const supabase = await createClient();
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { data: null, error: "Unauthorized" };
+
+        const { data, error } = await supabase
+            .from("brands")
+            .update({
+                header_config: headerConfig,
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", brandId)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        revalidatePath(`/dashboard/brands/${brandId}`);
+        return { data, error: null };
+    } catch (error: unknown) {
+        const err = error as Error;
+        console.error("updateBrandHeaderConfig error:", err);
+        return { data: null, error: err.message };
+    }
+}
+
 function hasVercelConfig(): boolean {
     return !!(process.env.VERCEL_API_TOKEN && process.env.VERCEL_PROJECT_ID);
 }
@@ -336,38 +373,56 @@ export async function verifyDomainDNS(domain: string) {
             }
         }
 
-        // Check Vercel platform status
+        // Check Vercel platform status for both apex and www
         if (hasVercelConfig()) {
             try {
-                const { getVercelDomainConfig, getVercelProjectDomain, verifyDomainOnVercel } = await import("@/lib/vercel/domains");
+                const { getVercelDomainConfig, getVercelProjectDomain, verifyDomainOnVercel, getDomainPair } = await import("@/lib/vercel/domains");
 
                 const domainToCheck = domain.toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
-                const [configResult, projectDomainResult] = await Promise.all([
-                    getVercelDomainConfig(domainToCheck),
-                    getVercelProjectDomain(domainToCheck),
+                const { apex, www } = getDomainPair(domainToCheck);
+
+                const [apexConfig, apexDomain, wwwConfig, wwwDomain] = await Promise.all([
+                    getVercelDomainConfig(apex),
+                    getVercelProjectDomain(apex),
+                    getVercelDomainConfig(www),
+                    getVercelProjectDomain(www),
                 ]);
 
-                const isConfigured = configResult.data?.configuredBy !== null;
-                const isMisconfigured = configResult.data?.misconfigured ?? false;
-                let isVerified = projectDomainResult.data?.verified ?? false;
+                const apexConfigured = apexConfig.data?.configuredBy !== null && !(apexConfig.data?.misconfigured);
+                const wwwConfigured = wwwConfig.data?.configuredBy !== null && !(wwwConfig.data?.misconfigured);
+                const anyMisconfigured = (apexConfig.data?.misconfigured ?? false) || (wwwConfig.data?.misconfigured ?? false);
 
-                if (!isVerified && (results.a || results.cname)) {
-                    const verifyResult = await verifyDomainOnVercel(domainToCheck);
-                    isVerified = verifyResult.data?.verified ?? false;
+                let apexVerified = apexDomain.data?.verified ?? false;
+                let wwwVerified = wwwDomain.data?.verified ?? false;
+
+                // Auto-trigger verification if DNS is pointing correctly
+                if (!apexVerified && results.a && apexDomain.data) {
+                    const v = await verifyDomainOnVercel(apex);
+                    apexVerified = v.data?.verified ?? false;
+                }
+                if (!wwwVerified && results.cname && wwwDomain.data) {
+                    const v = await verifyDomainOnVercel(www);
+                    wwwVerified = v.data?.verified ?? false;
                 }
 
                 results.vercel = {
-                    configured: isConfigured && !isMisconfigured,
-                    misconfigured: isMisconfigured,
-                    verified: isVerified,
+                    configured: (apexConfigured || wwwConfigured) && !anyMisconfigured,
+                    misconfigured: anyMisconfigured,
+                    verified: apexVerified && wwwVerified,
                 };
 
-                if (isMisconfigured) {
-                    results.errors.push("Vercel reports the domain DNS is misconfigured. Please double-check your records.");
+                if (anyMisconfigured) {
+                    results.errors.push("Vercel reports one or both domain variants are misconfigured. Double-check your A and CNAME records.");
                 }
-                if (!isVerified && projectDomainResult.data?.verification?.length) {
-                    const challenge = projectDomainResult.data.verification[0];
-                    results.errors.push(`Vercel verification pending: Add a TXT record on "${challenge.domain}" with value "${challenge.value}".`);
+
+                // Surface verification challenges for whichever domain still needs it
+                for (const [label, domainResult] of [["Apex", apexDomain], ["WWW", wwwDomain]] as const) {
+                    const dr = domainResult as typeof apexDomain;
+                    const isVerified = label === "Apex" ? apexVerified : wwwVerified;
+                    if (!isVerified && dr.data?.verification?.length) {
+                        const challenge = dr.data.verification[0];
+                        results.errors.push(`${label} verification pending: Add a TXT record on "${challenge.domain}" with value "${challenge.value}".`);
+                    }
                 }
             } catch (vercelErr) {
                 console.error("Vercel domain check failed (non-fatal):", vercelErr);

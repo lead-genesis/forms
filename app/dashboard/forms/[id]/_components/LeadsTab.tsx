@@ -92,22 +92,22 @@ export function LeadsTab({
                     <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-secondary/50">
                         <table className={cn("w-full text-sm min-w-[800px]", sansFont)}>
                             <thead>
-                                <tr className="border-b border-border/50 bg-secondary/10">
-                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                <tr>
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap border-b border-border/50">
                                         Submitted
                                     </th>
                                     {contactHeaders.map((header) => (
                                         <th
                                             key={header.key}
-                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[120px]"
+                                            className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[120px] border-b border-border/50"
                                         >
                                             {header.label}
                                         </th>
                                     ))}
-                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap border-b border-border/50">
                                         Verified
                                     </th>
-                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                                    <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap border-b border-border/50">
                                         Webhook
                                     </th>
                                 </tr>

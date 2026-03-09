@@ -155,7 +155,8 @@ export default function PageBuilderPage() {
 
     if (!page) return null;
 
-    const currentSection = page.sections.find(s => s.id === currentSectionId);
+    const nonHeaderSections = page.sections.filter(s => s.type !== 'header');
+    const currentSection = nonHeaderSections.find(s => s.id === currentSectionId);
 
     return (
         <div className="flex flex-col h-screen bg-zinc-50/50">
@@ -243,7 +244,7 @@ export default function PageBuilderPage() {
             {/* Bottom Section List (Horizontal Pill) - Centered */}
             <footer className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100]">
                 <SectionList
-                    sections={page.sections}
+                    sections={nonHeaderSections}
                     currentSectionId={currentSectionId}
                     onSectionSelect={(id) => {
                         setCurrentSectionId(id);

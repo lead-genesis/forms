@@ -1,6 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
 import { getBrandByDomain } from "@/app/actions/brands";
+import { getPublicBrandPages } from "@/app/actions/pages";
 import { BrandRuntimeShell } from "./BrandRuntimeShell";
 
 interface LayoutProps {
@@ -17,26 +18,36 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
 
     const baseUrl = `https://${brand.custom_domain || decodedHost}`;
 
+    const title = brand.seo_title || brand.name;
+    const description = brand.seo_description || brand.description || undefined;
+    const ogImage = brand.og_image_url || brand.logo_url || undefined;
+
     return {
         metadataBase: new URL(baseUrl),
         title: {
-            default: brand.name,
-            template: `%s — ${brand.name}`,
+            default: title,
+            template: `%s — ${title}`,
         },
-        description: brand.description || undefined,
+        description,
         icons: brand.logo_url ? { icon: brand.logo_url } : undefined,
         alternates: {
             canonical: baseUrl,
         },
         openGraph: {
             siteName: brand.name,
+            title,
+            description,
             url: baseUrl,
             type: "website",
             locale: "en_US",
+            ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : {}),
         },
         twitter: {
             card: "summary_large_image",
             site: brand.name,
+            title,
+            description,
+            ...(ogImage ? { images: [ogImage] } : {}),
         },
     };
 }
@@ -61,8 +72,10 @@ export default async function BrandRuntimeLayout({ children, params }: LayoutPro
         );
     }
 
+    const { data: brandPages } = await getPublicBrandPages(brand.id);
+
     return (
-        <BrandRuntimeShell brand={brand}>
+        <BrandRuntimeShell brand={brand} brandPages={brandPages}>
             {children}
         </BrandRuntimeShell>
     );

@@ -234,7 +234,7 @@ export default function DashboardOverview() {
                 <div className="w-full px-4 md:px-6 lg:px-10">
                     <div className="border border-border/40 rounded-2xl overflow-hidden shadow-sm bg-card/50 backdrop-blur-sm">
                         <table className={tableBase + " border-collapse min-w-full"}>
-                            <thead className={cn(tableHead, "bg-secondary/30 backdrop-blur-md")}>
+                            <thead className={cn(tableHead, "backdrop-blur-md")}>
                                 <tr>
                                     <th className={tableHeadCell + " pl-6 pr-4 py-5"}>Lead ID</th>
                                     <th className={tableHeadCell + " px-4 py-5"}>Form</th>

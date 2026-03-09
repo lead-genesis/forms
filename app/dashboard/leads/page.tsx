@@ -4,7 +4,14 @@ import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
 import { Card, CardContent } from "@/components/ui/card";
-import { sansFont } from "@/lib/design-system";
+import {
+    sansFont,
+    tableBase,
+    tableHead,
+    tableHeadCell,
+    tableRow,
+    tableCell,
+} from "@/lib/design-system";
 import { UserGroupIcon, CalendarIcon, PhoneIcon, DocumentTextIcon, ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { getDashboardLeads } from "@/app/actions/leads";
@@ -86,27 +93,27 @@ export default function LeadsPage() {
                     </Card>
                 ) : (
                     <div className="space-y-4">
-                        <div className="bg-background border border-border/50 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[900px]">
-                                <thead>
-                                    <tr className="border-b border-border/50 bg-secondary/30">
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lead</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">SMS</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Form</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Webhook</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Captured</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right pr-6">Actions</th>
+                        <div className="w-full overflow-x-auto">
+                            <table className={tableBase + " border-collapse min-w-[900px]"}>
+                                <thead className={tableHead}>
+                                    <tr>
+                                        <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Lead</th>
+                                        <th className={tableHeadCell + " px-4"}>Contact</th>
+                                        <th className={tableHeadCell + " px-4"}>SMS</th>
+                                        <th className={tableHeadCell + " px-4"}>Form</th>
+                                        <th className={tableHeadCell + " px-4"}>Webhook</th>
+                                        <th className={tableHeadCell + " px-4"}>Captured</th>
+                                        <th className={tableHeadCell + " px-4 text-right pr-4 md:pr-6 lg:pr-10"}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {paginatedLeads.map((lead) => (
                                         <tr
                                             key={lead.id}
-                                            className="border-b border-border/40 hover:bg-secondary/10 transition-colors group cursor-pointer"
+                                            className={cn(tableRow, "group cursor-pointer active:bg-secondary/20")}
                                             onClick={() => handleViewDetails(lead)}
                                         >
-                                            <td className="px-6 py-4">
+                                            <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
                                                         {(lead.answers?.first_name?.[0] || lead.answers?.email?.[0] || 'L')}
@@ -117,7 +124,7 @@ export default function LeadsPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={tableCell + " px-4"}>
                                                 <div className="flex flex-col gap-1">
                                                     {lead.answers?.phone ? (
                                                         <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -129,7 +136,7 @@ export default function LeadsPage() {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={tableCell + " px-4"}>
                                                 {lead.is_sms_verified ? (
                                                     <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 gap-1 rounded-full text-[10px] font-bold uppercase transition-all">
                                                         <CheckCircleIcon className="w-3 h-3" />
@@ -142,13 +149,13 @@ export default function LeadsPage() {
                                                     </Badge>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={tableCell + " px-4"}>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-green-500" title="Form active" />
                                                     <span className="text-sm font-medium">{lead.form_name}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={tableCell + " px-4"}>
                                                 {lead.webhook_status ? (
                                                     <div className={cn(
                                                         "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tight",
@@ -162,13 +169,13 @@ export default function LeadsPage() {
                                                     <span className="text-[10px] text-muted-foreground italic uppercase tracking-tight">Not Sent</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={tableCell + " px-4"}>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm text-foreground">{format(new Date(lead.created_at), "MMM d")}</span>
                                                     <span className="text-[10px] text-muted-foreground uppercase">{format(new Date(lead.created_at), "h:mm a")}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right pr-6">
+                                            <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
                                                 <button
                                                     className="text-xs font-semibold text-primary hover:underline hover:text-primary/80 transition-all opacity-0 group-hover:opacity-100"
                                                     onClick={(e) => {

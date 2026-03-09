@@ -4,38 +4,37 @@ import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
+import { HeaderRenderer } from "@/components/page-builder/renderers/HeaderRenderer";
+import { BrandPage } from "@/app/actions/pages";
 
 interface BrandRuntimeShellProps {
     brand: {
         name: string;
         description?: string;
         logo_url?: string;
+        header_config?: {
+            customLogoUrl?: string | null;
+            logoHeight?: number;
+            navigation?: string[];
+            navFontSize?: number;
+        } | null;
     };
+    brandPages?: BrandPage[];
     children: React.ReactNode;
 }
 
-export function BrandRuntimeShell({ brand, children }: BrandRuntimeShellProps) {
+export function BrandRuntimeShell({ brand, brandPages, children }: BrandRuntimeShellProps) {
+    const headerConfig = brand.header_config || {};
+
     return (
         <div className="min-h-screen bg-white">
-            {/* Brand Header */}
-            <header className="border-b border-zinc-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
-                <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-3">
-                        {brand.logo_url ? (
-                            <img src={brand.logo_url} alt={brand.name} className="h-10 w-auto object-contain" />
-                        ) : (
-                            <span className={cn("text-xl font-bold tracking-tight", sansFont)}>{brand.name}</span>
-                        )}
-                    </Link>
-
-                    <nav className="hidden md:flex items-center gap-8">
-                        <Link href="/" className="text-sm font-medium text-zinc-600 hover:text-black transition-colors">Home</Link>
-                        <Link href="/blogs" className="text-sm font-medium text-zinc-600 hover:text-black transition-colors">Blog</Link>
-                    </nav>
-
-                    <div className="flex items-center gap-4" />
-                </div>
-            </header>
+            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md">
+                <HeaderRenderer
+                    data={headerConfig}
+                    brand={brand}
+                    brandPages={brandPages}
+                />
+            </div>
 
             <main>
                 {children}
@@ -60,8 +59,28 @@ export function BrandRuntimeShell({ brand, children }: BrandRuntimeShellProps) {
                     <div className="space-y-4">
                         <h4 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Navigation</h4>
                         <ul className="space-y-2">
-                            <li><Link href="/" className="text-sm text-zinc-600 hover:text-black transition-colors">Home</Link></li>
-                            <li><Link href="/blogs" className="text-sm text-zinc-600 hover:text-black transition-colors">Blog</Link></li>
+                            {brandPages && brandPages.length > 0 ? (
+                                (headerConfig.navigation && headerConfig.navigation.length > 0
+                                    ? headerConfig.navigation
+                                    : brandPages.map(p => p.id)
+                                ).map((pageId: string) => {
+                                    const page = brandPages.find(p => p.id === pageId);
+                                    if (!page) return null;
+                                    const href = page.is_index ? '/' : `/${page.slug}`;
+                                    return (
+                                        <li key={pageId}>
+                                            <Link href={href} className="text-sm text-zinc-600 hover:text-black transition-colors">
+                                                {page.title}
+                                            </Link>
+                                        </li>
+                                    );
+                                })
+                            ) : (
+                                <>
+                                    <li><Link href="/" className="text-sm text-zinc-600 hover:text-black transition-colors">Home</Link></li>
+                                    <li><Link href="/blogs" className="text-sm text-zinc-600 hover:text-black transition-colors">Blog</Link></li>
+                                </>
+                            )}
                         </ul>
                     </div>
 

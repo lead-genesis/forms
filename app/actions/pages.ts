@@ -92,6 +92,39 @@ export async function getPublicIndexPage(brandId: string) {
     };
 }
 
+/** Returns a published page by type with its sections, without requiring authentication. */
+export async function getPublicPageByType(brandId: string, type: BrandPage['type']) {
+    const supabase = await createClient();
+
+    const { data: page, error: pageError } = await supabase
+        .from("brand_pages")
+        .select("*, brand:brands(*)")
+        .eq("brand_id", brandId)
+        .eq("type", type)
+        .eq("is_published", true)
+        .limit(1)
+        .single();
+
+    if (pageError) {
+        return { data: null, error: pageError.message };
+    }
+
+    const { data: sections, error: sectionsError } = await supabase
+        .from("brand_sections")
+        .select("*")
+        .eq("page_id", page.id)
+        .order("order", { ascending: true });
+
+    if (sectionsError) {
+        return { data: null, error: sectionsError.message };
+    }
+
+    return {
+        data: { ...page, sections: sections as BrandSection[] },
+        error: null
+    };
+}
+
 async function getSupabase() {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -110,7 +143,7 @@ export interface BrandPage {
     brand_id: string;
     title: string;
     slug: string;
-    type: 'landing' | 'blog' | 'content';
+    type: 'landing' | 'blog' | 'blog_list' | 'content';
     is_published: boolean;
     is_index?: boolean;
     background_color?: string;
@@ -124,7 +157,7 @@ export interface BrandPage {
 export interface BrandSection {
     id: string;
     page_id: string;
-    type: 'hero' | 'features' | 'text' | 'blog_content' | 'form_embed' | 'header';
+    type: 'hero' | 'features' | 'text' | 'blog_content' | 'blog_list' | 'form_embed' | 'header';
     data: any;
     order: number;
     created_at: string;
@@ -224,7 +257,6 @@ export async function createPage(
 
         if (error) throw error;
 
-        // Seed basic sections based on type
         if (type === 'landing') {
             await supabase.from("brand_sections").insert([
                 {
@@ -233,6 +265,14 @@ export async function createPage(
                     data: { heading: 'Welcome to ' + title, subheading: 'Catchy subheading here', buttonText: 'Get Started' },
                     order: 0
                 }
+            ]);
+        } else if (type === 'blog_list') {
+            await supabase.from("brand_sections").insert([
+                { page_id: data.id, type: 'blog_list', data: { heading: 'Blog', description: '' }, order: 0 },
+            ]);
+        } else if (type === 'blog') {
+            await supabase.from("brand_sections").insert([
+                { page_id: data.id, type: 'blog_content', data: {}, order: 0 },
             ]);
         }
 
@@ -248,7 +288,7 @@ export async function createPage(
 export async function createDefaultBrandPages(brandId: string) {
     const defaults: { title: string; slug: string; type: BrandPage['type']; is_index?: boolean }[] = [
         { title: "Home", slug: "index", type: "landing", is_index: true },
-        { title: "Blogs", slug: "blogs", type: "content" },
+        { title: "Blogs", slug: "blogs", type: "blog_list" },
         { title: "Blog Post", slug: "blog-post", type: "blog" },
         { title: "Privacy", slug: "privacy", type: "content" }
     ];
@@ -262,6 +302,100 @@ export async function createDefaultBrandPages(brandId: string) {
         }
     }
     return { error: null };
+}
+
+/**
+ * Backfills blog template pages for brands created before the blog_list/blog_content
+ * section system was introduced. Idempotent -- safe to call multiple times.
+ */
+export async function migrateBrandBlogPages(brandId: string) {
+    try {
+        const { supabase } = await getSupabase();
+
+        // 1. Migrate "Blogs" page: content → blog_list
+        const { data: blogListPage } = await supabase
+            .from("brand_pages")
+            .select("id")
+            .eq("brand_id", brandId)
+            .eq("slug", "blogs")
+            .eq("type", "content")
+            .maybeSingle();
+
+        if (blogListPage) {
+            await supabase
+                .from("brand_pages")
+                .update({ type: "blog_list", updated_at: new Date().toISOString() })
+                .eq("id", blogListPage.id);
+        }
+
+        // 2. Seed sections on blog_list pages that have none
+        const { data: blogListPages } = await supabase
+            .from("brand_pages")
+            .select("id")
+            .eq("brand_id", brandId)
+            .eq("type", "blog_list");
+
+        for (const page of blogListPages ?? []) {
+            const { count } = await supabase
+                .from("brand_sections")
+                .select("id", { count: "exact", head: true })
+                .eq("page_id", page.id);
+
+            if (count === 0) {
+                await supabase.from("brand_sections").insert([
+                    { page_id: page.id, type: "blog_list", data: { heading: "Blog", description: "" }, order: 0 },
+                ]);
+            }
+        }
+
+        // 3. Seed sections on blog template pages that have none
+        const { data: blogPages } = await supabase
+            .from("brand_pages")
+            .select("id")
+            .eq("brand_id", brandId)
+            .eq("type", "blog");
+
+        for (const page of blogPages ?? []) {
+            const { count } = await supabase
+                .from("brand_sections")
+                .select("id", { count: "exact", head: true })
+                .eq("page_id", page.id);
+
+            if (count === 0) {
+                await supabase.from("brand_sections").insert([
+                    { page_id: page.id, type: "blog_content", data: {}, order: 0 },
+                ]);
+            }
+        }
+
+        // 4. If brand has no blog_list page at all, create one
+        const { count: blogListCount } = await supabase
+            .from("brand_pages")
+            .select("id", { count: "exact", head: true })
+            .eq("brand_id", brandId)
+            .eq("type", "blog_list");
+
+        if (blogListCount === 0) {
+            await createPage(brandId, "Blogs", "blog_list", { slug: "blogs" });
+        }
+
+        // 5. If brand has no blog template page at all, create one
+        const { count: blogCount } = await supabase
+            .from("brand_pages")
+            .select("id", { count: "exact", head: true })
+            .eq("brand_id", brandId)
+            .eq("type", "blog");
+
+        if (blogCount === 0) {
+            await createPage(brandId, "Blog Post", "blog", { slug: "blog-post" });
+        }
+
+        revalidatePath(`/dashboard/brands/${brandId}`);
+        return { error: null };
+    } catch (error: any) {
+        console.error("migrateBrandBlogPages error:", error);
+        return { error: error.message };
+    }
 }
 
 export async function updatePage(pageId: string, updates: Partial<BrandPage>) {
