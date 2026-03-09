@@ -7,7 +7,7 @@ import { FormStep } from "@/components/form/FormStepRenderer";
 import { getFormBySubdomain, getFormSteps, incrementFormViews } from "@/app/actions/forms";
 // Metadata moved to layout.tsx
 
-export default function SubdomainFormPage() {
+function SubdomainFormPageContent() {
     const params = useParams();
     const searchParams = useSearchParams();
     // In our middleware we rewrite to /form-subdomain/[subdomain]
@@ -92,8 +92,6 @@ export default function SubdomainFormPage() {
         })();
     }, [subdomain, isPreviewSession]);
 
-    // Removed conflicting document.title useEffect
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-background">
@@ -148,5 +146,20 @@ export default function SubdomainFormPage() {
                 />
             </div>
         </div>
+    );
+}
+
+export default function SubdomainFormPage() {
+    return (
+        <React.Suspense fallback={
+            <div className="flex items-center justify-center h-screen bg-background">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    <p className="text-sm text-muted-foreground">Loading form…</p>
+                </div>
+            </div>
+        }>
+            <SubdomainFormPageContent />
+        </React.Suspense>
     );
 }

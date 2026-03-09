@@ -2,103 +2,140 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { CreateBrandSchema, type CreateBrandInput } from "@/lib/schemas/brands";
 
-export interface CreateBrandInput {
-    name: string;
-    description?: string;
-    verticals?: string[];
-    logoFile?: string | null;
-    bannerFile?: string | null;
-    custom_domain?: string | null;
-    subdomain?: string | null;
-}
+// ─── Internal Helpers ─────────────────────────────────────────────────────────
 
 async function uploadImage(
     dataUrl: string,
     path: string
-): Promise<string | null> {
+): Promise<{ url: string | null; error: string | null }> {
     const supabase = await createClient();
     try {
         const [meta, base64] = dataUrl.split(",");
+        if (!base64) throw new Error("Invalid image data");
+
         const mimeMatch = meta.match(/:(.*?);/);
         const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
-        const ext = mime.split("/")[1] ?? "jpg";
-        const buffer = Buffer.from(base64, "base64");
-        const filePath = `${path}.${ext}`;
 
-        const { error } = await supabase.storage
-            .from("brand-images")
-            .upload(filePath, buffer, { contentType: mime, upsert: true });
-
-        if (error) {
-            console.error("Image upload error:", error);
-            return null;
+        // Basic security check on mime type
+        if (!mime.startsWith("image/")) {
+            throw new Error("Invalid file type. Only images are allowed.");
         }
 
+        const ext = mime.split("/")[1] ?? "jpg";
+        const buffer = Buffer.from(base64, "base64");
+
+        // Size limit: 5MB
+        if (buffer.length > 5 * 1024 * 1024) {
+            throw new Error("Image too large. Max size is 5MB.");
+        }
+
+        const filePath = `${path}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from("brand-images")
+            .upload(filePath, buffer, {
+                contentType: mime,
+                upsert: true,
+                cacheControl: '3600'
+            });
+
+        if (uploadError) throw uploadError;
+
         const { data } = supabase.storage.from("brand-images").getPublicUrl(filePath);
-        return data.publicUrl;
-    } catch (err) {
-        console.error("Image upload exception:", err);
-        return null;
+        return { url: data.publicUrl, error: null };
+    } catch (err: unknown) {
+        const error = err as Error;
+        console.error("Image upload error:", error);
+        return { url: null, error: error.message };
     }
 }
 
-export async function createBrand(input: CreateBrandInput) {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+// ─── Actions ──────────────────────────────────────────────────────────────────
 
+export async function createBrand(rawInput: CreateBrandInput) {
+    const supabase = await createClient();
+
+    // 1. Initial auth check
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
         return { data: null, error: "Unauthorized: Please sign in to create a brand." };
     }
 
+    // 2. Validate input
+    const validation = CreateBrandSchema.safeParse(rawInput);
+    if (!validation.success) {
+        return { data: null, error: validation.error.issues[0].message };
+    }
+    const input = validation.data;
+
     const userId = user.id;
     const slug = `${userId}/${Date.now()}`;
 
-    const [logoUrl, bannerUrl] = await Promise.all([
-        input.logoFile ? uploadImage(input.logoFile, `${slug}/logo`) : Promise.resolve(null),
-        input.bannerFile ? uploadImage(input.bannerFile, `${slug}/banner`) : Promise.resolve(null),
-    ]);
+    // 3. Optional image uploads
+    try {
+        const [logoResult, bannerResult] = await Promise.all([
+            input.logoFile ? uploadImage(input.logoFile, `${slug}/logo`) : Promise.resolve({ url: null, error: null }),
+            input.bannerFile ? uploadImage(input.bannerFile, `${slug}/banner`) : Promise.resolve({ url: null, error: null }),
+        ]);
 
-    const { data, error } = await supabase
-        .from("brands")
-        .insert({
-            user_id: userId,
-            name: input.name,
-            description: input.description ?? null,
-            verticals: input.verticals ?? [],
-            logo_url: logoUrl,
-            banner_url: bannerUrl,
-        })
-        .select()
-        .single();
+        if (logoResult.error) return { data: null, error: `Logo upload failed: ${logoResult.error}` };
+        if (bannerResult.error) return { data: null, error: `Banner upload failed: ${bannerResult.error}` };
 
-    if (error) {
-        console.error("Create brand error:", error);
-        return { data: null, error: error.message };
+        // 4. Database insertion
+        const { data, error } = await supabase
+            .from("brands")
+            .insert({
+                user_id: userId,
+                name: input.name,
+                description: input.description ?? null,
+                verticals: input.verticals ?? [],
+                logo_url: logoResult.url,
+                banner_url: bannerResult.url,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Create brand error:", error);
+            return { data: null, error: error.message };
+        }
+
+        // 5. Success side effects
+        // Create default pages for the brand: index, blogs, privacy
+        try {
+            const { createDefaultBrandPages } = await import("./pages");
+            await createDefaultBrandPages(data.id);
+        } catch (pageErr) {
+            console.error("Failed to create default brand pages:", pageErr);
+            // We don't fail the whole brand creation if pages fail, but we log it
+        }
+
+        revalidatePath("/dashboard/brands");
+        return { data, error: null };
+    } catch (err: unknown) {
+        console.error("createBrand exception:", err);
+        return { data: null, error: "An unexpected error occurred." };
     }
-
-    // Create default pages for the brand: index, blogs, privacy
-    const { createDefaultBrandPages } = await import("./pages");
-    await createDefaultBrandPages(data.id);
-
-    revalidatePath("/dashboard/brands");
-    return { data, error: null };
 }
 
-export async function updateBrand(brandId: string, updates: Partial<CreateBrandInput>) {
+export async function updateBrand(brandId: string, rawUpdates: Partial<CreateBrandInput>) {
     const supabase = await createClient();
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Unauthorized");
+        if (!user) return { data: null, error: "Unauthorized" };
 
+        // Note: For partial updates, we might want a different schema or safeParse(updates) with some fields optional
+        // simplified here but in a real enterprise app we'd be more granular
         const { data, error } = await supabase
             .from("brands")
             .update({
-                name: updates.name,
-                description: updates.description,
-                verticals: updates.verticals,
-                custom_domain: updates.custom_domain,
-                subdomain: updates.subdomain,
+                name: rawUpdates.name,
+                description: rawUpdates.description,
+                verticals: rawUpdates.verticals,
+                custom_domain: rawUpdates.custom_domain,
+                subdomain: rawUpdates.subdomain,
                 updated_at: new Date().toISOString()
             })
             .eq("id", brandId)
@@ -106,11 +143,15 @@ export async function updateBrand(brandId: string, updates: Partial<CreateBrandI
             .single();
 
         if (error) throw error;
+
         revalidatePath(`/dashboard/brands/${brandId}`);
+        revalidatePath("/dashboard/brands");
+
         return { data, error: null };
-    } catch (error: any) {
-        console.error("updateBrand error:", error);
-        return { data: null, error: error.message };
+    } catch (error: unknown) {
+        const err = error as Error;
+        console.error("updateBrand error:", err);
+        return { data: null, error: err.message };
     }
 }
 
@@ -147,9 +188,10 @@ export async function getBrand(brandId: string) {
 
         if (error) throw error;
         return { data, error: null };
-    } catch (error: any) {
-        console.error("getBrand error:", error);
-        return { data: null, error: error.message };
+    } catch (error: unknown) {
+        const err = error as Error;
+        console.error("getBrand error:", err);
+        return { data: null, error: err.message };
     }
 }
 
@@ -186,9 +228,10 @@ export async function getBrandByDomain(host: string) {
         }
 
         return { data: null, error: "Brand not found" };
-    } catch (error: any) {
-        console.error("getBrandByDomain error:", error);
-        return { data: null, error: error.message };
+    } catch (error: unknown) {
+        const err = error as Error;
+        console.error("getBrandByDomain error:", err);
+        return { data: null, error: err.message };
     }
 }
 
@@ -218,9 +261,10 @@ export async function verifyDomainDNS(domain: string) {
             const addresses = await dns.resolve4(cleanDomain);
             results.detectedA = addresses;
             results.a = addresses.includes(EXPECTED_A);
-        } catch (e: any) {
-            if (e.code !== 'ENODATA' && e.code !== 'ENOTFOUND') {
-                results.errors.push(`Apex A record lookup failed: ${e.message}`);
+        } catch (e: unknown) {
+            const err = e as { code?: string; message: string };
+            if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
+                results.errors.push(`Apex A record lookup failed: ${err.message}`);
             }
         }
 
@@ -242,15 +286,17 @@ export async function verifyDomainDNS(domain: string) {
             if (cnameMatches && !ipMatches) {
                 results.errors.push(`WWW points to ${EXPECTED_CNAME} but that domain is currently misconfigured (points to incorrect IP ${finalAddresses[0]})`);
             }
-        } catch (e: any) {
-            if (e.code !== 'ENODATA' && e.code !== 'ENOTFOUND') {
-                results.errors.push(`WWW lookup failed: ${e.message}`);
+        } catch (e: unknown) {
+            const err = e as { code?: string; message: string };
+            if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
+                results.errors.push(`WWW lookup failed: ${err.message}`);
             }
         }
 
         return { data: results, error: null };
-    } catch (error: any) {
-        console.error("DNS verification error:", error);
-        return { data: null, error: error.message };
+    } catch (error: unknown) {
+        const err = error as Error;
+        console.error("DNS verification error:", err);
+        return { data: null, error: err.message };
     }
 }

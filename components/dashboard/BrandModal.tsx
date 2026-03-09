@@ -7,7 +7,10 @@ import { sansFont } from "@/lib/design-system";
 import { XMarkIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { createBrand } from "@/app/actions/brands";
+import type { CreateBrandInput } from "@/lib/schemas/brands";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface BrandModalProps {
     trigger: React.ReactNode;
@@ -19,6 +22,7 @@ const inputBase = "w-full bg-transparent focus:ring-0 focus:outline-none transit
 const underlineInput = cn(inputBase, "border-b border-zinc-100 hover:border-zinc-200 focus:border-zinc-300 px-1 py-1.5");
 
 export function BrandModal({ trigger, onCreated }: BrandModalProps) {
+    const router = useRouter();
     const [verticals, setVerticals] = useState<string[]>([]);
     const [verticalInput, setVerticalInput] = useState("");
     const [bannerImage, setBannerImage] = useState<string | null>(null);
@@ -34,6 +38,11 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string | null>>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Support max 5MB as per Server Action limit
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("Image too large. Max size is 5MB.");
+                return;
+            }
             const reader = new FileReader();
             reader.onloadend = () => setter(reader.result as string);
             reader.readAsDataURL(file);
@@ -55,9 +64,9 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
 
     const removeVertical = (i: number) => setVerticals(verticals.filter((_, idx) => idx !== i));
 
-    const handleOpenChange = (open: boolean) => {
-        setOpen(open);
-        if (!open) {
+    const handleOpenChange = (isOpen: boolean) => {
+        setOpen(isOpen);
+        if (!isOpen) {
             setVerticals([]);
             setVerticalInput("");
             setBannerImage(null);
@@ -72,22 +81,30 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
             toast.error("Brand name is required");
             return;
         }
+
         setIsLoading(true);
         try {
-            const { error } = await createBrand({
+            const input: CreateBrandInput = {
                 name: name.trim(),
                 description: description.trim() || undefined,
                 verticals,
                 logoFile: logoImage,
                 bannerFile: bannerImage,
-            });
+            };
+
+            const { error } = await createBrand(input);
+
             if (error) {
                 toast.error(error);
             } else {
                 toast.success("Brand created!");
-                setOpen(false);
+                handleOpenChange(false);
+                router.refresh();
                 onCreated?.();
             }
+        } catch (err) {
+            console.error("Brand creation error:", err);
+            toast.error("Failed to create brand. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -98,7 +115,6 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
             <DialogTrigger asChild>{trigger}</DialogTrigger>
 
             <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border border-zinc-100 sm:rounded-[24px] rounded-xl gap-0 shadow-2xl shadow-black/10 bg-white">
-                {/* A11y header hidden visually */}
                 <div className="sr-only">
                     <DialogHeader>
                         <DialogTitle>Add New Brand</DialogTitle>
@@ -109,10 +125,14 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
                 {/* ─── Banner ─────────────────────────────────────── */}
                 <div className="relative h-48 w-full bg-zinc-50 overflow-hidden">
                     {bannerImage && (
-                        <img src={bannerImage} alt="Banner" className="w-full h-full object-cover" />
+                        <Image
+                            src={bannerImage}
+                            alt="Banner Preview"
+                            fill
+                            className="object-cover"
+                        />
                     )}
 
-                    {/* Top-left upload pill — always visible */}
                     <div className="absolute top-3.5 left-4 z-20">
                         <motion.button
                             type="button"
@@ -142,7 +162,6 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
 
                 {/* ─── Content ────────────────────────────────────── */}
                 <div className="px-7 pb-7 pt-0 relative z-10">
-                    {/* Floating card that overlaps the banner */}
                     <motion.div
                         initial={{ y: 16, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -158,20 +177,24 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
                                     className={cn(
-                                        "w-[72px] h-[72px] rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-200",
+                                        "w-[72px] h-[72px] rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-200 bg-white relative",
                                         logoImage
-                                            ? "shadow-sm"
+                                            ? "shadow-sm border border-zinc-100"
                                             : "border-2 border-dashed border-zinc-200 bg-zinc-50 hover:border-zinc-300 hover:bg-zinc-100"
                                     )}
                                 >
                                     {logoImage ? (
-                                        <img src={logoImage} alt="Logo" className="w-full h-full object-cover" />
+                                        <Image
+                                            src={logoImage}
+                                            alt="Logo Preview"
+                                            fill
+                                            className="object-cover"
+                                        />
                                     ) : (
                                         <PhotoIcon className="w-6 h-6 text-zinc-300 group-hover:text-zinc-400 transition-colors" />
                                     )}
                                 </motion.button>
 
-                                {/* Tooltip */}
                                 <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-medium text-zinc-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     {logoImage ? "Change logo" : "Logo"}
                                 </div>
@@ -187,7 +210,6 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
 
                             {/* ── Text inputs ───────────────────── */}
                             <div className="flex-1 space-y-3 w-full min-w-0">
-                                {/* Brand Name */}
                                 <input
                                     type="text"
                                     placeholder="Brand name"
@@ -200,7 +222,6 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
                                     )}
                                 />
 
-                                {/* Verticals tag input */}
                                 <div className="flex flex-wrap items-center gap-1.5 min-h-[34px] border-b border-zinc-100 hover:border-zinc-200 focus-within:border-zinc-300 px-1 py-1 transition-colors">
                                     <AnimatePresence>
                                         {verticals.map((v, i) => (
@@ -233,7 +254,6 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
                                     />
                                 </div>
 
-                                {/* Description */}
                                 <textarea
                                     placeholder="Short description…"
                                     rows={2}
@@ -253,7 +273,7 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
                         <div className="flex items-center gap-2.5">
                             <button
                                 type="button"
-                                onClick={() => setOpen(false)}
+                                onClick={() => handleOpenChange(false)}
                                 className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-xl transition-all"
                             >
                                 Cancel

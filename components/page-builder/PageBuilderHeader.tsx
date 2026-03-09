@@ -32,7 +32,7 @@ export function PageBuilderHeader({
     const router = useRouter();
 
     const handlePreview = () => {
-        toast.info("Preview functionality coming soon");
+        window.open(`/preview/${pageId}`, '_blank');
     };
 
     const handleShare = () => {
