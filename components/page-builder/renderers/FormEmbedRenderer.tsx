@@ -8,8 +8,8 @@ interface FormEmbedRendererProps {
 
 export const FormEmbedRenderer = React.memo(({ data }: FormEmbedRendererProps) => {
     return (
-        <div className="py-20 px-12 bg-zinc-50/50">
-            <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border border-zinc-100 shadow-xl shadow-zinc-200/50">
+        <div className="py-10 sm:py-14 lg:py-20 px-4 sm:px-8 lg:px-12 bg-zinc-50/50">
+            <div className="max-w-xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 border border-zinc-100 shadow-xl shadow-zinc-200/50">
                 <div className="space-y-6">
                     <div className="h-6 w-32 bg-zinc-100 rounded-lg animate-pulse" />
                     <div className="space-y-3">

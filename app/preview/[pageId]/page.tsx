@@ -42,9 +42,9 @@ export default function PreviewPage() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center transition-all duration-500" style={{ backgroundColor: page.background_color || '#ffffff' }}>
-            {/* Centered container with max-width 1200px */}
-            <div className="w-full max-w-[1200px]">
+        <div className="min-h-screen flex flex-col items-center transition-all duration-500 w-full overflow-x-hidden" style={{ backgroundColor: page.background_color || '#ffffff' }}>
+            {/* Centered container with max-width 1200px, responsive padding */}
+            <div className="w-full max-w-[1200px] min-w-0 px-0 sm:px-4">
                 <SectionCanvas
                     sections={page.sections}
                     currentSectionId={null}

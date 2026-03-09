@@ -207,11 +207,11 @@ export default function PageBuilderPage() {
                     className="flex-1 relative flex flex-col items-center overflow-hidden bg-zinc-50/10"
                     style={{ backgroundColor: page?.background_color ? `${page.background_color}10` : undefined }}
                 >
-                    <div className="absolute top-8 left-8 z-50">
+                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 lg:top-8 lg:left-8 z-50">
                         <ViewportToggle viewport={viewport} setViewport={setViewport} />
                     </div>
 
-                    <div className="flex-1 w-full overflow-y-auto p-12 custom-scrollbar scroll-smooth transition-all duration-500">
+                    <div className="flex-1 w-full overflow-y-auto p-4 sm:p-6 lg:p-12 custom-scrollbar scroll-smooth transition-all duration-500">
                         <div className="w-full flex justify-center">
                             <SectionCanvas
                                 sections={page.sections}

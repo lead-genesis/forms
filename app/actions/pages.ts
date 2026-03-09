@@ -56,23 +56,44 @@ export async function getPublicPageBySlug(brandId: string, slug: string) {
     };
 }
 
-/** Returns the published index page for a brand with its sections, without requiring authentication. */
+/** Returns the published index page for a brand with its sections, without requiring authentication.
+ * Prefers the page marked is_index=true; falls back to the page with slug 'index' if none is marked. */
 export async function getPublicIndexPage(brandId: string) {
     const supabase = await createClient();
 
-    const { data: page, error: pageError } = await supabase
+    // Try is_index first (explicit index), then slug=index (legacy/convention)
+    const { data: byIndex, error: byIndexError } = await supabase
         .from("brand_pages")
         .select("*, brand:brands(*)")
         .eq("brand_id", brandId)
         .eq("is_published", true)
-        .or("is_index.eq.true,slug.eq.index")
-        .order("is_index", { ascending: false })
-        .limit(1)
-        .single();
+        .eq("is_index", true)
+        .maybeSingle();
 
-    if (pageError) {
-        console.error("getPublicIndexPage error:", pageError);
-        return { data: null, error: pageError.message };
+    if (byIndexError) {
+        console.error("getPublicIndexPage (is_index) error:", byIndexError);
+        return { data: null, error: byIndexError.message };
+    }
+
+    let page = byIndex;
+    if (!page) {
+        const { data: bySlug, error: bySlugError } = await supabase
+            .from("brand_pages")
+            .select("*, brand:brands(*)")
+            .eq("brand_id", brandId)
+            .eq("is_published", true)
+            .eq("slug", "index")
+            .maybeSingle();
+
+        if (bySlugError) {
+            console.error("getPublicIndexPage (slug=index) error:", bySlugError);
+            return { data: null, error: bySlugError.message };
+        }
+        page = bySlug;
+    }
+
+    if (!page) {
+        return { data: null, error: null };
     }
 
     const { data: sections, error: sectionsError } = await supabase

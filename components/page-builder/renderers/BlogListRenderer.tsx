@@ -48,7 +48,7 @@ function BlogCard({ blog, isPlaceholder }: { blog: BlogItem; isPlaceholder?: boo
                 <div className="flex items-center gap-3 text-sm font-bold text-zinc-400 uppercase tracking-widest">
                     <span>{format(new Date(blog.created_at), "MMM d, yyyy")}</span>
                 </div>
-                <h3 className={cn("text-2xl font-bold text-black leading-tight group-hover:text-zinc-600 transition-colors", sansFont)}>
+                <h3 className={cn("text-xl sm:text-2xl font-bold text-black leading-tight group-hover:text-zinc-600 transition-colors", sansFont)}>
                     {blog.title}
                 </h3>
                 {blog.excerpt && (
@@ -85,14 +85,14 @@ export const BlogListRenderer = React.memo(({ data, brand, blogs, isPreview }: B
     const isPlaceholder = !isPreview;
 
     return (
-        <div className="max-w-6xl mx-auto px-6 py-20">
-            <header className="max-w-3xl mb-20">
-                <h1 className={cn("text-6xl font-black mb-6 tracking-tight text-black", sansFont)}>{heading}</h1>
-                <p className="text-xl text-zinc-500">{description}</p>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+            <header className="max-w-3xl mb-12 sm:mb-16 lg:mb-20">
+                <h1 className={cn("text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-4 sm:mb-6 tracking-tight text-black", sansFont)}>{heading}</h1>
+                <p className="text-base sm:text-lg lg:text-xl text-zinc-500">{description}</p>
             </header>
 
             {isPreview && displayBlogs.length === 0 ? (
-                <div className="py-20 text-center bg-zinc-50 rounded-[3rem] border border-zinc-100">
+                <div className="py-12 sm:py-16 lg:py-20 text-center bg-zinc-50 rounded-2xl sm:rounded-[3rem] border border-zinc-100">
                     <DocumentTextIcon className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-zinc-400">No posts yet</h2>
                     <p className="text-zinc-400">Check back soon for new content.</p>
@@ -106,7 +106,7 @@ export const BlogListRenderer = React.memo(({ data, brand, blogs, isPreview }: B
                             </div>
                         </div>
                     )}
-                    <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12", isPlaceholder && "opacity-60")}>
+                    <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12", isPlaceholder && "opacity-60")}>
                         {displayBlogs.map((blog) => (
                             <BlogCard key={blog.id} blog={blog} isPlaceholder={isPlaceholder} />
                         ))}

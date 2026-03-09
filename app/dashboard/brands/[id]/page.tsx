@@ -333,25 +333,25 @@ export default function BrandDetailsPage() {
                 title={brand ? brand.name : "Brand Details"}
                 subtitle={brand ? brand.description || "Manage your brand pages and settings." : "Manage your brand pages and settings."}
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     {activeTab !== 'settings' && activeTab !== 'domain' && activeTab !== 'header' && mounted && (
                         activeTab === 'blogs' ? (
                             <Link
                                 href={`/dashboard/blogs/new?brand_id=${brandId}`}
-                                className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200 flex items-center gap-2"
+                                className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200 flex items-center gap-1.5 sm:gap-2"
                             >
-                                <PlusIcon className="w-4 h-4" />
-                                Create Blog
+                                <PlusIcon className="w-4 h-4 flex-shrink-0" />
+                                <span className="hidden sm:inline">Create Blog</span>
                             </Link>
                         ) : (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button
                                         disabled={isCreating}
-                                        className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200 flex items-center gap-2"
+                                        className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200 flex items-center gap-1.5 sm:gap-2"
                                     >
-                                        <PlusIcon className="w-4 h-4" />
-                                        Create Page
+                                        <PlusIcon className="w-4 h-4 flex-shrink-0" />
+                                        <span className="hidden sm:inline">Create Page</span>
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-48 rounded-xl">
@@ -368,59 +368,61 @@ export default function BrandDetailsPage() {
                 </div>
             </DashboardHeader>
 
-            <div className="px-4 md:px-6 lg:px-10">
+            <div className="px-3 sm:px-4 md:px-6 lg:px-10">
                 {/* Tabs */}
-                <div className="flex items-center gap-1 bg-secondary/20 p-1 rounded-2xl w-fit mb-8 border border-border/50">
-                    <button
-                        onClick={() => setActiveTab('pages')}
-                        className={cn(
-                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
-                            activeTab === 'pages' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <DocumentTextIcon className="w-4 h-4" />
-                        Pages
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('blogs')}
-                        className={cn(
-                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
-                            activeTab === 'blogs' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <NewspaperIcon className="w-4 h-4" />
-                        Blogs
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('header')}
-                        className={cn(
-                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
-                            activeTab === 'header' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <Bars3Icon className="w-4 h-4" />
-                        Header
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('domain')}
-                        className={cn(
-                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
-                            activeTab === 'domain' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <GlobeAltIcon className="w-4 h-4" />
-                        Domain
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('settings')}
-                        className={cn(
-                            "px-6 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
-                            activeTab === 'settings' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <Cog6ToothIcon className="w-4 h-4" />
-                        Settings
-                    </button>
+                <div className="overflow-x-auto -mx-3 sm:-mx-4 md:mx-0 pb-2 mb-6 md:mb-8 scrollbar-thin">
+                    <div className="flex items-center gap-1 bg-secondary/20 p-1 rounded-2xl w-max min-w-0 border border-border/50 mx-3 sm:mx-4 md:mx-0">
+                        <button
+                            onClick={() => setActiveTab('pages')}
+                            className={cn(
+                                "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
+                                activeTab === 'pages' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <DocumentTextIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Pages
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('blogs')}
+                            className={cn(
+                                "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
+                                activeTab === 'blogs' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <NewspaperIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Blogs
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('header')}
+                            className={cn(
+                                "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
+                                activeTab === 'header' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Bars3Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Header
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('domain')}
+                            className={cn(
+                                "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
+                                activeTab === 'domain' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <GlobeAltIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Domain
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('settings')}
+                            className={cn(
+                                "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
+                                activeTab === 'settings' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Cog6ToothIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Settings
+                        </button>
+                    </div>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -442,12 +444,12 @@ export default function BrandDetailsPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="flex gap-8 items-stretch max-w-[1080px]"
+                            className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch max-w-[1080px] w-full"
                         >
                             {/* Left: Settings */}
-                            <div className="w-[420px] shrink-0 space-y-6">
+                            <div className="w-full lg:w-[420px] lg:shrink-0 space-y-6 min-w-0">
                                 <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
-                                    <CardContent className="p-8 space-y-6">
+                                    <CardContent className="p-4 sm:p-6 lg:p-8 space-y-6">
                                         <div>
                                             <h4 className="text-lg font-bold mb-1">Site Header</h4>
                                             <p className="text-xs text-muted-foreground">Configure your header once — it applies across all pages for this brand.</p>
@@ -457,14 +459,14 @@ export default function BrandDetailsPage() {
                                             <div className="space-y-2">
                                                 <label className="text-sm font-semibold text-foreground px-1">Header Logo</label>
                                                 <div className="space-y-3">
-                                                    <div className="flex gap-2">
+                                                    <div className="flex flex-col sm:flex-row gap-2">
                                                         <input
                                                             type="text"
                                                             value={headerLogoUrl}
                                                             onChange={(e) => setHeaderLogoUrl(e.target.value)}
                                                             placeholder="Paste logo URL..."
                                                             className={cn(
-                                                                "flex-1 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium",
+                                                                "flex-1 min-w-0 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium",
                                                                 headerLogoUrl && !headerLogoUrl.startsWith('http') && !headerLogoUrl.startsWith('/') && "border-red-200 bg-red-50/30"
                                                             )}
                                                         />
@@ -583,11 +585,11 @@ export default function BrandDetailsPage() {
                             </div>
 
                             {/* Right: Live Preview */}
-                            <div className="flex-1 min-w-0 flex flex-col">
-                                <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col flex-1">
-                                    <div className="px-5 py-3.5 border-b border-border/40 flex items-center justify-between bg-secondary/10">
+                            <div className="flex-1 min-w-0 flex flex-col w-full">
+                                <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col flex-1 min-h-0">
+                                    <div className="px-3 sm:px-5 py-3 sm:py-3.5 border-b border-border/40 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-secondary/10">
                                         <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Preview</span>
-                                        <div className="flex items-center gap-1 bg-background border border-border/50 rounded-lg p-0.5">
+                                        <div className="flex items-center gap-1 bg-background border border-border/50 rounded-lg p-0.5 w-fit">
                                             {([
                                                 { id: 'desktop' as const, icon: Monitor, label: 'Desktop' },
                                                 { id: 'tablet' as const, icon: Tablet, label: 'Tablet' },
@@ -610,13 +612,13 @@ export default function BrandDetailsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-zinc-50/50 flex justify-center p-6 flex-1">
+                                    <div className="bg-zinc-50/50 flex justify-center p-3 sm:p-6 flex-1 min-h-[280px] sm:min-h-[320px] overflow-auto">
                                         <div
                                             className={cn(
-                                                "bg-white rounded-2xl shadow-lg shadow-black/5 overflow-hidden transition-all duration-500 ease-out border border-zinc-200/60 relative",
-                                                headerPreviewViewport === 'desktop' && "w-full",
-                                                headerPreviewViewport === 'tablet' && "w-[768px] max-w-full",
-                                                headerPreviewViewport === 'mobile' && "w-[375px] max-w-full"
+                                                "bg-white rounded-2xl shadow-lg shadow-black/5 overflow-hidden transition-all duration-500 ease-out border border-zinc-200/60 relative shrink-0",
+                                                headerPreviewViewport === 'desktop' && "w-full max-w-full",
+                                                headerPreviewViewport === 'tablet' && "w-full max-w-[768px]",
+                                                headerPreviewViewport === 'mobile' && "w-full max-w-[375px]"
                                             )}
                                         >
                                             {/* Faux browser chrome */}
@@ -672,12 +674,12 @@ export default function BrandDetailsPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="max-w-3xl space-y-6"
+                            className="max-w-3xl space-y-6 w-full min-w-0"
                         >
                             <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
-                                <CardContent className="p-8 space-y-6">
+                                <CardContent className="p-4 sm:p-6 lg:p-8 space-y-6">
                                     <h4 className="text-lg font-bold mb-4">Domain & Subdomain</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-foreground px-1">Subdomain</label>
                                             <div className="flex items-center gap-2">
@@ -711,16 +713,16 @@ export default function BrandDetailsPage() {
                                             animate={{ opacity: 1, height: 'auto' }}
                                             className="mt-6 space-y-4"
                                         >
-                                            <div className="rounded-2xl border border-border/50 overflow-hidden">
-                                                <div className="flex items-center justify-between px-5 py-3.5 bg-secondary/20 border-b border-border/50">
+                                            <div className="rounded-2xl border border-border/50 overflow-hidden min-w-0">
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-3 sm:px-5 py-3 sm:py-3.5 bg-secondary/20 border-b border-border/50">
                                                     <div className="flex items-center gap-2.5">
-                                                        <Globe className="w-4 h-4 text-muted-foreground" />
+                                                        <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                                         <h5 className="text-sm font-bold text-foreground">Connected Domains</h5>
                                                     </div>
                                                     <button
                                                         onClick={handleVerifyDNS}
                                                         disabled={isVerifying}
-                                                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                                                        className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-semibold transition-all disabled:opacity-50 w-full sm:w-auto"
                                                     >
                                                         {isVerifying ? (
                                                             <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
@@ -731,20 +733,21 @@ export default function BrandDetailsPage() {
                                                     </button>
                                                 </div>
 
-                                                <p className="px-5 pt-3 pb-1 text-xs text-muted-foreground">
+                                                <p className="px-3 sm:px-5 pt-3 pb-1 text-xs text-muted-foreground">
                                                     Both domains are automatically registered with Vercel. The secondary domain redirects to your primary.
                                                 </p>
 
                                                 <div className="divide-y divide-border/30">
                                                     {/* Apex domain row */}
-                                                    <div className="px-5 py-4 flex items-center gap-4">
-                                                        <div className={cn(
-                                                            "w-2.5 h-2.5 rounded-full shrink-0 transition-colors",
-                                                            !dnsStatus ? "bg-muted-foreground/30" : dnsStatus.a ? "bg-emerald-500" : "bg-red-500"
-                                                        )} />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-semibold text-foreground truncate">{domainPair.apex}</span>
+                                                    <div className="px-3 sm:px-5 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                                        <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                                                            <div className={cn(
+                                                                "w-2.5 h-2.5 rounded-full shrink-0 transition-colors mt-0.5",
+                                                                !dnsStatus ? "bg-muted-foreground/30" : dnsStatus.a ? "bg-emerald-500" : "bg-red-500"
+                                                            )} />
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <span className="text-sm font-semibold text-foreground truncate">{domainPair.apex}</span>
                                                                 {domainPair.primary === domainPair.apex && (
                                                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary uppercase tracking-wide shrink-0">Primary</span>
                                                                 )}
@@ -754,13 +757,14 @@ export default function BrandDetailsPage() {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <div className="flex items-center gap-3 mt-1.5">
-                                                                <span className="text-xs text-muted-foreground">A Record</span>
-                                                                <span className="text-xs text-muted-foreground/40">|</span>
-                                                                <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">@ → 76.76.21.21</code>
+                                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5">
+                                                                    <span className="text-xs text-muted-foreground">A Record</span>
+                                                                    <span className="text-xs text-muted-foreground/40 hidden sm:inline">|</span>
+                                                                    <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded break-all">@ → 76.76.21.21</code>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="shrink-0 text-right">
+                                                        <div className="shrink-0 sm:text-right pl-5 sm:pl-0">
                                                             {!dnsStatus ? (
                                                                 <span className="text-xs text-muted-foreground">Not checked</span>
                                                             ) : dnsStatus.a ? (
@@ -781,14 +785,15 @@ export default function BrandDetailsPage() {
                                                     </div>
 
                                                     {/* WWW domain row */}
-                                                    <div className="px-5 py-4 flex items-center gap-4">
-                                                        <div className={cn(
-                                                            "w-2.5 h-2.5 rounded-full shrink-0 transition-colors",
-                                                            !dnsStatus ? "bg-muted-foreground/30" : dnsStatus.cname ? "bg-emerald-500" : "bg-red-500"
-                                                        )} />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-semibold text-foreground truncate">{domainPair.www}</span>
+                                                    <div className="px-3 sm:px-5 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                                        <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                                                            <div className={cn(
+                                                                "w-2.5 h-2.5 rounded-full shrink-0 transition-colors mt-0.5",
+                                                                !dnsStatus ? "bg-muted-foreground/30" : dnsStatus.cname ? "bg-emerald-500" : "bg-red-500"
+                                                            )} />
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <span className="text-sm font-semibold text-foreground truncate">{domainPair.www}</span>
                                                                 {domainPair.primary === domainPair.www && (
                                                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary uppercase tracking-wide shrink-0">Primary</span>
                                                                 )}
@@ -798,13 +803,14 @@ export default function BrandDetailsPage() {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <div className="flex items-center gap-3 mt-1.5">
-                                                                <span className="text-xs text-muted-foreground">CNAME</span>
-                                                                <span className="text-xs text-muted-foreground/40">|</span>
-                                                                <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">www → cname.genesisflow.io</code>
+                                                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5">
+                                                                    <span className="text-xs text-muted-foreground">CNAME</span>
+                                                                    <span className="text-xs text-muted-foreground/40 hidden sm:inline">|</span>
+                                                                    <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded break-all">www → cname.genesisflow.io</code>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="shrink-0 text-right">
+                                                        <div className="shrink-0 sm:text-right pl-5 sm:pl-0">
                                                             {!dnsStatus ? (
                                                                 <span className="text-xs text-muted-foreground">Not checked</span>
                                                             ) : dnsStatus.cname ? (
@@ -826,7 +832,7 @@ export default function BrandDetailsPage() {
 
                                                     {/* Subdomain row */}
                                                     {subdomain && (
-                                                        <div className="px-5 py-4 flex items-center gap-4">
+                                                        <div className="px-3 sm:px-5 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                                                             <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-emerald-500" />
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2">
@@ -846,7 +852,7 @@ export default function BrandDetailsPage() {
                                             {/* Vercel SSL / Platform Status */}
                                             {dnsStatus?.vercel && (
                                                 <div className={cn(
-                                                    "flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border",
+                                                    "flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3.5 px-3 sm:px-5 py-3 sm:py-3.5 rounded-2xl border",
                                                     dnsStatus.vercel.verified && dnsStatus.vercel.configured
                                                         ? "bg-emerald-500/5 border-emerald-500/20"
                                                         : dnsStatus.vercel.misconfigured
@@ -893,7 +899,7 @@ export default function BrandDetailsPage() {
                                             )}
 
                                             {dnsStatus && isConnected && !dnsStatus.vercel && (
-                                                <div className="flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border bg-emerald-500/5 border-emerald-500/20">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3.5 px-3 sm:px-5 py-3 sm:py-3.5 rounded-2xl border bg-emerald-500/5 border-emerald-500/20">
                                                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                                                     <div>
                                                         <p className="text-sm font-semibold text-emerald-600">All DNS Records Connected</p>
@@ -903,7 +909,7 @@ export default function BrandDetailsPage() {
                                             )}
 
                                             {dnsStatus && isPartial && (
-                                                <div className="flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border bg-amber-500/5 border-amber-500/20">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3.5 px-3 sm:px-5 py-3 sm:py-3.5 rounded-2xl border bg-amber-500/5 border-amber-500/20">
                                                     <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
                                                     <div>
                                                         <p className="text-sm font-semibold text-amber-600">Partial Configuration</p>
@@ -917,7 +923,7 @@ export default function BrandDetailsPage() {
                                             )}
 
                                             {dnsStatus && !isConnected && !isPartial && (
-                                                <div className="flex items-center gap-3.5 px-5 py-3.5 rounded-2xl border bg-red-500/5 border-red-500/20">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3.5 px-3 sm:px-5 py-3 sm:py-3.5 rounded-2xl border bg-red-500/5 border-red-500/20">
                                                     <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
                                                     <div>
                                                         <p className="text-sm font-semibold text-red-600">DNS Records Not Detected</p>
@@ -927,7 +933,7 @@ export default function BrandDetailsPage() {
                                             )}
 
                                             {dnsStatus?.errors && dnsStatus.errors.length > 0 && (
-                                                <div className="px-5 py-3.5 rounded-2xl border bg-red-500/5 border-red-500/20 flex gap-3.5 items-start">
+                                                <div className="px-3 sm:px-5 py-3 sm:py-3.5 rounded-2xl border bg-red-500/5 border-red-500/20 flex flex-col sm:flex-row gap-3 sm:gap-3.5 items-start">
                                                     <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                                                     <div className="space-y-1.5">
                                                         <p className="text-sm font-semibold text-red-600">Issues Found</p>
@@ -941,7 +947,7 @@ export default function BrandDetailsPage() {
                                             )}
 
                                             {!dnsStatus && (
-                                                <div className="px-5 py-4 rounded-2xl bg-secondary/10 border border-border/30">
+                                                <div className="px-3 sm:px-5 py-3 sm:py-4 rounded-2xl bg-secondary/10 border border-border/30">
                                                     <p className="text-xs text-muted-foreground leading-relaxed">
                                                         Add these DNS records at your domain registrar, then click <b>Verify DNS</b> above.
                                                         Both the apex (<code className="text-[11px] font-mono bg-secondary/50 px-1 py-0.5 rounded">{domainPair.apex}</code>) and www
@@ -970,16 +976,16 @@ export default function BrandDetailsPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="max-w-3xl space-y-6"
+                            className="max-w-3xl space-y-6 w-full min-w-0"
                         >
                             <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
-                                <CardContent className="p-8 space-y-6">
+                                <CardContent className="p-4 sm:p-6 lg:p-8 space-y-6">
                                     <h4 className="text-lg font-bold mb-4">General Settings</h4>
 
                                     {/* Brand Logo */}
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-foreground px-1">Brand Logo</label>
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                                             <div className="relative shrink-0">
                                                 <div className={cn(
                                                     "w-20 h-20 rounded-2xl border-2 overflow-hidden flex items-center justify-center bg-secondary/20 transition-all",
@@ -1000,14 +1006,14 @@ export default function BrandDetailsPage() {
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="flex-1 space-y-2">
-                                                <div className="flex gap-2">
+                                            <div className="flex-1 space-y-2 min-w-0 w-full">
+                                                <div className="flex flex-col sm:flex-row gap-2">
                                                     <input
                                                         type="text"
                                                         value={logoUrl}
                                                         onChange={(e) => setLogoUrl(e.target.value)}
                                                         placeholder="Paste logo URL..."
-                                                        className="flex-1 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                                        className="flex-1 min-w-0 bg-secondary/20 border border-border/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                                                     />
                                                     <input
                                                         type="file"
@@ -1029,8 +1035,8 @@ export default function BrandDetailsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                        <div className="space-y-2 min-w-0">
                                             <label className="text-sm font-semibold text-foreground px-1">Brand Name</label>
                                             <input
                                                 type="text"
@@ -1135,9 +1141,9 @@ export default function BrandDetailsPage() {
                             exit={{ opacity: 0, y: -10 }}
                         >
                             {blogs.length === 0 ? (
-                                <div className="max-w-xl mx-auto py-12">
+                                <div className="max-w-xl mx-auto py-8 sm:py-12 px-3 sm:px-0">
                                     <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                                        <CardContent className="p-10 flex flex-col items-center justify-center text-center">
+                                        <CardContent className="p-6 sm:p-10 flex flex-col items-center justify-center text-center">
                                             <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                                                 <NewspaperIcon className="w-8 h-8 text-muted-foreground" />
                                             </div>
@@ -1158,16 +1164,16 @@ export default function BrandDetailsPage() {
                                 </div>
                             ) : (
                                 <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
-                                    <div className="overflow-x-auto">
-                                        <table className={tableBase + " border-collapse min-w-full"}>
+                                    <div className="overflow-x-auto -mx-3 sm:mx-0 rounded-2xl min-w-0">
+                                        <table className={tableBase + " border-collapse min-w-[640px] sm:min-w-full w-full"}>
                                             <thead className={tableHead}>
                                                 <tr>
-                                                    <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Headline</th>
-                                                    <th className={tableHeadCell + " px-4"}>Sub headline</th>
-                                                    <th className={tableHeadCell + " px-4"}>Blog content</th>
-                                                    <th className={tableHeadCell + " px-4"}>Image</th>
-                                                    <th className={tableHeadCell + " px-4"}>Brand</th>
-                                                    <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right w-20"}></th>
+                                                    <th className={tableHeadCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>Headline</th>
+                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden md:table-cell"}>Sub headline</th>
+                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Blog content</th>
+                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden md:table-cell"}>Image</th>
+                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Brand</th>
+                                                    <th className={tableHeadCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right w-14 sm:w-20"}></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1177,16 +1183,16 @@ export default function BrandDetailsPage() {
                                                         className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
                                                         onClick={() => router.push(`/dashboard/blogs/${blog.id}`)}
                                                     >
-                                                        <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4 font-medium text-foreground max-w-[200px] truncate"}>
+                                                        <td className={tableCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4 font-medium text-foreground max-w-[180px] sm:max-w-[200px] truncate"}>
                                                             {blog.title || "—"}
                                                         </td>
-                                                        <td className={tableCell + " px-4 text-muted-foreground max-w-[180px] truncate"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground max-w-[180px] truncate hidden md:table-cell"}>
                                                             {blog.excerpt || "—"}
                                                         </td>
-                                                        <td className={tableCell + " px-4 text-muted-foreground max-w-[220px]"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground max-w-[220px] hidden lg:table-cell"}>
                                                             <span className="line-clamp-2">{contentPreview(blog.content)}</span>
                                                         </td>
-                                                        <td className={tableCell + " px-4"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 hidden md:table-cell"}>
                                                             {blog.featured_image ? (
                                                                 <img
                                                                     src={blog.featured_image}
@@ -1197,10 +1203,10 @@ export default function BrandDetailsPage() {
                                                                 <span className="text-muted-foreground text-xs">—</span>
                                                             )}
                                                         </td>
-                                                        <td className={tableCell + " px-4 text-muted-foreground"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground hidden lg:table-cell"}>
                                                             {blog.brands?.name ?? "—"}
                                                         </td>
-                                                        <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
+                                                        <td className={tableCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right"}>
                                                             <Link
                                                                 href={`/dashboard/blogs/${blog.id}`}
                                                                 className="p-2 hover:bg-secondary/30 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex"
@@ -1226,9 +1232,9 @@ export default function BrandDetailsPage() {
                             exit={{ opacity: 0, y: -10 }}
                         >
                             {filteredPages.length === 0 ? (
-                                <div className="max-w-xl mx-auto py-12">
+                                <div className="max-w-xl mx-auto py-8 sm:py-12 px-3 sm:px-0">
                                     <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                                        <CardContent className="p-10 flex flex-col items-center justify-center text-center">
+                                        <CardContent className="p-6 sm:p-10 flex flex-col items-center justify-center text-center">
                                             <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                                                 <DocumentTextIcon className="w-8 h-8 text-muted-foreground" />
                                             </div>
@@ -1248,17 +1254,17 @@ export default function BrandDetailsPage() {
                                     </Card>
                                 </div>
                             ) : (
-                                <div className="w-full overflow-x-auto">
-                                    <table className={tableBase + " border-collapse min-w-full"}>
+                                <div className="w-full overflow-x-auto -mx-3 sm:mx-0 rounded-2xl min-w-0">
+                                    <table className={tableBase + " border-collapse min-w-[520px] sm:min-w-full w-full"}>
                                         <thead className={tableHead}>
                                             <tr>
-                                                <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Page</th>
-                                                <th className={tableHeadCell + " px-4"}>Slug</th>
-                                                <th className={tableHeadCell + " px-4"}>Index</th>
-                                                <th className={tableHeadCell + " px-4"}>Type</th>
-                                                <th className={tableHeadCell + " px-4"}>Status</th>
-                                                <th className={tableHeadCell + " px-4 hidden sm:table-cell"}>Updated</th>
-                                                <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right w-20"}></th>
+                                                <th className={tableHeadCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>Page</th>
+                                                <th className={tableHeadCell + " px-3 sm:px-4 hidden sm:table-cell"}>Slug</th>
+                                                <th className={tableHeadCell + " px-3 sm:px-4"}>Index</th>
+                                                <th className={tableHeadCell + " px-3 sm:px-4 hidden md:table-cell"}>Type</th>
+                                                <th className={tableHeadCell + " px-3 sm:px-4"}>Status</th>
+                                                <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Updated</th>
+                                                <th className={tableHeadCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right w-14 sm:w-20"}></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1268,7 +1274,7 @@ export default function BrandDetailsPage() {
                                                         className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
                                                         onClick={() => router.push(`/page-builder/${page.id}`)}
                                                     >
-                                                        <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
+                                                        <td className={tableCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>
                                                             <div className="flex items-center gap-3">
                                                                 <div className={cn(
                                                                     "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
@@ -1281,15 +1287,15 @@ export default function BrandDetailsPage() {
                                                                         <DocumentTextIcon className="w-4 h-4" />
                                                                     )}
                                                                 </div>
-                                                                <span className={cn("font-medium text-foreground truncate max-w-[200px] block", sansFont)}>
+                                                                <span className={cn("font-medium text-foreground truncate max-w-[140px] sm:max-w-[200px] block", sansFont)}>
                                                                     {page.title}
                                                                 </span>
                                                             </div>
                                                         </td>
-                                                        <td className={tableCell + " px-4 text-muted-foreground font-mono text-xs"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground font-mono text-xs hidden sm:table-cell"}>
                                                             /{page.slug}
                                                         </td>
-                                                        <td className={tableCell + " px-4"} onClick={(e) => e.stopPropagation()}>
+                                                        <td className={tableCell + " px-3 sm:px-4"} onClick={(e) => e.stopPropagation()}>
                                                             {page.is_index ? (
                                                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-tight">
                                                                     Index
@@ -1305,7 +1311,7 @@ export default function BrandDetailsPage() {
                                                                 </button>
                                                             )}
                                                         </td>
-                                                        <td className={tableCell + " px-4"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 hidden md:table-cell"}>
                                                             <span className={cn(
                                                                 "text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-tight",
                                                                 page.type === "landing" ? "bg-blue-500/10 text-blue-600" :
@@ -1314,7 +1320,7 @@ export default function BrandDetailsPage() {
                                                                 {page.type === "blog" ? "Blog" : page.type === "blog_list" ? "Blog List" : page.type === "landing" ? "Landing" : "Content"}
                                                             </span>
                                                         </td>
-                                                        <td className={tableCell + " px-4"}>
+                                                        <td className={tableCell + " px-3 sm:px-4"}>
                                                             <span className={cn(
                                                                 "text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight",
                                                                 page.is_published ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary text-muted-foreground"
@@ -1322,10 +1328,10 @@ export default function BrandDetailsPage() {
                                                                 {page.is_published ? "Published" : "Draft"}
                                                             </span>
                                                         </td>
-                                                        <td className={tableCell + " px-4 text-muted-foreground text-xs hidden sm:table-cell"}>
+                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground text-xs hidden lg:table-cell"}>
                                                             {new Date(page.updated_at).toLocaleDateString()}
                                                         </td>
-                                                        <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
+                                                        <td className={tableCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right"}>
                                                             <Link
                                                                 href={`/page-builder/${page.id}`}
                                                                 className="p-2 hover:bg-secondary/30 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex"

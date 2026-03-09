@@ -34,15 +34,15 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
 
     return (
         <div className={cn(
-            "bg-white flex flex-col transition-all duration-700 ease-in-out origin-top",
+            "bg-white flex flex-col transition-all duration-700 ease-in-out origin-top min-w-0 overflow-x-hidden",
             !isPreview && "shadow-2xl shadow-black/5",
             viewport === "desktop" ? cn("w-full min-h-[120vh]", !isPreview && "max-w-5xl rounded-[32px]") :
-                viewport === "tablet" ? "w-[768px] rounded-[36px] min-h-[1024px]" :
-                    "w-[375px] rounded-[40px] min-h-[667px] scale-[0.85] md:scale-100"
+                viewport === "tablet" ? "w-[768px] max-w-[100vw] rounded-[36px] min-h-[1024px]" :
+                    "w-[375px] max-w-[100vw] rounded-[40px] min-h-[667px] scale-[0.85] md:scale-100"
         )} style={{ backgroundColor: backgroundColor || '#ffffff' }}>
             {/* Browser/Phone Header */}
             {!isPreview && (
-                <div className="h-14 border-b border-zinc-50 flex items-center px-6 shrink-0 bg-white/50 backdrop-blur-sm">
+                <div className="h-12 sm:h-14 border-b border-zinc-50 flex items-center px-4 sm:px-6 shrink-0 bg-white/50 backdrop-blur-sm">
                     <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-200" />
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-200" />
@@ -58,13 +58,19 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
             )}
 
             {/* Brand Header Preview */}
-            <HeaderRenderer data={brand?.header_config || {}} brand={brand} brandPages={brandPages} />
+            <HeaderRenderer
+                data={brand?.header_config || {}}
+                brand={brand}
+                brandPages={brandPages}
+                forceMobile={!isPreview && (viewport === "mobile" || viewport === "tablet")}
+                contained={!isPreview}
+            />
 
             {/* Sections Area */}
             <div className="flex-1 flex flex-col">
                 {filteredSections.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-20 text-center space-y-4">
-                        <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-200">
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 lg:p-20 text-center space-y-4">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-200">
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M12 8v8" /><path d="M8 12h8" /></svg>
                         </div>
                         <div className="space-y-1">
@@ -85,7 +91,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                                 )}
                                 style={{ backgroundColor: section.data?.backgroundColor }}
                             >
-                                <SectionRenderer section={section} brand={brand} brandPages={brandPages} brandForms={brandForms} isPreview={isPreview} blogs={blogs} blog={blog} />
+                                <SectionRenderer section={section} brand={brand} brandPages={brandPages} brandForms={brandForms} isPreview={isPreview} blogs={blogs} blog={blog} viewport={viewport} />
 
                                 {currentSectionId === section.id && (
                                     <>
@@ -110,7 +116,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
             </div>
 
             {/* Site Footer Placeholder */}
-            <div className="p-12 border-t border-zinc-50 bg-zinc-50/30 font-sans">
+            <div className="p-6 sm:p-8 lg:p-12 border-t border-zinc-50 bg-zinc-50/30 font-sans">
                 <div className="flex flex-col items-center gap-4 text-center">
                     <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center">
                         <span className="text-[10px] font-bold text-white">B</span>
@@ -126,16 +132,16 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
 
 SectionCanvas.displayName = "SectionCanvas";
 
-function SectionRenderer({ section, brand, brandPages, brandForms, isPreview, blogs, blog }: { section: BrandSection; brand: any; brandPages?: BrandPage[]; brandForms?: any[]; isPreview?: boolean; blogs?: any[]; blog?: any }) {
+function SectionRenderer({ section, brand, brandPages, brandForms, isPreview, blogs, blog, viewport }: { section: BrandSection; brand: any; brandPages?: BrandPage[]; brandForms?: any[]; isPreview?: boolean; blogs?: any[]; blog?: any; viewport?: ViewportMode }) {
     const { data, type } = section;
 
     switch (type) {
         case 'hero':
-            return <HeroRenderer data={data} fontColor={data?.fontColor || '#18181b'} imageUrl={data?.imageUrl} isPreview={isPreview} brandPages={brandPages} brandForms={brandForms} />;
+            return <HeroRenderer data={data} fontColor={data?.fontColor || '#18181b'} imageUrl={data?.imageUrl} isPreview={isPreview} brandPages={brandPages} brandForms={brandForms} viewport={viewport} />;
         case 'header':
             return <HeaderRenderer data={data} brand={brand} brandPages={brandPages} />;
         case 'features':
-            return <FeaturesRenderer data={data} isPreview={isPreview} />;
+            return <FeaturesRenderer data={data} isPreview={isPreview} viewport={viewport} />;
         case 'text':
             return <TextRenderer data={data} />;
         case 'form_embed':
