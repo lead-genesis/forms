@@ -99,19 +99,21 @@ export default function FormsPage() {
                     </div>
                 ) : forms.length === 0 ? (
                     /* Empty state */
-                    <div className="max-w-xl mx-auto">
-                        <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                            <CardContent className="p-10 flex flex-col items-center justify-center text-center">
-                                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                                    <DocumentTextIcon className="w-8 h-8 text-muted-foreground" />
-                                </div>
-                                <h2 className={cn("text-xl font-bold tracking-tight mb-2", sansFont)}>No forms created yet</h2>
-                                <p className="text-muted-foreground mb-6 max-w-md">
-                                    Create your first form to start capturing leads from your audience.
-                                </p>
-                                <AddFormModal trigger={addFormTrigger} onCreated={fetchForms} />
-                            </CardContent>
-                        </Card>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                        <div className="max-w-xl w-full mx-auto">
+                            <Card className="border-none shadow-none rounded-2xl overflow-hidden bg-transparent">
+                                <CardContent className="p-10 flex flex-col items-center justify-center text-center">
+                                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                                        <DocumentTextIcon className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h2 className={cn("text-xl font-bold tracking-tight mb-2", sansFont)}>No forms created yet</h2>
+                                    <p className="text-muted-foreground mb-6 max-w-md">
+                                        Create your first form to start capturing leads from your audience.
+                                    </p>
+                                    <AddFormModal trigger={addFormTrigger} onCreated={fetchForms} />
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 ) : (
                     /* Forms grouped by brand – brand label + horizontal card row per brand */

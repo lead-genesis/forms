@@ -113,7 +113,7 @@ export default function BrandDetailsPage() {
 
     const handleUpdateSettings = async () => {
         setIsSaving(true);
-        const { error } = await updateBrand(brandId, {
+        const { error, vercelRegistered, vercelSkipped } = await updateBrand(brandId, {
             name: brandName,
             description: brandDesc,
             custom_domain: customDomain || null,
@@ -124,6 +124,14 @@ export default function BrandDetailsPage() {
             toast.error(error);
         } else {
             toast.success("Settings updated");
+            if (vercelRegistered) {
+                toast.success("Domain registered with Vercel. It should appear in your project's Domains tab.");
+            }
+            if (vercelSkipped) {
+                toast.warning(
+                    "Domain saved here but not added to Vercel. Add VERCEL_API_TOKEN and VERCEL_PROJECT_ID to your environment variables to register it in the Vercel dashboard."
+                );
+            }
             setBrand({ ...brand, name: brandName, description: brandDesc, custom_domain: customDomain, subdomain: subdomain });
             // Reset DNS status when domain changes
             setDnsStatus(null);

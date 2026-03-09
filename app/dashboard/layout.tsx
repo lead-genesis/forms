@@ -299,7 +299,7 @@ export default function DashboardLayout({
             </AnimatePresence>
 
             {/* Main content */}
-            <main className="flex-1 md:ml-64">
+            <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
                 {/* Mobile header with hamburger */}
                 <header className="md:hidden h-14 border-b border-border/50 bg-background/80 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-20">
                     <Link href="/dashboard" className="flex items-center">
@@ -315,7 +315,7 @@ export default function DashboardLayout({
                 </header>
 
                 <div className={cn(
-                    "py-6 lg:py-10 mx-auto",
+                    "py-6 lg:py-10 mx-auto flex-1 flex flex-col",
                     pathname === "/dashboard/settings" ? "max-w-4xl px-6 lg:px-10" : "w-full"
                 )}>
                     {children}

@@ -11,7 +11,7 @@ interface DashboardPageProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function DashboardPage({ className, children, ...props }: DashboardPageProps) {
     return (
-        <div className={cn("flex flex-col gap-6 p-4 md:p-8", className)} {...props}>
+        <div className={cn("flex-1 flex flex-col gap-6 p-4 md:p-8", className)} {...props}>
             {children}
         </div>
     );

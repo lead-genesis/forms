@@ -135,21 +135,34 @@ export async function updateBrand(brandId: string, rawUpdates: Partial<CreateBra
         const oldDomain = existingBrand?.custom_domain || null;
         const newDomain = rawUpdates.custom_domain || null;
         const domainChanged = oldDomain !== newDomain;
+        let vercelRegistered = false;
+        let vercelSkipped = false;
 
-        if (domainChanged && hasVercelConfig()) {
-            const { addDomainToVercel, removeDomainFromVercel } = await import("@/lib/vercel/domains");
+        if (newDomain && !hasVercelConfig()) {
+            vercelSkipped = true;
+        }
 
-            if (oldDomain) {
+        if (hasVercelConfig()) {
+            const { addDomainToVercel, removeDomainFromVercel, getVercelProjectDomain } = await import("@/lib/vercel/domains");
+
+            if (domainChanged && oldDomain) {
                 const removeResult = await removeDomainFromVercel(oldDomain);
                 if (removeResult.error) {
                     console.error("Failed to remove old domain from Vercel:", removeResult.error);
                 }
             }
 
+            // Sync current custom domain to Vercel on every save (so re-saving after adding env vars registers it)
             if (newDomain) {
-                const addResult = await addDomainToVercel(newDomain);
-                if (addResult.error) {
-                    return { data: null, error: `Domain registration failed: ${addResult.error}` };
+                const existing = await getVercelProjectDomain(newDomain);
+                if (existing.data) {
+                    vercelRegistered = true;
+                } else {
+                    const addResult = await addDomainToVercel(newDomain);
+                    if (addResult.error) {
+                        return { data: null, error: `Domain registration failed: ${addResult.error}` };
+                    }
+                    vercelRegistered = true;
                 }
             }
         }
@@ -173,7 +186,7 @@ export async function updateBrand(brandId: string, rawUpdates: Partial<CreateBra
         revalidatePath(`/dashboard/brands/${brandId}`);
         revalidatePath("/dashboard/brands");
 
-        return { data, error: null };
+        return { data, error: null, vercelRegistered, vercelSkipped };
     } catch (error: unknown) {
         const err = error as Error;
         console.error("updateBrand error:", err);
@@ -192,7 +205,6 @@ export async function getBrands() {
     const { data, error } = await supabase
         .from("brands")
         .select("*")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
     if (error) {

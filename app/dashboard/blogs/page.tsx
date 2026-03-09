@@ -67,24 +67,26 @@ export default function BlogsPage() {
                         ))}
                     </div>
                 ) : blogs.length === 0 ? (
-                    <div className="max-w-xl mx-auto">
-                        <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                            <CardContent className="p-10 flex flex-col items-center justify-center text-center">
-                                <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
-                                    <DocumentTextIcon className="w-8 h-8 text-muted-foreground" />
-                                </div>
-                                <h2 className={cn("text-xl font-bold tracking-tight mb-2", sansFont)}>No blogs created yet</h2>
-                                <p className="text-muted-foreground mb-6 max-w-md">
-                                    Start sharing stories and updates by creating your first blog post.
-                                </p>
-                                <Link
-                                    href="/dashboard/blogs/new"
-                                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200"
-                                >
-                                    Create First Blog
-                                </Link>
-                            </CardContent>
-                        </Card>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                        <div className="max-w-xl w-full mx-auto">
+                            <Card className="border-none shadow-none rounded-2xl overflow-hidden bg-transparent">
+                                <CardContent className="p-10 flex flex-col items-center justify-center text-center">
+                                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                                        <DocumentTextIcon className="w-8 h-8 text-muted-foreground" />
+                                    </div>
+                                    <h2 className={cn("text-xl font-bold tracking-tight mb-2", sansFont)}>No blogs created yet</h2>
+                                    <p className="text-muted-foreground mb-6 max-w-md">
+                                        Start sharing stories and updates by creating your first blog post.
+                                    </p>
+                                    <Link
+                                        href="/dashboard/blogs/new"
+                                        className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200"
+                                    >
+                                        Create First Blog
+                                    </Link>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
