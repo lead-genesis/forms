@@ -1,73 +1,62 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { useParams, notFound } from "next/navigation";
-import { getBlogBySlug } from "@/app/actions/blogs";
-import { useBrand } from "../../layout";
-import { TiptapRenderer } from "@/components/TiptapRenderer";
-import { format } from "date-fns";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import React from "react";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
+import { format } from "date-fns";
+import { getBrandByDomain } from "@/app/actions/brands";
+import { getBlogBySlug } from "@/app/actions/blogs";
+import { TiptapRenderer } from "@/components/TiptapRenderer";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
 
-export default function BlogPostPage() {
-    const params = useParams();
-    const slug = params.slug as string;
-    const { brand, isLoading: isBrandLoading } = useBrand();
+interface PageProps {
+    params: Promise<{ host: string; slug: string }>;
+}
 
-    const [blog, setBlog] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const { host, slug } = await params;
+    const decodedHost = decodeURIComponent(host);
+    const { data: brand } = await getBrandByDomain(decodedHost);
+    if (!brand) return {};
 
-    useEffect(() => {
-        if (!brand?.id || !slug) return;
+    const { data: blog } = await getBlogBySlug(brand.id, slug);
+    if (!blog || !blog.is_published) return {};
 
-        (async () => {
-            try {
-                setIsLoading(true);
-                const { data, error: blogError } = await getBlogBySlug(brand.id, slug);
+    const blogUrl = `https://${brand.custom_domain || decodedHost}/blog/${slug}`;
 
-                if (blogError || !data) {
-                    setError("Article not found");
-                    return;
-                }
+    return {
+        title: blog.title,
+        description: blog.excerpt || undefined,
+        alternates: {
+            canonical: blogUrl,
+        },
+        openGraph: {
+            title: blog.title,
+            description: blog.excerpt || undefined,
+            url: blogUrl,
+            type: "article",
+            publishedTime: blog.created_at,
+            images: blog.featured_image ? [{ url: blog.featured_image }] : undefined,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: blog.title,
+            description: blog.excerpt || undefined,
+            images: blog.featured_image ? [blog.featured_image] : undefined,
+        },
+    };
+}
 
-                // If not published, don't show on public side
-                if (!data.is_published) {
-                    setError("Article not found");
-                    return;
-                }
+export default async function BlogPostPage({ params }: PageProps) {
+    const { host, slug } = await params;
+    const { data: brand } = await getBrandByDomain(decodeURIComponent(host));
 
-                setBlog(data);
-            } catch (err) {
-                console.error("Error fetching blog:", err);
-                setError("Something went wrong");
-            } finally {
-                setIsLoading(false);
-            }
-        })();
-    }, [brand?.id, slug]);
+    if (!brand) notFound();
 
-    if (isLoading || isBrandLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="w-8 h-8 rounded-full border-2 border-zinc-200 border-t-black animate-spin" />
-            </div>
-        );
-    }
+    const { data: blog } = await getBlogBySlug(brand.id, slug);
 
-    if (error || !blog) {
-        return (
-            <div className="max-w-4xl mx-auto py-40 px-6 text-center">
-                <h1 className="text-3xl font-bold mb-4">{error}</h1>
-                <Link href="/blogs" className="text-primary hover:underline inline-flex items-center gap-2">
-                    <ArrowLeftIcon className="w-4 h-4" />
-                    Back to Articles
-                </Link>
-            </div>
-        );
-    }
+    if (!blog || !blog.is_published) notFound();
 
     return (
         <article className="max-w-4xl mx-auto px-6 py-20">
@@ -127,13 +116,6 @@ export default function BlogPostPage() {
                             <p className="text-xs text-zinc-400">Published in {brand.name} Blog</p>
                         </div>
                     </div>
-
-                    <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-sm font-bold text-zinc-400 hover:text-black transition-colors uppercase tracking-widest"
-                    >
-                        Back to top
-                    </button>
                 </div>
             </footer>
         </article>

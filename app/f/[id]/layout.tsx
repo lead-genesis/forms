@@ -26,7 +26,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return {
         title: { absolute: title },
         description,
-        icons: brandLogo ? { icon: brandLogo } : undefined
+        icons: brandLogo ? { icon: brandLogo } : undefined,
+        openGraph: {
+            title,
+            description,
+            type: "website",
+            images: brandLogo ? [{ url: brandLogo }] : undefined,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title,
+            description,
+            images: brandLogo ? [brandLogo] : undefined,
+        },
     };
 }
 

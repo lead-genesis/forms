@@ -56,7 +56,18 @@ export default function BrandDetailsPage() {
     const [subdomain, setSubdomain] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
-    const [dnsStatus, setDnsStatus] = useState<{ a: boolean; cname: boolean; detectedA: string[]; detectedCname: string[]; errors: string[] } | null>(null);
+    const [dnsStatus, setDnsStatus] = useState<{
+        a: boolean;
+        cname: boolean;
+        detectedA: string[];
+        detectedCname: string[];
+        errors: string[];
+        vercel?: {
+            configured: boolean;
+            misconfigured: boolean;
+            verified: boolean;
+        } | null;
+    } | null>(null);
     const [settingIndexPageId, setSettingIndexPageId] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
@@ -430,6 +441,62 @@ export default function BrandDetailsPage() {
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {dnsStatus?.vercel && (
+                                                    <div className="mt-4">
+                                                        <div className={cn(
+                                                            "flex items-center gap-3 p-3 rounded-xl border",
+                                                            dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                ? "bg-emerald-500/5 border-emerald-500/10"
+                                                                : dnsStatus.vercel.misconfigured
+                                                                    ? "bg-red-500/5 border-red-500/10"
+                                                                    : "bg-amber-500/5 border-amber-500/10"
+                                                        )}>
+                                                            {dnsStatus.vercel.verified && dnsStatus.vercel.configured ? (
+                                                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                            ) : (
+                                                                <AlertCircle className={cn(
+                                                                    "w-4 h-4 shrink-0",
+                                                                    dnsStatus.vercel.misconfigured ? "text-red-500" : "text-amber-500"
+                                                                )} />
+                                                            )}
+                                                            <div>
+                                                                <p className={cn(
+                                                                    "text-[10px] font-bold",
+                                                                    dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                        ? "text-emerald-600"
+                                                                        : dnsStatus.vercel.misconfigured
+                                                                            ? "text-red-600"
+                                                                            : "text-amber-600"
+                                                                )}>
+                                                                    {dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                        ? "Domain Active — SSL provisioned"
+                                                                        : dnsStatus.vercel.misconfigured
+                                                                            ? "Domain Misconfigured"
+                                                                            : !dnsStatus.vercel.verified
+                                                                                ? "Domain Verification Pending"
+                                                                                : "Provisioning SSL Certificate..."}
+                                                                </p>
+                                                                <p className={cn(
+                                                                    "text-[9px]",
+                                                                    dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                        ? "text-emerald-600/80"
+                                                                        : dnsStatus.vercel.misconfigured
+                                                                            ? "text-red-600/80"
+                                                                            : "text-amber-600/80"
+                                                                )}>
+                                                                    {dnsStatus.vercel.verified && dnsStatus.vercel.configured
+                                                                        ? "Your domain is live and serving traffic with HTTPS."
+                                                                        : dnsStatus.vercel.misconfigured
+                                                                            ? "DNS records point elsewhere. Double-check your A/CNAME records above."
+                                                                            : !dnsStatus.vercel.verified
+                                                                                ? "Check the errors below for verification steps."
+                                                                                : "SSL is being provisioned. This usually takes a few minutes."}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 <p className="mt-4 text-[9px] text-muted-foreground bg-secondary/20 p-2 rounded-lg italic">
                                                     Note: For the best experience, we recommend setting up both the <b>apex domain</b> ({customDomain.replace('www.', '')}) and the <b>www subdomain</b>. Browsers will automatically redirect users to your brand's primary site regardless of which one they use.

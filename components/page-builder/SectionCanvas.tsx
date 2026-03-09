@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo } from "react";
 import { BrandPage, BrandSection } from "@/app/actions/pages";
 import { cn } from "@/lib/utils";

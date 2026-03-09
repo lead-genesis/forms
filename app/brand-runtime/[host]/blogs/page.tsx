@@ -1,43 +1,54 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import { getBlogs } from "@/app/actions/blogs";
-import { useBrand } from "../layout";
+import React from "react";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
-import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import { getBrandByDomain } from "@/app/actions/brands";
+import { getPublicBlogs } from "@/app/actions/blogs";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
+import { DocumentTextIcon } from "@heroicons/react/24/outline";
 
-export default function BlogListingPage() {
-    const { brand, isLoading: isBrandLoading } = useBrand();
-    const [blogs, setBlogs] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+interface PageProps {
+    params: Promise<{ host: string }>;
+}
 
-    useEffect(() => {
-        if (!brand?.id) return;
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const { host } = await params;
+    const decodedHost = decodeURIComponent(host);
+    const { data: brand } = await getBrandByDomain(decodedHost);
+    if (!brand) return {};
 
-        (async () => {
-            try {
-                setIsLoading(true);
-                const { data } = await getBlogs(brand.id);
-                // Only show published blogs on public side
-                setBlogs(data?.filter((b: any) => b.is_published) || []);
-            } catch (err) {
-                console.error("Error fetching blogs:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        })();
-    }, [brand?.id]);
+    const blogsUrl = `https://${brand.custom_domain || decodedHost}/blogs`;
+    const description = `Insights, stories, and updates from the ${brand.name} team.`;
 
-    if (isLoading || isBrandLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="w-8 h-8 rounded-full border-2 border-zinc-200 border-t-black animate-spin" />
-            </div>
-        );
-    }
+    return {
+        title: "Blog",
+        description,
+        alternates: {
+            canonical: blogsUrl,
+        },
+        openGraph: {
+            title: `Blog — ${brand.name}`,
+            description,
+            url: blogsUrl,
+            type: "website",
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: `Blog — ${brand.name}`,
+            description,
+        },
+    };
+}
+
+export default async function BlogListingPage({ params }: PageProps) {
+    const { host } = await params;
+    const { data: brand } = await getBrandByDomain(decodeURIComponent(host));
+
+    if (!brand) notFound();
+
+    const { data: blogs } = await getPublicBlogs(brand.id);
 
     return (
         <div className="max-w-6xl mx-auto px-6 py-20">

@@ -1,37 +1,37 @@
 import React from "react";
 import { Metadata } from "next";
-import { getBrandByDomain } from "@/app/actions/brands";
-import { getPublicIndexPage, getPublicBrandPages } from "@/app/actions/pages";
-import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
 import { notFound } from "next/navigation";
+import { getBrandByDomain } from "@/app/actions/brands";
+import { getPublicPageBySlug, getPublicBrandPages } from "@/app/actions/pages";
+import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
 
 interface PageProps {
-    params: Promise<{ host: string }>;
+    params: Promise<{ host: string; slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-    const { host } = await params;
+    const { host, slug } = await params;
     const decodedHost = decodeURIComponent(host);
     const { data: brand } = await getBrandByDomain(decodedHost);
     if (!brand) return {};
 
-    const { data: page } = await getPublicIndexPage(brand.id);
+    const { data: page } = await getPublicPageBySlug(brand.id, slug);
     if (!page) return {};
 
     const title = page.seo_title || page.title;
     const description = page.seo_description || brand.description || undefined;
-    const baseUrl = `https://${brand.custom_domain || decodedHost}`;
+    const pageUrl = `https://${brand.custom_domain || decodedHost}/${slug}`;
 
     return {
         title,
         description,
         alternates: {
-            canonical: baseUrl,
+            canonical: pageUrl,
         },
         openGraph: {
             title,
             description: description || undefined,
-            url: baseUrl,
+            url: pageUrl,
             images: page.og_image_url ? [{ url: page.og_image_url }] : undefined,
             type: "website",
         },
@@ -44,34 +44,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
 }
 
-export default async function BrandRuntimeHomePage({ params }: PageProps) {
-    const { host } = await params;
+export default async function BrandRuntimeSlugPage({ params }: PageProps) {
+    const { host, slug } = await params;
     const { data: brand } = await getBrandByDomain(decodeURIComponent(host));
 
     if (!brand) notFound();
 
-    const [{ data: indexPage }, { data: brandPages }] = await Promise.all([
-        getPublicIndexPage(brand.id),
+    const [{ data: page }, { data: brandPages }] = await Promise.all([
+        getPublicPageBySlug(brand.id, slug),
         getPublicBrandPages(brand.id),
     ]);
 
-    if (!indexPage) {
-        return (
-            <div className="max-w-4xl mx-auto py-20 px-6 text-center">
-                <h1 className="text-3xl font-bold mb-4">Under Construction</h1>
-                <p className="text-zinc-500">The landing page for {brand.name} is currently being prepared.</p>
-            </div>
-        );
-    }
+    if (!page) notFound();
 
     return (
         <SectionCanvas
-            sections={indexPage.sections}
+            sections={page.sections}
             currentSectionId={null}
             onSectionSelect={() => {}}
             brand={brand}
             brandPages={brandPages}
-            backgroundColor={indexPage.background_color}
+            backgroundColor={page.background_color}
             viewport="desktop"
             isPreview={true}
         />

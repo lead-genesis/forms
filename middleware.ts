@@ -5,13 +5,15 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 export const config = {
     matcher: [
         /*
-         * Match all request paths except for the ones starting with:
+         * Match all request paths except:
          * - api (API routes)
          * - _next/static (static files)
          * - _next/image (image optimization files)
-         * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+         * - favicon.ico
+         * Note: sitemap.xml and robots.txt are NOT excluded so custom domains
+         * can be rewritten to brand-specific versions.
          */
-        '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+        '/((?!api|_next/static|_next/image|favicon.ico).*)',
     ],
 };
 
@@ -80,11 +82,14 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL('/auth', req.url));
     }
 
-    // Skip internal Next.js paths and static files
+    const SEO_PATHS = ['/sitemap.xml', '/robots.txt'];
+    const isSeoPath = SEO_PATHS.includes(url.pathname);
+
+    // Skip internal Next.js paths and static files (but not SEO files — those need domain rewriting)
     if (
         url.pathname.startsWith('/_next') ||
         url.pathname.startsWith('/api') ||
-        url.pathname.includes('.')
+        (url.pathname.includes('.') && !isSeoPath)
     ) {
         return res;
     }
@@ -109,13 +114,13 @@ export async function middleware(req: NextRequest) {
         '127.0.0.1:3000',
     ];
 
-    // 1. Initial checks to skip internal paths
+    // 1. Initial checks to skip internal paths (SEO files pass through for domain rewriting)
     if (
         url.pathname.startsWith('/_next') ||
         url.pathname.startsWith('/api') ||
         url.pathname.startsWith('/form-subdomain/') ||
         url.pathname.startsWith('/brand-runtime/') ||
-        url.pathname.includes('.')
+        (url.pathname.includes('.') && !isSeoPath)
     ) {
         return res;
     }

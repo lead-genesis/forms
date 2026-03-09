@@ -176,3 +176,20 @@ export async function getBlogBySlug(brandId: string, slug: string) {
         return { data: null, error: error.message };
     }
 }
+
+/** Returns published blogs for a brand without requiring authentication. */
+export async function getPublicBlogs(brandId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("blogs")
+        .select("id, title, slug, excerpt, featured_image, created_at, brand_id")
+        .eq("brand_id", brandId)
+        .eq("is_published", true)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("getPublicBlogs error:", error);
+        return { data: [], error: error.message };
+    }
+    return { data: data || [], error: null };
+}

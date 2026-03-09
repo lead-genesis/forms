@@ -4,7 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
 import { Settings, Globe, Search, Share2, PanelRightClose } from "lucide-react";
-import { BrandPage } from "@/app/actions/pages";
+import { BrandPage, uploadPageImage } from "@/app/actions/pages";
 
 interface PageSettingsProps {
     page: BrandPage;
@@ -102,10 +102,28 @@ export function PageSettings({ page, onChange, onClose }: PageSettingsProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight ml-1">SEO Description</label>
+                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight ml-1">SEO Title</label>
+                        <input
+                            type="text"
+                            value={page.seo_title || ""}
+                            onChange={(e) => onChange({ seo_title: e.target.value || undefined })}
+                            placeholder={page.title}
+                            className="w-full bg-zinc-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 transition-all font-medium placeholder:text-zinc-300"
+                        />
+                        <p className="text-[10px] text-zinc-400 ml-1">Overrides the page title in search results</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between ml-1">
+                            <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">SEO Description</label>
+                            <span className="text-[10px] font-mono text-zinc-400">{(page.seo_description || "").length}/160</span>
+                        </div>
                         <textarea
                             rows={4}
+                            value={page.seo_description || ""}
+                            onChange={(e) => onChange({ seo_description: e.target.value || undefined })}
                             placeholder="Add a meta description for search engines..."
+                            maxLength={160}
                             className="w-full bg-zinc-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 transition-all font-medium resize-none placeholder:text-zinc-300"
                         />
                     </div>
@@ -118,12 +136,32 @@ export function PageSettings({ page, onChange, onClose }: PageSettingsProps) {
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Social Sharing</span>
                     </div>
 
-                    <div className="aspect-[1.91/1] w-full bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center text-center p-6 group cursor-pointer hover:bg-zinc-100/50 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:scale-110 transition-transform">
-                            <PlusIcon className="w-5 h-5" />
+                    {page.og_image_url ? (
+                        <div className="relative group">
+                            <div className="aspect-[1.91/1] w-full rounded-2xl overflow-hidden border border-zinc-100">
+                                <img
+                                    src={page.og_image_url}
+                                    alt="OG Image"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            <button
+                                onClick={() => onChange({ og_image_url: undefined })}
+                                className="absolute top-2 right-2 w-7 h-7 bg-white rounded-lg shadow border border-zinc-100 flex items-center justify-center text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all text-xs font-bold"
+                            >
+                                ✕
+                            </button>
                         </div>
-                        <p className="mt-3 text-[11px] font-bold text-zinc-500 group-hover:text-zinc-600 transition-colors uppercase">Upload OG Image</p>
-                    </div>
+                    ) : (
+                        <label className="aspect-[1.91/1] w-full bg-zinc-50 rounded-2xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center text-center p-6 group cursor-pointer hover:bg-zinc-100/50 transition-colors">
+                            <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:scale-110 transition-transform">
+                                <PlusIcon className="w-5 h-5" />
+                            </div>
+                            <p className="mt-3 text-[11px] font-bold text-zinc-500 group-hover:text-zinc-600 transition-colors uppercase">Upload OG Image</p>
+                            <p className="mt-1 text-[10px] text-zinc-400">Recommended: 1200 × 630px</p>
+                            <OgImageUploadInput onChange={onChange} pageId={page.id} />
+                        </label>
+                    )}
                 </div>
             </div>
 
@@ -137,6 +175,29 @@ export function PageSettings({ page, onChange, onClose }: PageSettingsProps) {
                 </div>
             </div>
         </div>
+    );
+}
+
+function OgImageUploadInput({ onChange, pageId }: { onChange: (updates: Partial<BrandPage>) => void; pageId: string }) {
+    const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const dataUrl = ev.target?.result as string;
+            const { url, error } = await uploadPageImage(pageId, dataUrl);
+            if (url) onChange({ og_image_url: url });
+            if (error) console.error("OG image upload failed:", error);
+        };
+        reader.readAsDataURL(file);
+    };
+    return (
+        <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handleFile}
+        />
     );
 }
 

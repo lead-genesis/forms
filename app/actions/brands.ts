@@ -126,8 +126,34 @@ export async function updateBrand(brandId: string, rawUpdates: Partial<CreateBra
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { data: null, error: "Unauthorized" };
 
-        // Note: For partial updates, we might want a different schema or safeParse(updates) with some fields optional
-        // simplified here but in a real enterprise app we'd be more granular
+        const { data: existingBrand } = await supabase
+            .from("brands")
+            .select("custom_domain")
+            .eq("id", brandId)
+            .single();
+
+        const oldDomain = existingBrand?.custom_domain || null;
+        const newDomain = rawUpdates.custom_domain || null;
+        const domainChanged = oldDomain !== newDomain;
+
+        if (domainChanged && hasVercelConfig()) {
+            const { addDomainToVercel, removeDomainFromVercel } = await import("@/lib/vercel/domains");
+
+            if (oldDomain) {
+                const removeResult = await removeDomainFromVercel(oldDomain);
+                if (removeResult.error) {
+                    console.error("Failed to remove old domain from Vercel:", removeResult.error);
+                }
+            }
+
+            if (newDomain) {
+                const addResult = await addDomainToVercel(newDomain);
+                if (addResult.error) {
+                    return { data: null, error: `Domain registration failed: ${addResult.error}` };
+                }
+            }
+        }
+
         const { data, error } = await supabase
             .from("brands")
             .update({
@@ -235,13 +261,16 @@ export async function getBrandByDomain(host: string) {
     }
 }
 
+function hasVercelConfig(): boolean {
+    return !!(process.env.VERCEL_API_TOKEN && process.env.VERCEL_PROJECT_ID);
+}
+
 export async function verifyDomainDNS(domain: string) {
-    // Basic sanitization: remove protocol and paths
     const cleanDomain = domain.toLowerCase()
         .replace(/^https?:\/\//, '')
         .split('/')[0]
         .split(':')[0]
-        .replace(/^www\./, ''); // Get apex for checks
+        .replace(/^www\./, '');
 
     const dns = await import("node:dns/promises");
     const EXPECTED_A = "76.76.21.21";
@@ -253,7 +282,12 @@ export async function verifyDomainDNS(domain: string) {
             cname: false,
             detectedA: [] as string[],
             detectedCname: [] as string[],
-            errors: [] as string[]
+            errors: [] as string[],
+            vercel: null as {
+                configured: boolean;
+                misconfigured: boolean;
+                verified: boolean;
+            } | null,
         };
 
         // Check A record for Apex
@@ -271,16 +305,13 @@ export async function verifyDomainDNS(domain: string) {
         // Check CNAME for WWW
         const wwwDomain = `www.${cleanDomain}`;
         try {
-            // First check the CNAME record itself
             const cnames = await dns.resolveCname(wwwDomain);
             results.detectedCname = cnames;
             const cnameMatches = cnames.some(c => c === EXPECTED_CNAME || c.endsWith(EXPECTED_CNAME));
 
-            // Then check ultimate resolution (follow the chain to the IP)
             const finalAddresses = await dns.resolve4(wwwDomain);
             const ipMatches = finalAddresses.includes(EXPECTED_A);
 
-            // Verified only if BOTH the name matches and it points to our IP
             results.cname = cnameMatches && ipMatches;
 
             if (cnameMatches && !ipMatches) {
@@ -290,6 +321,44 @@ export async function verifyDomainDNS(domain: string) {
             const err = e as { code?: string; message: string };
             if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
                 results.errors.push(`WWW lookup failed: ${err.message}`);
+            }
+        }
+
+        // Check Vercel platform status
+        if (hasVercelConfig()) {
+            try {
+                const { getVercelDomainConfig, getVercelProjectDomain, verifyDomainOnVercel } = await import("@/lib/vercel/domains");
+
+                const domainToCheck = domain.toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+                const [configResult, projectDomainResult] = await Promise.all([
+                    getVercelDomainConfig(domainToCheck),
+                    getVercelProjectDomain(domainToCheck),
+                ]);
+
+                const isConfigured = configResult.data?.configuredBy !== null;
+                const isMisconfigured = configResult.data?.misconfigured ?? false;
+                let isVerified = projectDomainResult.data?.verified ?? false;
+
+                if (!isVerified && (results.a || results.cname)) {
+                    const verifyResult = await verifyDomainOnVercel(domainToCheck);
+                    isVerified = verifyResult.data?.verified ?? false;
+                }
+
+                results.vercel = {
+                    configured: isConfigured && !isMisconfigured,
+                    misconfigured: isMisconfigured,
+                    verified: isVerified,
+                };
+
+                if (isMisconfigured) {
+                    results.errors.push("Vercel reports the domain DNS is misconfigured. Please double-check your records.");
+                }
+                if (!isVerified && projectDomainResult.data?.verification?.length) {
+                    const challenge = projectDomainResult.data.verification[0];
+                    results.errors.push(`Vercel verification pending: Add a TXT record on "${challenge.domain}" with value "${challenge.value}".`);
+                }
+            } catch (vercelErr) {
+                console.error("Vercel domain check failed (non-fatal):", vercelErr);
             }
         }
 

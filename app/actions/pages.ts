@@ -3,6 +3,95 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+// ─── Public (unauthenticated) queries for brand-runtime public pages ──────────
+
+/** Returns all published pages for a brand without requiring authentication. */
+export async function getPublicBrandPages(brandId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("brand_pages")
+        .select("*")
+        .eq("brand_id", brandId)
+        .eq("is_published", true)
+        .order("created_at", { ascending: true });
+
+    if (error) {
+        console.error("getPublicBrandPages error:", error);
+        return { data: [] as BrandPage[], error: error.message };
+    }
+    return { data: data as BrandPage[], error: null };
+}
+
+/** Returns a single published page by slug with its sections, without requiring authentication. */
+export async function getPublicPageBySlug(brandId: string, slug: string) {
+    const supabase = await createClient();
+
+    const { data: page, error: pageError } = await supabase
+        .from("brand_pages")
+        .select("*, brand:brands(*)")
+        .eq("brand_id", brandId)
+        .eq("slug", slug)
+        .eq("is_published", true)
+        .single();
+
+    if (pageError) {
+        console.error("getPublicPageBySlug error:", pageError);
+        return { data: null, error: pageError.message };
+    }
+
+    const { data: sections, error: sectionsError } = await supabase
+        .from("brand_sections")
+        .select("*")
+        .eq("page_id", page.id)
+        .order("order", { ascending: true });
+
+    if (sectionsError) {
+        console.error("getPublicPageBySlug sections error:", sectionsError);
+        return { data: null, error: sectionsError.message };
+    }
+
+    return {
+        data: { ...page, sections: sections as BrandSection[] },
+        error: null
+    };
+}
+
+/** Returns the published index page for a brand with its sections, without requiring authentication. */
+export async function getPublicIndexPage(brandId: string) {
+    const supabase = await createClient();
+
+    const { data: page, error: pageError } = await supabase
+        .from("brand_pages")
+        .select("*, brand:brands(*)")
+        .eq("brand_id", brandId)
+        .eq("is_published", true)
+        .or("is_index.eq.true,slug.eq.index")
+        .order("is_index", { ascending: false })
+        .limit(1)
+        .single();
+
+    if (pageError) {
+        console.error("getPublicIndexPage error:", pageError);
+        return { data: null, error: pageError.message };
+    }
+
+    const { data: sections, error: sectionsError } = await supabase
+        .from("brand_sections")
+        .select("*")
+        .eq("page_id", page.id)
+        .order("order", { ascending: true });
+
+    if (sectionsError) {
+        console.error("getPublicIndexPage sections error:", sectionsError);
+        return { data: null, error: sectionsError.message };
+    }
+
+    return {
+        data: { ...page, sections: sections as BrandSection[] },
+        error: null
+    };
+}
+
 async function getSupabase() {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -25,6 +114,9 @@ export interface BrandPage {
     is_published: boolean;
     is_index?: boolean;
     background_color?: string;
+    seo_title?: string;
+    seo_description?: string;
+    og_image_url?: string;
     created_at: string;
     updated_at: string;
 }
