@@ -32,6 +32,34 @@ interface Form {
     };
 }
 
+interface BrandGroup {
+    brandId: string;
+    brandName: string;
+    brandLogo?: string | null;
+    forms: Form[];
+}
+
+function groupFormsByBrand(forms: Form[]): BrandGroup[] {
+    const map = new Map<string, Form[]>();
+    for (const form of forms) {
+        const key = form.brand_id ?? "__none__";
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(form);
+    }
+    return Array.from(map.entries())
+        .map(([brandId, brandForms]) => {
+            const first = brandForms[0];
+            const brand = first?.brands;
+            return {
+                brandId,
+                brandName: brand?.name ?? "Other",
+                brandLogo: brand?.logo_url ?? null,
+                forms: brandForms,
+            };
+        })
+        .sort((a, b) => a.brandName.localeCompare(b.brandName));
+}
+
 export default function FormsPage() {
     const router = useRouter();
     const [forms, setForms] = useState<Form[]>([]);
@@ -86,112 +114,135 @@ export default function FormsPage() {
                         </Card>
                     </div>
                 ) : (
-                    /* Forms grid – same layout as brands */
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {forms.map((form) => (
-                            <motion.div
-                                key={form.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                whileHover={{ y: -2 }}
-                                onClick={() => router.push(`/dashboard/forms/${form.id}`)}
-                                className="group rounded-2xl border border-border/50 bg-background shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer"
-                            >
-                                {/* Banner area – gradient accent matching form status */}
-                                <div className={cn(
-                                    "h-28 w-full relative overflow-hidden flex items-center justify-center",
-                                    form.status === "active"
-                                        ? "bg-gradient-to-br from-emerald-500/10 via-emerald-400/5 to-transparent"
-                                        : "bg-secondary/40"
-                                )}>
-                                    <DocumentTextIcon className="w-10 h-10 text-muted-foreground/20 group-hover:scale-110 transition-transform" />
-                                </div>
-
-                                {/* Info section */}
-                                <div className="px-5 pb-5 pt-0 relative">
-                                    {/* Brand logo overlapping banner */}
-                                    <div className="w-14 h-14 rounded-2xl border-2 border-background bg-secondary/30 overflow-hidden -mt-7 mb-3 shadow-sm flex items-center justify-center">
-                                        {form.brands?.logo_url ? (
-                                            <img src={form.brands.logo_url} alt={form.brands.name} className="w-full h-full object-cover" />
+                    /* Forms grouped by brand – brand label + horizontal card row per brand */
+                    <div className="space-y-8">
+                        {groupFormsByBrand(forms).map((group) => (
+                            <section key={group.brandId}>
+                                {/* Brand label */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-9 h-9 rounded-xl border border-border/50 bg-secondary/30 overflow-hidden flex items-center justify-center flex-shrink-0">
+                                        {group.brandLogo ? (
+                                            <img src={group.brandLogo} alt="" className="w-full h-full object-cover" />
                                         ) : (
-                                            <TagIcon className="w-5 h-5 text-muted-foreground/40" />
+                                            <TagIcon className="w-4 h-4 text-muted-foreground/40" />
                                         )}
                                     </div>
+                                    <h2 className={cn("text-lg font-semibold text-foreground", sansFont)}>
+                                        {group.brandName}
+                                    </h2>
+                                </div>
 
-                                    <h3 className={cn("text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors", sansFont)}>
-                                        {form.name}
-                                    </h3>
-
-                                    <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
-                                        <ClockIcon className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
-                                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 truncate">
-                                            <span className="shrink-0">
-                                                {new Date(form.created_at).toLocaleDateString("en-AU", {
-                                                    day: "numeric",
-                                                    month: "short",
-                                                    year: "numeric",
-                                                })}
-                                            </span>
-                                            {form.brands?.name && (
-                                                <>
-                                                    <span className="text-muted-foreground/40 shrink-0">•</span>
-                                                    <span className="truncate" title={form.brands.name}>{form.brands.name}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between mt-3 gap-2">
-                                        <div className="flex items-center gap-1.5">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    window.open(`/f/${form.id}?preview=true`, "_blank");
-                                                }}
-                                                className="p-1.5 rounded-xl bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
-                                                title="Preview"
+                                {/* Horizontal scroll of form cards */}
+                                <div className="overflow-x-auto pb-2 -mx-4 md:-mx-6 lg:-mx-10 px-4 md:px-6 lg:px-10">
+                                    <div className="flex gap-4 min-w-0" style={{ width: "max-content" }}>
+                                        {group.forms.map((form) => (
+                                            <motion.div
+                                                key={form.id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                whileHover={{ y: -2 }}
+                                                onClick={() => router.push(`/dashboard/forms/${form.id}`)}
+                                                className="group w-[260px] flex-shrink-0 rounded-2xl border border-border/50 bg-background shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer"
                                             >
-                                                <PlayIcon className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const shareUrl = form.subdomain
-                                                        ? `https://${form.subdomain}.genesisflow.io`
-                                                        : `${window.location.origin}/f/${form.id}`;
-                                                    window.open(shareUrl, "_blank");
-                                                }}
-                                                className="p-1.5 rounded-xl bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
-                                                title="Open Live Form"
-                                            >
-                                                <ShareIcon className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                        <span className={cn(
-                                            "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                                            form.status === "active"
-                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                                : "bg-secondary text-muted-foreground border-border/50"
-                                        )}>
-                                            {form.status}
-                                        </span>
+                                                {/* Banner area – gradient accent matching form status */}
+                                                <div className={cn(
+                                                    "h-28 w-full relative overflow-hidden flex items-center justify-center",
+                                                    form.status === "active"
+                                                        ? "bg-gradient-to-br from-emerald-500/10 via-emerald-400/5 to-transparent"
+                                                        : "bg-secondary/40"
+                                                )}>
+                                                    <DocumentTextIcon className="w-10 h-10 text-muted-foreground/20 group-hover:scale-110 transition-transform" />
+                                                </div>
+
+                                                {/* Info section */}
+                                                <div className="px-5 pb-5 pt-0 relative">
+                                                    {/* Brand logo overlapping banner */}
+                                                    <div className="w-14 h-14 rounded-2xl border-2 border-background bg-secondary/30 overflow-hidden -mt-7 mb-3 shadow-sm flex items-center justify-center">
+                                                        {form.brands?.logo_url ? (
+                                                            <img src={form.brands.logo_url} alt={form.brands.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <TagIcon className="w-5 h-5 text-muted-foreground/40" />
+                                                        )}
+                                                    </div>
+
+                                                    <h3 className={cn("text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors", sansFont)}>
+                                                        {form.name}
+                                                    </h3>
+
+                                                    <div className="flex items-center gap-1.5 mt-1.5 overflow-hidden">
+                                                        <ClockIcon className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                                                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 truncate">
+                                                            <span className="shrink-0">
+                                                                {new Date(form.created_at).toLocaleDateString("en-AU", {
+                                                                    day: "numeric",
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                })}
+                                                            </span>
+                                                            {form.brands?.name && (
+                                                                <>
+                                                                    <span className="text-muted-foreground/40 shrink-0">•</span>
+                                                                    <span className="truncate" title={form.brands.name}>{form.brands.name}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between mt-3 gap-2">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    window.open(`/f/${form.id}?preview=true`, "_blank");
+                                                                }}
+                                                                className="p-1.5 rounded-xl bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
+                                                                title="Preview"
+                                                            >
+                                                                <PlayIcon className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const shareUrl = form.subdomain
+                                                                        ? `https://${form.subdomain}.genesisflow.io`
+                                                                        : `${window.location.origin}/f/${form.id}`;
+                                                                    window.open(shareUrl, "_blank");
+                                                                }}
+                                                                className="p-1.5 rounded-xl bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all active:scale-90"
+                                                                title="Open Live Form"
+                                                            >
+                                                                <ShareIcon className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        <span className={cn(
+                                                            "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                                                            form.status === "active"
+                                                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                                                : "bg-secondary text-muted-foreground border-border/50"
+                                                        )}>
+                                                            {form.status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+
+                                        {/* Add form card for this brand */}
+                                        <AddFormModal
+                                            trigger={
+                                                <div className="w-[260px] flex-shrink-0 rounded-2xl border-2 border-dashed border-border/50 min-h-[240px] flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-border transition-colors cursor-pointer bg-secondary/10">
+                                                    <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
+                                                        <DocumentTextIcon className="w-5 h-5" />
+                                                    </div>
+                                                    <span className="text-[13px] font-medium">Add Form</span>
+                                                </div>
+                                            }
+                                            onCreated={fetchForms}
+                                        />
                                     </div>
                                 </div>
-                            </motion.div>
+                            </section>
                         ))}
-
-                        {/* Add more card */}
-                        <AddFormModal
-                            trigger={
-                                <div className="rounded-2xl border-2 border-dashed border-border/50 h-full min-h-[190px] flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-border transition-colors cursor-pointer bg-secondary/10">
-                                    <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
-                                        <DocumentTextIcon className="w-5 h-5" />
-                                    </div>
-                                    <span className="text-[13px] font-medium">Add Form</span>
-                                </div>
-                            }
-                            onCreated={fetchForms}
-                        />
                     </div>
                 )}
             </motion.div>

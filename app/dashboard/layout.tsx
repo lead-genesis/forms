@@ -12,8 +12,6 @@ import {
     sansFont,
 } from "@/lib/design-system";
 import {
-    RectangleGroupIcon,
-    Cog6ToothIcon,
     ArrowRightStartOnRectangleIcon,
     Squares2X2Icon,
     UsersIcon,
@@ -22,6 +20,7 @@ import {
     DocumentTextIcon,
     UserGroupIcon,
     TagIcon,
+    BookOpenIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
 
@@ -73,6 +72,7 @@ export default function DashboardLayout({
         "/dashboard/forms": "Forms",
         "/dashboard/leads": "Leads",
         "/dashboard/brands": "Brands",
+        "/dashboard/blogs": "Blogs",
         "/dashboard/users": "Users",
         "/dashboard/settings": "Settings",
         "/dashboard/products": "Products",
@@ -82,12 +82,33 @@ export default function DashboardLayout({
     const matchedPath = sortedPaths.find((path) => pathname.startsWith(path));
     const pageTitle = matchedPath ? pageTitleMap[matchedPath] : "Dashboard";
 
-    const navItems = [
-        { href: "/dashboard", label: "Overview", icon: Squares2X2Icon },
-        { href: "/dashboard/forms", label: "Forms", icon: DocumentTextIcon },
-        { href: "/dashboard/leads", label: "Leads", icon: UserGroupIcon },
-        { href: "/dashboard/brands", label: "Brands", icon: TagIcon },
-        { href: "/dashboard/users", label: "Users", icon: UsersIcon },
+    const navGroups = [
+        {
+            label: "Main",
+            items: [
+                { href: "/dashboard", label: "Overview", icon: Squares2X2Icon },
+            ],
+        },
+        {
+            label: "Lead generation",
+            items: [
+                { href: "/dashboard/forms", label: "Forms", icon: DocumentTextIcon },
+                { href: "/dashboard/leads", label: "Leads", icon: UserGroupIcon },
+            ],
+        },
+        {
+            label: "Content",
+            items: [
+                { href: "/dashboard/brands", label: "Brands", icon: TagIcon },
+                { href: "/dashboard/blogs", label: "Blogs", icon: BookOpenIcon },
+            ],
+        },
+        {
+            label: "Team",
+            items: [
+                { href: "/dashboard/users", label: "Users", icon: UsersIcon },
+            ],
+        },
     ];
 
     useEffect(() => {
@@ -108,34 +129,38 @@ export default function DashboardLayout({
                     </Link>
                 </div>
 
-                {/* Section label */}
-                <div className="px-6 pt-4 pb-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">Menu</p>
-                </div>
-
                 {/* Navigation */}
-                <nav className="flex-1 px-3 space-y-0.5">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn(
-                                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative",
-                                    isActive
-                                        ? "bg-secondary text-foreground"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-                                )}
-                            >
-                                <item.icon className={cn(
-                                    "w-[18px] h-[18px] transition-transform duration-200",
-                                    !isActive && "group-hover:scale-110"
-                                )} />
-                                {item.label}
-                            </Link>
-                        );
-                    })}
+                <nav className="flex-1 px-3 overflow-y-auto space-y-6">
+                    {navGroups.map((group) => (
+                        <div key={group.label}>
+                            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                                {group.label}
+                            </p>
+                            <div className="space-y-0.5">
+                                {group.items.map((item) => {
+                                    const isActive = pathname === item.href;
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            className={cn(
+                                                "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative",
+                                                isActive
+                                                    ? "bg-secondary text-foreground"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                            )}
+                                        >
+                                            <item.icon className={cn(
+                                                "w-[18px] h-[18px] transition-transform duration-200",
+                                                !isActive && "group-hover:scale-110"
+                                            )} />
+                                            {item.label}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </nav>
 
                 {/* Bottom section */}
@@ -195,52 +220,59 @@ export default function DashboardLayout({
                                 </button>
                             </div>
 
-                            {/* Section label */}
-                            <div className="px-5 pt-4 pb-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">Menu</p>
-                            </div>
-
                             {/* Nav */}
-                            <nav className="flex-1 px-3 py-2">
-                                <motion.ul
+                            <nav className="flex-1 px-3 py-2 overflow-y-auto">
+                                <motion.div
                                     variants={{
                                         hidden: { opacity: 0 },
                                         show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } }
                                     }}
                                     initial="hidden"
                                     animate="show"
-                                    className="space-y-1"
+                                    className="space-y-6"
                                 >
-                                    {navItems.map((item) => {
-                                        const isActive = pathname === item.href;
-                                        return (
-                                            <motion.li
-                                                key={item.href}
-                                                variants={{
-                                                    hidden: { x: -10, opacity: 0 },
-                                                    show: { x: 0, opacity: 1 }
-                                                }}
+                                    {navGroups.map((group) => (
+                                        <div key={group.label}>
+                                            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                                                {group.label}
+                                            </p>
+                                            <motion.ul
+                                                variants={{ hidden: {}, show: {} }}
+                                                className="space-y-1"
                                             >
-                                                <Link
-                                                    href={item.href}
-                                                    onClick={() => setMobileMenuOpen(false)}
-                                                    className={cn(
-                                                        "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                                                        isActive
-                                                            ? "bg-secondary text-foreground"
-                                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-                                                    )}
-                                                >
-                                                    <item.icon className={cn(
-                                                        "w-[18px] h-[18px]",
-                                                        isActive ? "text-foreground" : "text-muted-foreground"
-                                                    )} />
-                                                    {item.label}
-                                                </Link>
-                                            </motion.li>
-                                        );
-                                    })}
-                                </motion.ul>
+                                                {group.items.map((item) => {
+                                                    const isActive = pathname === item.href;
+                                                    return (
+                                                        <motion.li
+                                                            key={item.href}
+                                                            variants={{
+                                                                hidden: { x: -10, opacity: 0 },
+                                                                show: { x: 0, opacity: 1 }
+                                                            }}
+                                                        >
+                                                            <Link
+                                                                href={item.href}
+                                                                onClick={() => setMobileMenuOpen(false)}
+                                                                className={cn(
+                                                                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                                                                    isActive
+                                                                        ? "bg-secondary text-foreground"
+                                                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                                                )}
+                                                            >
+                                                                <item.icon className={cn(
+                                                                    "w-[18px] h-[18px]",
+                                                                    isActive ? "text-foreground" : "text-muted-foreground"
+                                                                )} />
+                                                                {item.label}
+                                                            </Link>
+                                                        </motion.li>
+                                                    );
+                                                })}
+                                            </motion.ul>
+                                        </div>
+                                    ))}
+                                </motion.div>
                             </nav>
 
                             {/* Bottom */}

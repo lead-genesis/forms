@@ -1,19 +1,32 @@
 "use server";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
-function getClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!url || !key || url.includes('placeholder')) {
-        return null;
-    }
-
-    return createSupabaseClient(url, key);
+export interface AnalyticsSummary {
+    totalLeads: number;
+    totalConversions: number;
+    conversionRate: number;
+    leadsByDay: { date: string, count: number }[];
+    leadsByBrand: { name: string, count: number }[];
+    totalViews: number;
 }
 
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
+export async function getAnalyticsSummary(brandId?: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { data: null, error: "Unauthorized" };
+    }
+
+    try {
+        // This is a placeholder for more detailed analytics if needed later
+        // For now, we'll return a basic structure or implement as needed
+        return { data: null, error: "Not implemented" };
+    } catch (e: any) {
+        return { data: null, error: e.message };
+    }
+}
 
 export interface DashboardStats {
     totalLeads: number;
@@ -29,14 +42,18 @@ export interface DashboardStats {
     }[];
 }
 
-export async function getDashboardStats(userId?: string) {
-    const supabase = getClient();
-    if (!supabase) return { data: null, error: "Supabase client not initialized" };
-    const uid = userId ?? DEMO_USER_ID;
+export async function getDashboardStats() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { data: null, error: "Unauthorized" };
+    }
+
+    const userId = user.id;
 
     try {
         // 1. Fetch form views and counts of leads per form in one query
-        // We use the count aggregation in the related leads table
         const { data: forms, error: formsError } = await supabase
             .from("forms")
             .select(`
@@ -47,15 +64,15 @@ export async function getDashboardStats(userId?: string) {
                 brands:brand_id (name),
                 leads:leads (count)
             `)
-            .eq("user_id", uid);
+            .eq("user_id", userId);
 
         if (formsError) throw formsError;
 
-        const totalViews = forms.reduce((acc, f) => acc + (f.views || 0), 0);
+        const totalViews = forms.reduce((acc: number, f: any) => acc + (f.views || 0), 0);
 
         // 2. Map form stats and calculate total leads
         let totalLeads = 0;
-        const formStats = forms.map(form => {
+        const formStats = forms.map((form: any) => {
             const leadCount = (form.leads as any)?.[0]?.count || 0;
             totalLeads += leadCount;
             const conversionRate = form.views > 0 ? (leadCount / form.views) * 100 : 0;
@@ -78,7 +95,7 @@ export async function getDashboardStats(userId?: string) {
 
         // 4. Calculate Top Brands from the form stats
         const brandMap: Record<string, number> = {};
-        formStats.forEach(form => {
+        formStats.forEach((form: any) => {
             brandMap[form.brandName] = (brandMap[form.brandName] || 0) + form.count;
         });
 
@@ -98,13 +115,13 @@ export async function getDashboardStats(userId?: string) {
                     brands:brand_id (name)
                 )
             `)
-            .in("form_id", forms.map(f => f.id))
+            .in("form_id", forms.map((f: any) => f.id))
             .order("created_at", { ascending: false })
             .limit(5);
 
         if (recentError) throw recentError;
 
-        const recentLeads = (recentLeadsData || []).map(lead => ({
+        const recentLeads = (recentLeadsData || []).map((lead: any) => ({
             id: lead.id,
             formName: (lead.forms as any)?.name || "Unknown",
             brandName: (lead.forms as any)?.brands?.name || "Unknown",

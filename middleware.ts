@@ -99,43 +99,47 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(callbackUrl);
     }
 
-    // Prevent infinite loop if already rewritten
-    if (url.pathname.startsWith('/form-subdomain/')) {
-        return res;
-    }
-
     // Allowed base domains we don't want to rewrite
     const baseDomains = [
         'genesisflow.io',
         'www.genesisflow.io',
         'localhost:3000',
         'localhost',
+        '127.0.0.1',
+        '127.0.0.1:3000',
     ];
 
-    // Check if we are on a Vercel-internal or system domain
-    const isSystemDomain = hostname.includes('vercel.app') || hostname.includes('now.sh');
-
-    // If it's a base domain OR a system domain (without subdomain), don't rewrite
-    const hostParts = hostname.split('.');
-    if (baseDomains.includes(hostname) || (isSystemDomain && hostParts.length <= 3)) {
+    // 1. Initial checks to skip internal paths
+    if (
+        url.pathname.startsWith('/_next') ||
+        url.pathname.startsWith('/api') ||
+        url.pathname.startsWith('/form-subdomain/') ||
+        url.pathname.startsWith('/brand-runtime/') ||
+        url.pathname.includes('.')
+    ) {
         return res;
     }
 
-    // Extract the subdomain
-    const subdomain = hostParts[0].toLowerCase();
+    // 2. Identify if it's a custom domain or a subdomain
+    const isBaseDomain = baseDomains.includes(hostname);
+    const isVercelDomain = hostname.includes('vercel.app') || hostname.includes('now.sh');
 
-    // Prevent matching against common base/system prefixes
-    const ignoredSubdomains = ['www', 'genesisflow', 'localhost', 'api', 'admin'];
-    if (ignoredSubdomains.includes(subdomain) || isSystemDomain) {
-        // If it's a vercel domain and we reach here, we actually don't want to rewrite it 
-        // unless it's explicitly a custom setup. For now, let's skip v-loops.
+    if (isBaseDomain || (isVercelDomain && hostname.split('.').length <= 3)) {
         return res;
     }
 
-    console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);
+    // 3. Determine if it's a subdomain of our base domain
+    const isSubdomainOfCorrectBase = hostname.endsWith('.genesisflow.io');
 
-    // Rewrite to our hidden dynamic route
-    const targetPath = `/form-subdomain/${subdomain}${url.pathname === '/' ? '' : url.pathname}`;
+    if (isSubdomainOfCorrectBase) {
+        const subdomain = hostname.replace('.genesisflow.io', '').toLowerCase();
+        if (subdomain === 'www' || subdomain === 'api' || subdomain === 'admin') return res;
 
-    return NextResponse.rewrite(new URL(targetPath, req.url));
+        console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);
+        return NextResponse.rewrite(new URL(`/form-subdomain/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, req.url));
+    }
+
+    // 4. Otherwise, handle as a full custom domain (for brands)
+    console.log(`Rewriting custom domain: ${hostname}, path: ${url.pathname}`);
+    return NextResponse.rewrite(new URL(`/brand-runtime/${hostname}${url.pathname === '/' ? '' : url.pathname}`, req.url));
 }
