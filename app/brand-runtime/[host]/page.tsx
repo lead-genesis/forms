@@ -68,7 +68,6 @@ export default async function BrandRuntimeHomePage({ params }: PageProps) {
         <SectionCanvas
             sections={indexPage.sections}
             currentSectionId={null}
-            onSectionSelect={() => {}}
             brand={brand}
             brandPages={brandPages}
             backgroundColor={indexPage.background_color}

@@ -17,7 +17,7 @@ import { BlogListRenderer } from "./renderers/BlogListRenderer";
 interface SectionCanvasProps {
     sections: BrandSection[];
     currentSectionId: string | null;
-    onSectionSelect: (id: string) => void;
+    onSectionSelect?: (id: string) => void;
     brand: any;
     brandPages?: BrandPage[];
     brandForms?: any[];
@@ -83,7 +83,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                         {filteredSections.map((section) => (
                             <div
                                 key={section.id}
-                                onClick={() => !isPreview && onSectionSelect(section.id)}
+                                onClick={() => !isPreview && onSectionSelect?.(section.id)}
                                 className={cn(
                                     "relative transition-all duration-300",
                                     !isPreview && "cursor-pointer group",

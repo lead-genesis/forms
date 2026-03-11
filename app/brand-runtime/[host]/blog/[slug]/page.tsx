@@ -66,7 +66,6 @@ export default async function BlogPostPage({ params }: PageProps) {
         <SectionCanvas
             sections={templatePage.sections}
             currentSectionId={null}
-            onSectionSelect={() => {}}
             brand={brand}
             brandPages={brandPages}
             backgroundColor={templatePage.background_color}

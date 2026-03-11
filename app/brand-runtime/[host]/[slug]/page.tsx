@@ -61,7 +61,6 @@ export default async function BrandRuntimeSlugPage({ params }: PageProps) {
         <SectionCanvas
             sections={page.sections}
             currentSectionId={null}
-            onSectionSelect={() => {}}
             brand={brand}
             brandPages={brandPages}
             backgroundColor={page.background_color}
