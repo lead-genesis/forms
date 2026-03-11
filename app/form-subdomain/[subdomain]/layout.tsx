@@ -9,11 +9,11 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
     try {
         const { data, error } = await getFormBySubdomain(subdomain);
         if (error || !data) {
-            return { title: "Genesis Flow" };
+            return { title: "Form" };
         }
 
         const brandName = data.brands?.name;
-        const formName = data.name || "Genesis Flow";
+        const formName = data.name || "Form";
         const brandLogo = data.brands?.logo_url;
 
         let title = brandName ? `${formName} - ${brandName}` : formName;
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
             },
         };
     } catch (err) {
-        return { title: "Genesis Flow" };
+        return { title: "Form" };
     }
 }
 

@@ -39,9 +39,11 @@ export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview, 
                 style={{ color: fontColor }}
             >
                 {imageUrl && (
-                    <div className="absolute inset-0">
-                        <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40" />
+                    <div className="absolute inset-0 flex justify-center">
+                        <div className="w-full max-w-[1200px] relative">
+                            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40" />
+                        </div>
                     </div>
                 )}
                 <div className="relative z-[2] max-w-[1200px] mx-auto w-full py-16 sm:py-24 lg:py-32 px-4 sm:px-8 lg:px-12 text-center flex flex-col items-center space-y-4 sm:space-y-6">

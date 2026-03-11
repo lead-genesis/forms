@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
         metadataBase: new URL(baseUrl),
         title: {
             default: title,
-            template: `%s — ${title}`,
+            template: `%s | ${brand.name}`,
         },
         description,
         icons: brand.logo_url ? { icon: brand.logo_url } : undefined,

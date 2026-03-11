@@ -82,7 +82,7 @@ export function PageBuilderHeader({
                             <ChevronDown className="w-3.5 h-3.5" />
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="w-56 z-[1000]">
+                    <DropdownMenuContent align="center" className="w-56 z-[200]">
                         <DropdownMenuLabel className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-1.5">
                             Brand Pages
                         </DropdownMenuLabel>

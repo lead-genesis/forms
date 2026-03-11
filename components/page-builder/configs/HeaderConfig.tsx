@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { Upload, Loader2, X } from "lucide-react";
+import { Upload, Loader2, X, GripVertical, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandPage } from "@/app/actions/pages";
+import { Reorder } from "framer-motion";
 
 interface HeaderConfigProps {
     data: any;
@@ -15,18 +16,31 @@ interface HeaderConfigProps {
 }
 
 export function HeaderConfig({ data, brandPages, onDataChange, onFileUpload, isUploading, fileInputRef }: HeaderConfigProps) {
-    const selectedPages = data?.navigation || [];
+    const selectedPageIds = data?.navigation || [];
+    
+    // Get the actual page objects for the selected IDs, in their saved order
+    const navigationPages = selectedPageIds
+        .map((id: string) => brandPages?.find(p => p.id === id))
+        .filter(Boolean) as BrandPage[];
+
+    // Only show published pages that aren't already in the navigation in the "available" list
+    const availablePages = brandPages?.filter(p => p.is_published && !selectedPageIds.includes(p.id)) || [];
+
     const togglePage = (pageId: string) => {
-        const newNav = selectedPages.includes(pageId)
-            ? selectedPages.filter((id: string) => id !== pageId)
-            : [...selectedPages, pageId];
+        const newNav = selectedPageIds.includes(pageId)
+            ? selectedPageIds.filter((id: string) => id !== pageId)
+            : [...selectedPageIds, pageId];
         onDataChange('navigation', newNav);
+    };
+
+    const handleReorder = (newOrder: BrandPage[]) => {
+        onDataChange('navigation', newOrder.map(p => p.id));
     };
 
     return (
         <div className="space-y-6">
             <p className="text-xs text-zinc-500 bg-indigo-50 p-4 rounded-xl border border-indigo-100 leading-relaxed">
-                Select which pages should appear in your site navigation and customize your header logo.
+                Customize your header logo and organize your site navigation links with drag-and-drop.
             </p>
 
             <div className="space-y-4">
@@ -94,10 +108,11 @@ export function HeaderConfig({ data, brandPages, onDataChange, onFileUpload, isU
                     </div>
                 </div>
             </div>
-            <div className="space-y-2">
-                <label className="text-[11px] font-bold text-zinc-500 ml-1">Navigation Links</label>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-4 px-1">
+
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-zinc-500 ml-1 border-b border-zinc-100 w-full pb-2 block">Navigation Settings</label>
+                    <div className="flex items-center gap-4 px-1 pt-1">
                         <div className="flex-1 space-y-1.5">
                             <div className="flex justify-between items-baseline">
                                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">Font Size</span>
@@ -114,31 +129,86 @@ export function HeaderConfig({ data, brandPages, onDataChange, onFileUpload, isU
                             />
                         </div>
                     </div>
+                </div>
 
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                        {brandPages?.map((page) => (
-                            <button
-                                key={page.id}
-                                onClick={() => togglePage(page.id)}
-                                className={cn(
-                                    "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
-                                    selectedPages.includes(page.id)
-                                        ? "bg-zinc-900 border-zinc-900 text-white shadow-md"
-                                        : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-200"
-                                )}
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                        <label className="text-[11px] font-bold text-zinc-500">Active Navigation</label>
+                        <span className="text-[10px] text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full font-medium">Drag to reorder</span>
+                    </div>
+                    
+                    <Reorder.Group 
+                        axis="y" 
+                        values={navigationPages} 
+                        onReorder={handleReorder}
+                        className="space-y-2"
+                    >
+                        {navigationPages.map((page) => (
+                            <Reorder.Item 
+                                key={page.id} 
+                                value={page}
+                                className="bg-white border border-zinc-200 rounded-xl p-3 flex items-center gap-3 shadow-sm hover:border-zinc-300 transition-colors group"
                             >
-                                <div className="flex flex-col">
-                                    <span className="text-xs font-bold">{page.title}</span>
-                                    <span className={cn("text-[9px] uppercase tracking-wider font-semibold opacity-60", selectedPages.includes(page.id) ? "text-zinc-300" : "text-zinc-400")}>
-                                        /{page.slug}
-                                    </span>
+                                <GripVertical className="w-4 h-4 text-zinc-300 group-hover:text-zinc-400 cursor-grab active:cursor-grabbing" />
+                                <div className="flex-1 flex flex-col min-w-0">
+                                    <span className="text-xs font-bold text-zinc-900 truncate">{page.title}</span>
+                                    <span className="text-[10px] text-zinc-500 font-mono tracking-tighter truncate opacity-70">/{page.slug}</span>
                                 </div>
-                                {selectedPages.includes(page.id) && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                            </button>
+                                <button 
+                                    onClick={() => togglePage(page.id)}
+                                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </Reorder.Item>
                         ))}
-                        {(!brandPages || brandPages.length === 0) && (
+                        {navigationPages.length === 0 && (
+                            <div className="p-6 text-center border-2 border-dashed border-zinc-100 rounded-2xl">
+                                <p className="text-[11px] text-zinc-400 italic">No links added to navigation yet.</p>
+                            </div>
+                        )}
+                    </Reorder.Group>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                    <label className="text-[11px] font-bold text-zinc-500 px-1">Add Published Pages</label>
+                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                        {availablePages.map((page) => {
+                            const isSelected = selectedPageIds.includes(page.id);
+                            return (
+                                <button
+                                    key={page.id}
+                                    onClick={() => togglePage(page.id)}
+                                    className={cn(
+                                        "flex items-center justify-between p-3 rounded-xl border transition-all text-left group",
+                                        isSelected
+                                            ? "bg-indigo-50 border-indigo-200 text-indigo-700 pointer-events-none opacity-50"
+                                            : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                                    )}
+                                >
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold truncate">{page.title}</span>
+                                            <span className="text-[8px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full font-bold uppercase tracking-wider border border-emerald-100/50">Published</span>
+                                        </div>
+                                        <span className="text-[10px] opacity-60 font-mono">/{page.slug}</span>
+                                    </div>
+                                    <div className={cn(
+                                        "w-5 h-5 rounded-full border flex items-center justify-center transition-all",
+                                        isSelected 
+                                            ? "bg-indigo-500 border-indigo-500 text-white" 
+                                            : "border-zinc-200 bg-zinc-50 group-hover:border-zinc-300"
+                                    )}>
+                                        {isSelected ? <Check className="w-3 h-3" /> : <X className="w-3 h-3 rotate-45 text-zinc-400" />}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                        {availablePages.length === 0 && (
                             <div className="p-8 text-center border-2 border-dashed border-zinc-100 rounded-2xl">
-                                <p className="text-xs text-zinc-400 italic">No other pages found for this brand.</p>
+                                <p className="text-[11px] text-zinc-400 italic leading-relaxed">
+                                    No published pages found.<br/>Publish some pages to add them to navigation.
+                                </p>
                             </div>
                         )}
                     </div>
@@ -147,3 +217,4 @@ export function HeaderConfig({ data, brandPages, onDataChange, onFileUpload, isU
         </div>
     );
 }
+

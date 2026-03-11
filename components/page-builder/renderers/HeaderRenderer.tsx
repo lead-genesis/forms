@@ -49,10 +49,14 @@ export const HeaderRenderer = React.memo(({ data, brand, brandPages, forceMobile
     const closeMobile = useCallback(() => setMobileOpen(false), []);
 
     const resolvedLinks = navigation.length > 0
-        ? navigation.map((pageId: string) => {
-            const page = brandPages?.find(p => p.id === pageId);
-            return { id: pageId, label: page?.title || "Link", href: page ? (page.is_index ? "/" : `/${page.slug}`) : "#" };
-        })
+        ? navigation
+            .map((pageId: string) => brandPages?.find(p => p.id === pageId))
+            .filter((page: BrandPage | undefined): page is BrandPage => !!page && page.is_published)
+            .map((page: BrandPage) => ({
+                id: page.id,
+                label: page.title || "Link",
+                href: page.is_index ? "/" : `/${page.slug}`
+            }))
         : null;
 
     const placeholderLinks = [

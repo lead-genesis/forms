@@ -124,7 +124,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                         <span className="text-[10px] font-bold text-white">B</span>
                     </div>
                     <p className="text-[11px] text-zinc-400 font-medium tracking-wide">
-                        © {currentYear} {brand?.name || "Brand Name"}. Built with Genesis Flow.
+                        © {currentYear} {brand?.name || "Brand Name"}. All rights reserved.
                     </p>
                 </div>
             </div>

@@ -78,7 +78,7 @@ export function BrandRuntimeShell({ brand, brandPages, children }: BrandRuntimeS
                                     : brandPages.map(p => p.id)
                                 ).map((pageId: string) => {
                                     const page = brandPages.find(p => p.id === pageId);
-                                    if (!page) return null;
+                                    if (!page || !page.is_published) return null;
                                     const href = page.is_index ? '/' : `/${page.slug}`;
                                     return (
                                         <li key={pageId}>
@@ -106,7 +106,7 @@ export function BrandRuntimeShell({ brand, brandPages, children }: BrandRuntimeS
                 </div>
                 <div className="max-w-[1200px] mx-auto px-6 pt-12 mt-12 border-t border-zinc-200">
                     <p className="text-xs text-zinc-400 text-center">
-                        © {new Date().getFullYear()} {brand.name}. Powered by Genesis Flow.
+                        © {new Date().getFullYear()} {brand?.name || "Brand Name"}. All rights reserved.
                     </p>
                 </div>
             </footer>

@@ -62,7 +62,7 @@ function AddStepMenu({
                 position: "fixed",
                 bottom: window.innerHeight - anchorRect.top + 12,
                 left: Math.max(16, anchorRect.left - 160),
-                zIndex: 9999,
+                zIndex: 200,
             }}
             className="w-48 bg-background rounded-xl border border-border/60 shadow-xl p-1"
         >
@@ -173,7 +173,7 @@ export function StepList({ steps, currentStepId, onStepSelect, onAddStep, onStep
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="fixed inset-0 z-[9998] bg-black/5"
+                                        className="fixed inset-0 z-[190] bg-black/5"
                                         onClick={() => setShowAddMenu(false)}
                                     />,
                                     document.body

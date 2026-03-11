@@ -5,10 +5,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const { id } = await params;
     const { data } = await getForm(id);
 
-    if (!data) return { title: "Genesis Flow" };
+    if (!data) return { title: "Form" };
 
     const brandName = data.brands?.name;
-    const formName = data.name || "Genesis Flow";
+    const formName = data.name || "Form";
     const brandLogo = data.brands?.logo_url;
 
     // Title logic: 
