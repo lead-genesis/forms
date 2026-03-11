@@ -143,7 +143,7 @@ export async function middleware(req: NextRequest) {
         if (subdomain === 'www' || subdomain === 'api' || subdomain === 'admin') return res;
 
         console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);
-        return NextResponse.rewrite(new URL(`/form-subdomain/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, req.url));
+        return NextResponse.rewrite(new URL(`/brand-runtime/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, req.url));
     }
 
     // 4. Otherwise, handle as a full custom domain (for brands)

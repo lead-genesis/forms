@@ -119,10 +119,12 @@ function LiveView({ blog, brand }: { blog: BlogData; brand?: any }) {
 }
 
 export const BlogContentRenderer = React.memo(({ blog, brand, isPreview }: BlogContentRendererProps) => {
-    if (isPreview && blog) {
+    // In production (not preview), if we have a blog, show it
+    if (!isPreview && blog) {
         return <LiveView blog={blog} brand={brand} />;
     }
 
+    // In preview mode or if no blog is provided (template editing), show placeholder
     return (
         <div className="relative">
             <PlaceholderView />

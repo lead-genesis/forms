@@ -81,8 +81,8 @@ export const BlogListRenderer = React.memo(({ data, brand, blogs, isPreview }: B
     const heading = data?.heading || "Blog";
     const description = data?.description || (brand ? `Insights, stories, and updates from the ${brand.name} team.` : "Insights, stories, and updates from our team.");
 
-    const displayBlogs = isPreview ? (blogs ?? []) : PLACEHOLDER_BLOGS;
-    const isPlaceholder = !isPreview;
+    const displayBlogs = isPreview ? PLACEHOLDER_BLOGS : (blogs ?? []);
+    const isPlaceholder = isPreview;
 
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">

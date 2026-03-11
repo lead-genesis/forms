@@ -70,7 +70,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             brandPages={brandPages}
             backgroundColor={templatePage.background_color}
             viewport="desktop"
-            isPreview={true}
+            isPreview={false}
             blog={blog}
         />
     );

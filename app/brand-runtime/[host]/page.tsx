@@ -2,6 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import { getBrandByDomain } from "@/app/actions/brands";
 import { getPublicIndexPage, getPublicBrandPages } from "@/app/actions/pages";
+import { getPublicBlogs } from "@/app/actions/blogs";
 import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
 import { notFound } from "next/navigation";
 
@@ -50,9 +51,10 @@ export default async function BrandRuntimeHomePage({ params }: PageProps) {
 
     if (!brand) notFound();
 
-    const [{ data: indexPage }, { data: brandPages }] = await Promise.all([
+    const [{ data: indexPage }, { data: brandPages }, { data: blogs }] = await Promise.all([
         getPublicIndexPage(brand.id),
         getPublicBrandPages(brand.id),
+        getPublicBlogs(brand.id),
     ]);
 
     if (!indexPage) {
@@ -70,9 +72,10 @@ export default async function BrandRuntimeHomePage({ params }: PageProps) {
             currentSectionId={null}
             brand={brand}
             brandPages={brandPages}
+            blogs={blogs}
             backgroundColor={indexPage.background_color}
             viewport="desktop"
-            isPreview={true}
+            isPreview={false}
         />
     );
 }
