@@ -109,9 +109,11 @@ export async function middleware(req: NextRequest) {
         'genesisflow.io',
         'www.genesisflow.io',
         'localhost:3000',
+        'localhost:3001',
         'localhost',
         '127.0.0.1',
         '127.0.0.1:3000',
+        '127.0.0.1:3001',
     ];
 
     // 1. Initial checks to skip internal paths (SEO files pass through for domain rewriting)

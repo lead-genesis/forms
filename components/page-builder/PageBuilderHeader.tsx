@@ -4,7 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { sansFont } from "@/lib/design-system";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Share2, Eye, Layout, Type, Image, Send, MoreHorizontal, Settings, Loader2, Check, Save, ChevronDown } from "lucide-react";
+import { ChevronLeft, Share2, Eye, Layout, Type, Image, Send, MoreHorizontal, Settings, Loader2, Check, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,7 @@ import {
     DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { BrandPage } from "@/app/actions/pages";
+import { PageStatusToggle } from "@/components/PageStatusToggle";
 
 interface PageBuilderHeaderProps {
     title: string;
@@ -28,6 +29,7 @@ interface PageBuilderHeaderProps {
     pageId: string;
     brandPages?: BrandPage[];
     onPageSelect?: (pageId: string) => void;
+    page?: BrandPage;
 }
 
 export function PageBuilderHeader({
@@ -40,7 +42,8 @@ export function PageBuilderHeader({
     onOpenSettings,
     pageId,
     brandPages = [],
-    onPageSelect
+    onPageSelect,
+    page
 }: PageBuilderHeaderProps) {
     const router = useRouter();
 
@@ -147,13 +150,7 @@ export function PageBuilderHeader({
                         Preview
                     </Button>
                     <div className="w-px h-4 bg-zinc-100 mx-1" />
-                    <Button
-                        variant="default"
-                        size="sm"
-                        className="rounded-xl gap-2 px-6 bg-zinc-900 hover:bg-zinc-800 text-white shadow-xl shadow-zinc-200">
-                        <Save className="w-4 h-4" />
-                        Publish
-                    </Button>
+                    {page && <PageStatusToggle page={page} showLabel={false} />}
                 </div>
             </div>
         </header>

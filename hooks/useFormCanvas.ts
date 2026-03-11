@@ -44,12 +44,32 @@ export function useFormCanvas({
             }
         }
 
+        const conditions = step.data?.logic?.conditions as any[] | undefined;
+        if (conditions && conditions.length > 0) {
+            for (const cond of conditions) {
+                const answer = answers[cond.fieldId];
+                if (answer !== undefined) {
+                    let match = false;
+                    switch (cond.operator) {
+                        case "equals": match = answer === cond.value; break;
+                        case "not_equals": match = answer !== cond.value; break;
+                        case "contains": match = String(answer).toLowerCase().includes(String(cond.value).toLowerCase()); break;
+                        case "greater_than": match = Number(answer) > Number(cond.value); break;
+                        case "less_than": match = Number(answer) < Number(cond.value); break;
+                    }
+                    if (match && steps.some(s => s.id === cond.nextStepId)) {
+                        return cond.nextStepId;
+                    }
+                }
+            }
+        }
+
         const nextId = step.data?.logic?.nextStepId;
         if (nextId && steps.some(s => s.id === nextId)) return nextId;
 
         const idx = steps.findIndex(s => s.id === step.id);
         return idx < steps.length - 1 ? steps[idx + 1].id : null;
-    }, [steps]);
+    }, [steps, answers]);
 
     const goNext = useCallback(async (optionIndex?: number) => {
         if (!currentStep) return;

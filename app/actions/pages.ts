@@ -430,6 +430,10 @@ export async function updatePage(pageId: string, updates: Partial<BrandPage>) {
             .single();
 
         if (error) throw error;
+        
+        revalidatePath(`/dashboard/brands/${data.brand_id}`);
+        revalidatePath(`/page-builder/${pageId}`);
+        
         return { data: data as BrandPage, error: null };
     } catch (error: any) {
         console.error("updatePage error:", error);

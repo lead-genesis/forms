@@ -173,6 +173,7 @@ export default function PageBuilderPage() {
                 pageId={page.id}
                 brandPages={brandPages}
                 onPageSelect={(pageId) => router.push(`/page-builder/${pageId}`)}
+                page={page}
             />
 
             <main className="flex-1 flex overflow-hidden relative">
