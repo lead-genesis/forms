@@ -75,6 +75,7 @@ export default async function BrandRuntimeHomePage({ params }: PageProps) {
             blogs={blogs}
             backgroundColor={indexPage.background_color}
             viewport="desktop"
+            isRuntime={true}
             isPreview={false}
         />
     );

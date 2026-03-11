@@ -23,25 +23,26 @@ interface SectionCanvasProps {
     brandForms?: any[];
     backgroundColor?: string;
     viewport: ViewportMode;
+    isRuntime?: boolean;
     isPreview?: boolean;
     blogs?: any[];
     blog?: any;
 }
 
-export const SectionCanvas = React.memo(({ sections, currentSectionId, onSectionSelect, brand, brandPages, brandForms, backgroundColor, viewport, isPreview, blogs, blog }: SectionCanvasProps) => {
+export const SectionCanvas = React.memo(({ sections, currentSectionId, onSectionSelect, brand, brandPages, brandForms, backgroundColor, viewport, isRuntime, isPreview, blogs, blog }: SectionCanvasProps) => {
     const currentYear = useMemo(() => new Date().getFullYear(), []);
     const filteredSections = useMemo(() => sections.filter(s => s.type !== 'header'), [sections]);
 
     return (
         <div className={cn(
             "bg-white flex flex-col transition-all duration-700 ease-in-out origin-top min-w-0 overflow-x-hidden",
-            !isPreview && "shadow-2xl shadow-black/5",
-            viewport === "desktop" ? cn("w-full min-h-[120vh]", !isPreview && "max-w-5xl rounded-[32px]") :
+            !isRuntime && "shadow-2xl shadow-black/5 mx-auto",
+            viewport === "desktop" ? cn("w-full min-h-[120vh]", !isRuntime && "max-w-5xl rounded-[32px]") :
                 viewport === "tablet" ? "w-[768px] max-w-[100vw] rounded-[36px] min-h-[1024px]" :
                     "w-[375px] max-w-[100vw] rounded-[40px] min-h-[667px] scale-[0.85] md:scale-100"
         )} style={{ backgroundColor: backgroundColor || '#ffffff' }}>
             {/* Browser/Phone Header */}
-            {!isPreview && (
+            {!isRuntime && (
                 <div className="h-12 sm:h-14 border-b border-zinc-50 flex items-center px-4 sm:px-6 shrink-0 bg-white/50 backdrop-blur-sm">
                     <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-200" />
@@ -58,7 +59,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
             )}
 
             {/* Brand Header Preview - Only show in builder, not in runtime shell */}
-            {!isPreview && (
+            {!isRuntime && (
                 <HeaderRenderer
                     data={brand?.header_config || {}}
                     brand={brand}
@@ -88,8 +89,8 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                                 onClick={() => !isPreview && onSectionSelect?.(section.id)}
                                 className={cn(
                                     "relative transition-all duration-300",
-                                    !isPreview && "cursor-pointer group",
-                                    !isPreview && (currentSectionId === section.id ? "z-[60]" : "hover:bg-zinc-50/50")
+                                    !isRuntime && "cursor-pointer group",
+                                    !isRuntime && (currentSectionId === section.id ? "z-[60]" : "hover:bg-zinc-50/50")
                                 )}
                                 style={{ backgroundColor: section.data?.backgroundColor }}
                             >
@@ -108,7 +109,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                                 )}
 
                                 {/* Hover Indicator */}
-                                {!isPreview && (
+                                {!isRuntime && (
                                     <div className="absolute inset-0 border-2 border-transparent group-hover:border-zinc-100/50 transition-colors pointer-events-none" />
                                 )}
                             </div>

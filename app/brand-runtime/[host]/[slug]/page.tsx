@@ -65,7 +65,8 @@ export default async function BrandRuntimeSlugPage({ params }: PageProps) {
             brandPages={brandPages}
             backgroundColor={page.background_color}
             viewport="desktop"
-            isPreview={true}
+            isRuntime={true}
+            isPreview={false}
         />
     );
 }

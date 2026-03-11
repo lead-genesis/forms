@@ -63,7 +63,8 @@ export default async function BlogListingPage({ params }: PageProps) {
             brandPages={brandPages}
             backgroundColor={page.background_color}
             viewport="desktop"
-            isPreview={true}
+            isRuntime={true}
+            isPreview={false}
             blogs={blogs}
         />
     );

@@ -53,6 +53,7 @@ export default function PreviewPage() {
                     brandPages={brandPages}
                     backgroundColor={page.background_color}
                     viewport="desktop"
+                    isRuntime={true}
                     isPreview={true}
                 />
             </div>
