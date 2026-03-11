@@ -57,14 +57,16 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
                 </div>
             )}
 
-            {/* Brand Header Preview */}
-            <HeaderRenderer
-                data={brand?.header_config || {}}
-                brand={brand}
-                brandPages={brandPages}
-                forceMobile={!isPreview && (viewport === "mobile" || viewport === "tablet")}
-                contained={!isPreview}
-            />
+            {/* Brand Header Preview - Only show in builder, not in runtime shell */}
+            {!isPreview && (
+                <HeaderRenderer
+                    data={brand?.header_config || {}}
+                    brand={brand}
+                    brandPages={brandPages}
+                    forceMobile={viewport === "mobile" || viewport === "tablet"}
+                    contained={true}
+                />
+            )}
 
             {/* Sections Area */}
             <div className="flex-1 flex flex-col">

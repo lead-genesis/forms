@@ -30,7 +30,7 @@ export const FeaturesRenderer = React.memo(({ data, isPreview, viewport }: Featu
     ];
 
     return (
-        <div className="py-8 sm:py-12 md:py-16 lg:py-24 px-4 sm:px-6 md:px-8 lg:px-12 max-w-full overflow-hidden">
+        <div className="py-8 sm:py-12 md:py-16 lg:py-24 px-4 sm:px-6 md:px-8 lg:px-12 max-w-6xl mx-auto overflow-hidden">
             {data?.heading && (
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-center text-zinc-900 mb-8 sm:mb-10 md:mb-12 lg:mb-16 tracking-tight px-2">
                     {data.heading}

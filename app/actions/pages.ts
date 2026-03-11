@@ -171,6 +171,8 @@ export interface BrandPage {
     seo_title?: string;
     seo_description?: string;
     og_image_url?: string;
+    post_submission_action?: 'show_message' | 'redirect';
+    redirect_url?: string;
     created_at: string;
     updated_at: string;
 }

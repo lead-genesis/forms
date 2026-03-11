@@ -25,10 +25,23 @@ interface BrandRuntimeShellProps {
 
 export function BrandRuntimeShell({ brand, brandPages, children }: BrandRuntimeShellProps) {
     const headerConfig = brand.header_config || {};
+    const [isScrolled, setIsScrolled] = React.useState(false);
+
+    React.useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 10);
+        };
+        handleScroll(); // Initial check
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     return (
         <div className="min-h-screen bg-white">
-            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md">
+            <div className={cn(
+                "sticky top-0 z-50 bg-white/80 backdrop-blur-md transition-all duration-200",
+                isScrolled ? "border-b border-zinc-100 shadow-sm" : "border-b border-transparent"
+            )}>
                 <HeaderRenderer
                     data={headerConfig}
                     brand={brand}
@@ -42,7 +55,7 @@ export function BrandRuntimeShell({ brand, brandPages, children }: BrandRuntimeS
 
             {/* Brand Footer */}
             <footer className="border-t border-zinc-100 bg-zinc-50 py-20 mt-20">
-                <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
+                <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
                     <div className="col-span-2 space-y-6">
                         <Link href="/" className="flex items-center gap-3">
                             {brand.logo_url ? (
@@ -91,7 +104,7 @@ export function BrandRuntimeShell({ brand, brandPages, children }: BrandRuntimeS
                         </ul>
                     </div>
                 </div>
-                <div className="max-w-6xl mx-auto px-6 pt-12 mt-12 border-t border-zinc-200">
+                <div className="max-w-[1200px] mx-auto px-6 pt-12 mt-12 border-t border-zinc-200">
                     <p className="text-xs text-zinc-400 text-center">
                         © {new Date().getFullYear()} {brand.name}. Powered by Genesis Flow.
                     </p>

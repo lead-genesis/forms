@@ -129,6 +129,84 @@ export function PageSettings({ page, onChange, onClose }: PageSettingsProps) {
                     </div>
                 </div>
 
+                {/* Post-Submission Settings */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-3.5 h-3.5 text-zinc-400" />
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Post-Submission</span>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight ml-1">Behavior</label>
+                        <div className="relative">
+                            <select
+                                value={page.post_submission_action || "show_message"}
+                                onChange={(e) => onChange({ post_submission_action: e.target.value as "show_message" | "redirect" })}
+                                className="w-full bg-zinc-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 transition-all font-medium appearance-none cursor-pointer"
+                            >
+                                <option value="show_message">Show Thank You Message</option>
+                                <option value="redirect">Redirect to URL</option>
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    {page.post_submission_action === "redirect" && (
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight ml-1">Redirect URL</label>
+                            <input
+                                type="url"
+                                value={page.redirect_url || ""}
+                                onChange={(e) => onChange({ redirect_url: e.target.value || undefined })}
+                                placeholder="https://example.com/thank-you"
+                                className="w-full bg-zinc-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 transition-all font-medium placeholder:text-zinc-300"
+                            />
+                            <p className="text-[10px] text-zinc-400 ml-1">Users will be sent here after completing the form.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Post-Submission Settings */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Globe className="w-3.5 h-3.5 text-zinc-400" />
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Post-Submission</span>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight ml-1">Behavior</label>
+                        <div className="relative">
+                            <select
+                                value={page.post_submission_action || "show_message"}
+                                onChange={(e) => onChange({ post_submission_action: e.target.value as "show_message" | "redirect" })}
+                                className="w-full bg-zinc-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 transition-all font-medium appearance-none cursor-pointer"
+                            >
+                                <option value="show_message">Show Thank You Message</option>
+                                <option value="redirect">Redirect to URL</option>
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    {page.post_submission_action === "redirect" && (
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight ml-1">Redirect URL</label>
+                            <input
+                                type="url"
+                                value={page.redirect_url || ""}
+                                onChange={(e) => onChange({ redirect_url: e.target.value || undefined })}
+                                placeholder="https://example.com/thank-you"
+                                className="w-full bg-zinc-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-zinc-900 transition-all font-medium placeholder:text-zinc-300"
+                            />
+                            <p className="text-[10px] text-zinc-400 ml-1">Users will be sent here after completing the form.</p>
+                        </div>
+                    )}
+                </div>
+
                 {/* Social Sharing */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 mb-2">

@@ -76,53 +76,55 @@ export const HeaderRenderer = React.memo(({ data, brand, brandPages, forceMobile
 
     return (
         <div>
-            <header className="h-14 sm:h-16 lg:h-20 px-4 sm:px-6 md:px-8 lg:px-12 flex items-center justify-between border-b border-zinc-100 bg-white relative z-10">
-                <a href="/" className="flex items-center gap-3 shrink-0" onClick={(e) => e.preventDefault()}>
-                    {logoToUse ? (
-                        <img
-                            src={logoToUse}
-                            alt={brand?.name}
-                            className="w-auto object-contain"
-                            style={{ height: `${logoHeight}px` }}
-                        />
-                    ) : (
-                        <div
-                            className="bg-zinc-900 rounded-xl flex items-center justify-center text-white"
-                            style={{ width: `${logoHeight * 1.25}px`, height: `${logoHeight * 1.25}px` }}
-                        >
-                            <span style={{ fontSize: `${logoHeight * 0.45}px` }} className="font-black">
-                                {brand?.name?.[0] || "B"}
-                            </span>
-                        </div>
-                    )}
-                </a>
+            <header className="h-14 sm:h-16 lg:h-20 border-b border-zinc-100 bg-white relative z-10 w-full">
+                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 flex items-center justify-between h-full">
+                    <a href="/" className="flex items-center gap-3 shrink-0" onClick={(e) => e.preventDefault()}>
+                        {logoToUse ? (
+                            <img
+                                src={logoToUse}
+                                alt={brand?.name}
+                                className="w-auto object-contain"
+                                style={{ height: `${logoHeight}px` }}
+                            />
+                        ) : (
+                            <div
+                                className="bg-zinc-900 rounded-xl flex items-center justify-center text-white"
+                                style={{ width: `${logoHeight * 1.25}px`, height: `${logoHeight * 1.25}px` }}
+                            >
+                                <span style={{ fontSize: `${logoHeight * 0.45}px` }} className="font-black">
+                                    {brand?.name?.[0] || "B"}
+                                </span>
+                            </div>
+                        )}
+                    </a>
 
-                <nav className={cn("items-center gap-8", forceMobile ? "hidden" : "hidden md:flex")}>
-                    {links.map((link: NavLink) => (
-                        <a
-                            key={link.id}
-                            href={link.href}
-                            className={cn(
-                                "font-medium transition-colors",
-                                isPlaceholder ? "text-zinc-400" : "text-zinc-500 hover:text-zinc-900"
-                            )}
-                            style={{ fontSize: `${navFontSize}px` }}
-                        >
-                            {link.label}
-                        </a>
-                    ))}
-                </nav>
+                    <nav className={cn("items-center gap-8", forceMobile ? "hidden" : "hidden md:flex")}>
+                        {links.map((link: NavLink) => (
+                            <a
+                                key={link.id}
+                                href={link.href}
+                                className={cn(
+                                    "font-medium transition-colors",
+                                    isPlaceholder ? "text-zinc-400" : "text-zinc-500 hover:text-zinc-900"
+                                )}
+                                style={{ fontSize: `${navFontSize}px` }}
+                            >
+                                {link.label}
+                            </a>
+                        ))}
+                    </nav>
 
-                <button
-                    onClick={() => setMobileOpen(true)}
-                    className={cn(
-                        "p-2 -mr-2 rounded-lg hover:bg-zinc-50 transition-colors",
-                        forceMobile ? "flex" : "flex md:hidden"
-                    )}
-                    aria-label="Open menu"
-                >
-                    <Menu className="w-6 h-6 text-zinc-500" />
-                </button>
+                    <button
+                        onClick={() => setMobileOpen(true)}
+                        className={cn(
+                            "p-2 -mr-2 rounded-lg hover:bg-zinc-50 transition-colors",
+                            forceMobile ? "flex" : "flex md:hidden"
+                        )}
+                        aria-label="Open menu"
+                    >
+                        <Menu className="w-6 h-6 text-zinc-500" />
+                    </button>
+                </div>
             </header>
 
             {/* Mobile slide-out overlay — absolute when contained, fixed on live site */}

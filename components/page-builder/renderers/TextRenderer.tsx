@@ -13,7 +13,7 @@ export const TextRenderer = React.memo(({ data }: TextRendererProps) => {
 
     if (orientation === 'background') {
         return (
-            <div className="relative overflow-hidden min-h-[320px] sm:min-h-[400px] flex items-center justify-center text-center px-4 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24">
+            <div className="relative overflow-hidden min-h-[320px] sm:min-h-[400px] flex items-center justify-center text-center px-4 sm:px-8 lg:px-12 py-16 sm:py-20 lg:py-24 max-w-6xl mx-auto">
                 {imageUrl && (
                     <div className="absolute inset-0">
                         <img src={imageUrl} alt="" className="w-full h-full object-cover" />
@@ -34,7 +34,7 @@ export const TextRenderer = React.memo(({ data }: TextRendererProps) => {
 
     return (
         <div className={cn(
-            "py-10 sm:py-12 lg:py-16 px-4 sm:px-8 lg:px-12 flex flex-col md:flex-row items-center gap-8 sm:gap-10 lg:gap-12",
+            "py-10 sm:py-12 lg:py-16 px-4 sm:px-8 lg:px-12 flex flex-col md:flex-row items-center gap-8 sm:gap-10 lg:gap-12 max-w-6xl mx-auto",
             orientation === 'left' ? "md:flex-row" : "md:flex-row-reverse"
         )}>
             <div className="flex-1 space-y-3 sm:space-y-4 text-left min-w-0">
