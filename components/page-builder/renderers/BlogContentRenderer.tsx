@@ -59,7 +59,7 @@ function LiveView({ blog, brand }: { blog: BlogData; brand?: any }) {
                 className="inline-flex items-center gap-2 text-zinc-400 hover:text-black transition-colors mb-8 sm:mb-12 text-xs sm:text-sm font-bold uppercase tracking-widest"
             >
                 <ArrowLeftIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Back to Blog
+                Back to all posts
             </Link>
 
             <header className="mb-10 sm:mb-14 lg:mb-16 space-y-4 sm:space-y-6 lg:space-y-8">

@@ -50,8 +50,6 @@ export async function getDashboardStats() {
         return { data: null, error: "Unauthorized" };
     }
 
-    const userId = user.id;
-
     try {
         // 1. Fetch form views and counts of leads per form in one query
         const { data: forms, error: formsError } = await supabase
@@ -63,8 +61,7 @@ export async function getDashboardStats() {
                 brand_id, 
                 brands:brand_id (name),
                 leads:leads (count)
-            `)
-            .eq("user_id", userId);
+            `);
 
         if (formsError) throw formsError;
 

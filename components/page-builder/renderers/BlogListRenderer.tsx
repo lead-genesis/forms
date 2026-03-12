@@ -83,6 +83,7 @@ export const BlogListRenderer = React.memo(({ data, brand, blogs, isPreview }: B
 
     const displayBlogs = isPreview ? PLACEHOLDER_BLOGS : (blogs ?? []);
     const isPlaceholder = isPreview;
+    const isEmpty = !isPreview && displayBlogs.length === 0;
 
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
@@ -91,7 +92,7 @@ export const BlogListRenderer = React.memo(({ data, brand, blogs, isPreview }: B
                 <p className="text-base sm:text-lg lg:text-xl text-zinc-500">{description}</p>
             </header>
 
-            {isPreview && displayBlogs.length === 0 ? (
+            {isEmpty ? (
                 <div className="py-12 sm:py-16 lg:py-20 text-center bg-zinc-50 rounded-2xl sm:rounded-[3rem] border border-zinc-100">
                     <DocumentTextIcon className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-zinc-400">No posts yet</h2>

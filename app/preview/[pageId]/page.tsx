@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getPageWithSections, getBrandPages, BrandPage, BrandSection } from "@/app/actions/pages";
+import { getBlogs } from "@/app/actions/blogs";
 import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
 import { Loader2 } from "lucide-react";
 
@@ -11,14 +12,19 @@ export default function PreviewPage() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState<any>(null);
     const [brandPages, setBrandPages] = useState<BrandPage[]>([]);
+    const [blogs, setBlogs] = useState<any[]>([]);
 
     useEffect(() => {
         const load = async () => {
             const { data, error } = await getPageWithSections(pageId as string);
             if (data) {
                 setPage(data);
-                const { data: pages } = await getBrandPages(data.brand_id);
+                const [{ data: pages }, { data: blogData }] = await Promise.all([
+                    getBrandPages(data.brand_id),
+                    getBlogs(data.brand_id),
+                ]);
                 setBrandPages(pages || []);
+                setBlogs(blogData || []);
             }
             setLoading(false);
         };
@@ -55,6 +61,7 @@ export default function PreviewPage() {
                     viewport="desktop"
                     isRuntime={true}
                     isPreview={true}
+                    blogs={blogs}
                 />
             </div>
         </div>

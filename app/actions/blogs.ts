@@ -167,7 +167,8 @@ export async function getBlogBySlug(brandId: string, slug: string) {
             .select("*, brand:brands(*)")
             .eq("brand_id", brandId)
             .eq("slug", slug)
-            .single();
+            .eq("is_published", true)
+            .maybeSingle();
 
         if (error) throw error;
         return { data, error: null };

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getBrandPages, BrandPage, BrandSection, getPageWithSections, updatePage, createSection, updateSection, deleteSection, reorderSections } from "@/app/actions/pages";
 import { getBrand } from "@/app/actions/brands";
 import { getBrandForms, Form as BrandForm } from "@/app/actions/forms";
+import { getBlogs } from "@/app/actions/blogs";
 import { PageBuilderHeader } from "@/components/page-builder/PageBuilderHeader";
 import { cn } from "@/lib/utils";
 import { SectionList } from "@/components/page-builder/SectionList";
@@ -28,6 +29,7 @@ export default function PageBuilderPage() {
     const [viewport, setViewport] = useState<ViewportMode>("desktop");
     const [brandPages, setBrandPages] = useState<BrandPage[]>([]);
     const [brandForms, setBrandForms] = useState<BrandForm[]>([]);
+    const [blogs, setBlogs] = useState<any[]>([]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -51,11 +53,14 @@ export default function PageBuilderPage() {
                     setBrand(brandData);
                 }
 
-                const { data: pages } = await getBrandPages(pageData.brand_id);
+                const [{ data: pages }, { data: forms }, { data: blogData }] = await Promise.all([
+                    getBrandPages(pageData.brand_id),
+                    getBrandForms(pageData.brand_id),
+                    getBlogs(pageData.brand_id),
+                ]);
                 setBrandPages(pages || []);
-
-                const { data: forms } = await getBrandForms(pageData.brand_id);
                 setBrandForms(forms || []);
+                setBlogs(blogData || []);
             }
         } catch (err: any) {
             console.error("fetchData error:", err);
@@ -225,6 +230,8 @@ export default function PageBuilderPage() {
                                 brandForms={brandForms}
                                 backgroundColor={page?.background_color}
                                 viewport={viewport}
+                                isPreview={false}
+                                blogs={blogs}
                             />
                         </div>
                     </div>

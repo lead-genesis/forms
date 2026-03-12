@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Dialog,
@@ -28,15 +29,16 @@ interface Brand {
 interface AddFormModalProps {
     trigger: React.ReactNode;
     onCreated?: () => void;
+    brands?: Brand[];
 }
 
 type Step = "brand" | "name";
 
-export function AddFormModal({ trigger, onCreated }: AddFormModalProps) {
+export function AddFormModal({ trigger, onCreated, brands: initialBrands }: AddFormModalProps) {
     const [open, setOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [step, setStep] = useState<Step>("brand");
-    const [brands, setBrands] = useState<Brand[]>([]);
+    const [brands, setBrands] = useState<Brand[]>(initialBrands || []);
     const [loadingBrands, setLoadingBrands] = useState(false);
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
     const [formName, setFormName] = useState("New Lead Form");
@@ -46,16 +48,16 @@ export function AddFormModal({ trigger, onCreated }: AddFormModalProps) {
         setMounted(true);
     }, []);
 
-    // Fetch brands when modal opens
+    // Fetch brands when modal opens if not provided
     useEffect(() => {
-        if (open) {
+        if (open && !initialBrands) {
             setLoadingBrands(true);
             getBrands().then(({ data }) => {
                 setBrands(data as Brand[]);
                 setLoadingBrands(false);
             });
         }
-    }, [open]);
+    }, [open, initialBrands]);
 
     const handleOpenChange = (val: boolean) => {
         setOpen(val);
@@ -186,7 +188,7 @@ export function AddFormModal({ trigger, onCreated }: AddFormModalProps) {
                                                     {/* Logo */}
                                                     <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
                                                         {brand.logo_url ? (
-                                                            <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-cover" />
+                                                            <Image src={brand.logo_url} alt={brand.name} fill className="object-cover" />
                                                         ) : (
                                                             <TagIcon className="w-4 h-4 text-zinc-400" />
                                                         )}
@@ -226,7 +228,7 @@ export function AddFormModal({ trigger, onCreated }: AddFormModalProps) {
                                     <div className="flex items-center gap-2.5 px-3 py-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
                                         <div className="w-7 h-7 rounded-lg bg-white border border-zinc-100 flex items-center justify-center overflow-hidden shrink-0">
                                             {selectedBrand.logo_url ? (
-                                                <img src={selectedBrand.logo_url} alt={selectedBrand.name} className="w-full h-full object-cover" />
+                                                <Image src={selectedBrand.logo_url} alt={selectedBrand.name} fill className="object-cover" />
                                             ) : (
                                                 <TagIcon className="w-3.5 h-3.5 text-zinc-400" />
                                             )}

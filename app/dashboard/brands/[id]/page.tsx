@@ -1163,65 +1163,69 @@ export default function BrandDetailsPage() {
                                     </Card>
                                 </div>
                             ) : (
-                                <Card className="border-border/50 rounded-2xl overflow-hidden shadow-sm">
-                                    <div className="overflow-x-auto -mx-3 sm:mx-0 rounded-2xl min-w-0">
-                                        <table className={tableBase + " border-collapse min-w-[640px] sm:min-w-full w-full"}>
-                                            <thead className={tableHead}>
-                                                <tr>
-                                                    <th className={tableHeadCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>Headline</th>
-                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden md:table-cell"}>Sub headline</th>
-                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Blog content</th>
-                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden md:table-cell"}>Image</th>
-                                                    <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Brand</th>
-                                                    <th className={tableHeadCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right w-14 sm:w-20"}></th>
+                                <div className="w-full overflow-x-auto">
+                                    <table className={tableBase + " border-collapse min-w-[640px]"}>
+                                        <thead className={tableHead}>
+                                            <tr>
+                                                <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Blog</th>
+                                                <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Excerpt</th>
+                                                <th className={tableHeadCell + " px-4 hidden lg:table-cell"}>Preview</th>
+                                                <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Image</th>
+                                                <th className={tableHeadCell + " px-4 hidden lg:table-cell"}>Brand</th>
+                                                <th className={tableHeadCell + " px-4 text-right pr-4 md:pr-6 lg:pr-10"}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {blogs.map((blog) => (
+                                                <tr
+                                                    key={blog.id}
+                                                    className={cn(tableRow, "group cursor-pointer active:bg-secondary/20")}
+                                                    onClick={() => router.push(`/dashboard/blogs/${blog.id}`)}
+                                                >
+                                                    <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase flex-shrink-0">
+                                                                {blog.title?.[0] || 'B'}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-semibold truncate max-w-[160px] sm:max-w-[200px]">{blog.title || "—"}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className={tableCell + " px-4 text-muted-foreground max-w-[180px] truncate hidden md:table-cell"}>
+                                                        <span className="text-sm">{blog.excerpt || "—"}</span>
+                                                    </td>
+                                                    <td className={tableCell + " px-4 text-muted-foreground max-w-[220px] hidden lg:table-cell"}>
+                                                        <span className="line-clamp-2 text-sm">{contentPreview(blog.content)}</span>
+                                                    </td>
+                                                    <td className={tableCell + " px-4 hidden md:table-cell"}>
+                                                        {blog.featured_image ? (
+                                                            <img
+                                                                src={blog.featured_image}
+                                                                alt=""
+                                                                className="w-10 h-10 rounded-lg object-cover border border-border/50"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-xs italic">No image</span>
+                                                        )}
+                                                    </td>
+                                                    <td className={tableCell + " px-4 text-muted-foreground hidden lg:table-cell"}>
+                                                        <span className="text-sm">{blog.brands?.name ?? "—"}</span>
+                                                    </td>
+                                                    <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
+                                                        <Link
+                                                            href={`/dashboard/blogs/${blog.id}`}
+                                                            className="text-xs font-semibold text-primary hover:underline hover:text-primary/80 transition-all opacity-0 group-hover:opacity-100"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Edit
+                                                        </Link>
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                {blogs.map((blog) => (
-                                                    <tr
-                                                        key={blog.id}
-                                                        className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
-                                                        onClick={() => router.push(`/dashboard/blogs/${blog.id}`)}
-                                                    >
-                                                        <td className={tableCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4 font-medium text-foreground max-w-[180px] sm:max-w-[200px] truncate"}>
-                                                            {blog.title || "—"}
-                                                        </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground max-w-[180px] truncate hidden md:table-cell"}>
-                                                            {blog.excerpt || "—"}
-                                                        </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground max-w-[220px] hidden lg:table-cell"}>
-                                                            <span className="line-clamp-2">{contentPreview(blog.content)}</span>
-                                                        </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 hidden md:table-cell"}>
-                                                            {blog.featured_image ? (
-                                                                <img
-                                                                    src={blog.featured_image}
-                                                                    alt=""
-                                                                    className="w-12 h-12 rounded-lg object-cover border border-border/50"
-                                                                />
-                                                            ) : (
-                                                                <span className="text-muted-foreground text-xs">—</span>
-                                                            )}
-                                                        </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground hidden lg:table-cell"}>
-                                                            {blog.brands?.name ?? "—"}
-                                                        </td>
-                                                        <td className={tableCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right"}>
-                                                            <Link
-                                                                href={`/dashboard/blogs/${blog.id}`}
-                                                                className="p-2 hover:bg-secondary/30 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex"
-                                                                title="Edit blog"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </Link>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </Card>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </motion.div>
                     ) : (
