@@ -2,7 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBrandByDomain } from "@/app/actions/brands";
-import { getBlogBySlug } from "@/app/actions/blogs";
+import { getBlogBySlug, getPublicBlogs } from "@/app/actions/blogs";
 import { getPublicPageByType, getPublicBrandPages } from "@/app/actions/pages";
 import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
 
@@ -50,10 +50,11 @@ export default async function BlogPostPage({ params }: PageProps) {
 
     if (!brand) notFound();
 
-    const [{ data: blog }, { data: templatePage }, { data: brandPages }] = await Promise.all([
+    const [{ data: blog }, { data: templatePage }, { data: brandPages }, { data: blogs }] = await Promise.all([
         getBlogBySlug(brand.id, slug),
         getPublicPageByType(brand.id, "blog"),
         getPublicBrandPages(brand.id),
+        getPublicBlogs(brand.id),
     ]);
 
     if (!blog || !blog.is_published) notFound();
@@ -73,6 +74,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             isRuntime={true}
             isPreview={false}
             blog={blog}
+            blogs={blogs}
         />
     );
 }

@@ -119,16 +119,18 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
             </div>
 
             {/* Site Footer Placeholder */}
-            <div className="p-6 sm:p-8 lg:p-12 border-t border-zinc-50 bg-zinc-50/30 font-sans">
-                <div className="flex flex-col items-center gap-4 text-center">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-white">B</span>
+            {!isRuntime && (
+                <div className="p-6 sm:p-8 lg:p-12 border-t border-zinc-50 bg-zinc-50/30 font-sans">
+                    <div className="flex flex-col items-center gap-4 text-center">
+                        <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-white">B</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-medium tracking-wide">
+                            © {currentYear} {brand?.name || "Brand Name"}. All rights reserved.
+                        </p>
                     </div>
-                    <p className="text-[11px] text-zinc-400 font-medium tracking-wide">
-                        © {currentYear} {brand?.name || "Brand Name"}. All rights reserved.
-                    </p>
                 </div>
-            </div>
+            )}
         </div>
     );
 });

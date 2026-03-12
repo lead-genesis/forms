@@ -8,8 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { sansFont } from "@/lib/design-system";
 import { DocumentTextIcon, PlusIcon, MegaphoneIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
-import { getBlogs } from "@/app/actions/blogs";
+import { getBlogs, updateBlog } from "@/app/actions/blogs";
 import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
 
 const fadeInUp = {
     hidden: { y: 12, opacity: 0 },
@@ -105,15 +106,21 @@ export default function BlogsPage() {
                                             <DocumentTextIcon className="w-10 h-10 text-muted-foreground/20" />
                                         </div>
                                     )}
-                                    <div className="absolute top-3 right-3 flex gap-2">
+                                    <div className="absolute top-3 right-3 flex items-center gap-2 bg-white/80 backdrop-blur-md px-2 py-1.5 rounded-full border border-black/5 shadow-sm">
                                         <span className={cn(
-                                            "text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md border",
-                                            blog.is_published
-                                                ? "bg-green-500/10 text-green-600 border-green-500/20"
-                                                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                            "text-[10px] font-bold select-none",
+                                            blog.is_published ? "text-green-600" : "text-amber-600"
                                         )}>
                                             {blog.is_published ? "Published" : "Draft"}
                                         </span>
+                                        <Switch
+                                            checked={blog.is_published}
+                                            onCheckedChange={async (checked) => {
+                                                setBlogs(current => current.map(b => b.id === blog.id ? { ...b, is_published: checked } : b));
+                                                await updateBlog(blog.id, { is_published: checked });
+                                            }}
+                                            className="scale-75 origin-right"
+                                        />
                                     </div>
                                 </div>
 

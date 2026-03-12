@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBrandByDomain } from "@/app/actions/brands";
 import { getPublicPageBySlug, getPublicBrandPages } from "@/app/actions/pages";
+import { getPublicBlogs } from "@/app/actions/blogs";
 import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
 
 interface PageProps {
@@ -50,9 +51,10 @@ export default async function BrandRuntimeSlugPage({ params }: PageProps) {
 
     if (!brand) notFound();
 
-    const [{ data: page }, { data: brandPages }] = await Promise.all([
+    const [{ data: page }, { data: brandPages }, { data: blogs }] = await Promise.all([
         getPublicPageBySlug(brand.id, slug),
         getPublicBrandPages(brand.id),
+        getPublicBlogs(brand.id),
     ]);
 
     if (!page) notFound();
@@ -63,6 +65,7 @@ export default async function BrandRuntimeSlugPage({ params }: PageProps) {
             currentSectionId={null}
             brand={brand}
             brandPages={brandPages}
+            blogs={blogs}
             backgroundColor={page.background_color}
             viewport="desktop"
             isRuntime={true}
