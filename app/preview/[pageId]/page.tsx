@@ -1,43 +1,28 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { getPageWithSections, getBrandPages, BrandPage, BrandSection } from "@/app/actions/pages";
+import React from "react";
+import { createClient } from "@/lib/supabase/server";
+import { getPageWithSections, getBrandPages } from "@/app/actions/pages";
 import { getBlogs } from "@/app/actions/blogs";
 import { SectionCanvas } from "@/components/page-builder/SectionCanvas";
-import { Loader2 } from "lucide-react";
 
-export default function PreviewPage() {
-    const { pageId } = useParams();
-    const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState<any>(null);
-    const [brandPages, setBrandPages] = useState<BrandPage[]>([]);
-    const [blogs, setBlogs] = useState<any[]>([]);
+interface PageProps {
+    params: Promise<{ pageId: string }>;
+}
 
-    useEffect(() => {
-        const load = async () => {
-            const { data, error } = await getPageWithSections(pageId as string);
-            if (data) {
-                setPage(data);
-                const [{ data: pages }, { data: blogData }] = await Promise.all([
-                    getBrandPages(data.brand_id),
-                    getBlogs(data.brand_id),
-                ]);
-                setBrandPages(pages || []);
-                setBlogs(blogData || []);
-            }
-            setLoading(false);
-        };
-        load();
-    }, [pageId]);
+export default async function PreviewPage({ params }: PageProps) {
+    const { pageId } = await params;
 
-    if (loading) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-zinc-300 animate-spin" />
+                <p className="text-zinc-400">Page unavailable. Please sign in to preview pages.</p>
             </div>
         );
     }
+
+    const { data: page } = await getPageWithSections(pageId);
 
     if (!page) {
         return (
@@ -47,21 +32,24 @@ export default function PreviewPage() {
         );
     }
 
+    const [{ data: brandPages }, { data: blogs }] = await Promise.all([
+        getBrandPages(page.brand_id),
+        getBlogs(page.brand_id),
+    ]);
+
     return (
         <div className="min-h-screen flex flex-col items-center transition-all duration-500 w-full overflow-x-hidden" style={{ backgroundColor: page.background_color || '#ffffff' }}>
-            {/* Centered container with max-width 1200px, responsive padding */}
             <div className="w-full max-w-[1200px] min-w-0 px-0 sm:px-4">
                 <SectionCanvas
                     sections={page.sections}
                     currentSectionId={null}
-                    onSectionSelect={() => { }}
                     brand={page.brand}
-                    brandPages={brandPages}
+                    brandPages={brandPages || []}
                     backgroundColor={page.background_color}
                     viewport="desktop"
                     isRuntime={true}
                     isPreview={true}
-                    blogs={blogs}
+                    blogs={blogs || []}
                 />
             </div>
         </div>
