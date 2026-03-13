@@ -322,8 +322,7 @@ export async function verifyDomainDNS(domain: string) {
         .replace(/^www\./, '');
 
     const dns = await import("node:dns/promises");
-    const EXPECTED_A = "76.76.21.21";
-    const EXPECTED_CNAME = "cname.genesisflow.io";
+    const EXPECTED_A = "216.198.79.1";
 
     try {
         const results = {
@@ -351,21 +350,12 @@ export async function verifyDomainDNS(domain: string) {
             }
         }
 
-        // Check CNAME for WWW
+        // Check A record for WWW (www is a 308 redirect in Vercel — same A record as apex)
         const wwwDomain = `www.${cleanDomain}`;
         try {
-            const cnames = await dns.resolveCname(wwwDomain);
-            results.detectedCname = cnames;
-            const cnameMatches = cnames.some(c => c === EXPECTED_CNAME || c.endsWith(EXPECTED_CNAME));
-
-            const finalAddresses = await dns.resolve4(wwwDomain);
-            const ipMatches = finalAddresses.includes(EXPECTED_A);
-
-            results.cname = cnameMatches && ipMatches;
-
-            if (cnameMatches && !ipMatches) {
-                results.errors.push(`WWW points to ${EXPECTED_CNAME} but that domain is currently misconfigured (points to incorrect IP ${finalAddresses[0]})`);
-            }
+            const wwwAddresses = await dns.resolve4(wwwDomain);
+            results.detectedCname = wwwAddresses;
+            results.cname = wwwAddresses.includes(EXPECTED_A);
         } catch (e: unknown) {
             const err = e as { code?: string; message: string };
             if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
@@ -412,7 +402,7 @@ export async function verifyDomainDNS(domain: string) {
                 };
 
                 if (anyMisconfigured) {
-                    results.errors.push("Vercel reports one or both domain variants are misconfigured. Double-check your A and CNAME records.");
+                    results.errors.push("Vercel reports one or both domain variants are misconfigured. Double-check your A records.");
                 }
 
                 // Surface verification challenges for whichever domain still needs it

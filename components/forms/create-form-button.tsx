@@ -18,8 +18,8 @@ export function CreateFormButton({ brands }: { brands: Brand[] }) {
     <AddFormModal
       brands={brands}
       trigger={
-        <Button className="gap-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl h-11 px-6 font-semibold shadow-lg shadow-black/10">
-          <Plus className="w-5 h-5" />
+        <Button className="rounded-full px-6 gap-2 shrink-0">
+          <Plus className="w-4 h-4" />
           Create Form
         </Button>
       }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { sansFont } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -72,11 +72,6 @@ export default function SettingsPage() {
 
     return (
         <DashboardPage className="max-w-4xl">
-            <DashboardHeader
-                title="Settings"
-                subtitle="Manage your account preferences and security settings."
-            />
-
             <div className="px-4 md:px-6 lg:px-10 space-y-6">
                 {/* Profile */}
                 <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">

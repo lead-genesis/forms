@@ -1,9 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
     sansFont,
     tableBase,
@@ -12,7 +14,7 @@ import {
     tableRow,
     tableCell,
 } from "@/lib/design-system";
-import { DocumentTextIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { DocumentTextIcon, ChevronRightIcon, PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { AddFormModal } from "@/components/forms/add-form-modal";
 import { format } from "date-fns";
@@ -51,6 +53,7 @@ interface FormsListClientProps {
 export function FormsListClient({ initialForms: forms, brands }: FormsListClientProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [search, setSearch] = useState("");
 
     const refreshForms = () => {
         startTransition(() => {
@@ -58,9 +61,20 @@ export function FormsListClient({ initialForms: forms, brands }: FormsListClient
         });
     };
 
+    const filteredForms = forms.filter((f) =>
+        f.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const createTrigger = (
+        <Button className="rounded-full px-6 gap-2 shrink-0">
+            <PlusIcon className="w-4 h-4" />
+            Create Form
+        </Button>
+    );
+
     if (forms.length === 0) {
         return (
-            <motion.div variants={fadeInUp} className="px-4 md:px-6 lg:px-10 flex-1 flex flex-col items-center justify-center">
+            <motion.div variants={fadeInUp} className="flex-1 flex flex-col items-center justify-center">
                 <div className="max-w-xl w-full mx-auto">
                     <Card className="border-none shadow-none rounded-2xl overflow-hidden bg-transparent">
                         <CardContent className="p-10 flex flex-col items-center justify-center text-center">
@@ -71,15 +85,7 @@ export function FormsListClient({ initialForms: forms, brands }: FormsListClient
                             <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                                 You haven&apos;t created any forms yet. Create your first lead capture form to start growing your business.
                             </p>
-                            <AddFormModal 
-                                brands={brands}
-                                trigger={
-                                    <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200">
-                                        Create Your First Form
-                                    </button>
-                                } 
-                                onCreated={refreshForms} 
-                            />
+                            <AddFormModal brands={brands} trigger={createTrigger} onCreated={refreshForms} />
                         </CardContent>
                     </Card>
                 </div>
@@ -88,29 +94,47 @@ export function FormsListClient({ initialForms: forms, brands }: FormsListClient
     }
 
     return (
-        <motion.div variants={fadeInUp} className={cn("px-4 md:px-6 lg:px-10", isPending && "opacity-50")}>
+        <motion.div variants={fadeInUp} className={cn("flex flex-col gap-4 w-full max-w-[70%] mx-auto", isPending && "opacity-50")}>
+            {/* Local header */}
+            <div className="flex items-center justify-between">
+                <h3 className={cn("text-lg font-semibold tracking-tight", sansFont)}>Forms</h3>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                            placeholder="Search forms..."
+                            className="pl-8 h-9 w-36 sm:w-48 rounded-full text-sm border-border/50 bg-background"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <AddFormModal brands={brands} trigger={createTrigger} onCreated={refreshForms} />
+                </div>
+            </div>
+
+            {/* Table */}
             <div className="w-full overflow-x-auto">
                 <table className={tableBase + " border-collapse min-w-full"}>
                     <thead className={tableHead}>
                         <tr>
-                            <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Form Name</th>
-                            <th className={tableHeadCell + " px-4"}>Brand</th>
-                            <th className={tableHeadCell + " px-4 hidden sm:table-cell"}>Status</th>
-                            <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Views</th>
-                            <th className={tableHeadCell + " px-4 hidden lg:table-cell text-right"}>Created</th>
-                            <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}></th>
+                            <th className={tableHeadCell}>Form Name</th>
+                            <th className={tableHeadCell}>Brand</th>
+                            <th className={tableHeadCell + " hidden sm:table-cell"}>Status</th>
+                            <th className={tableHeadCell + " hidden md:table-cell"}>Views</th>
+                            <th className={tableHeadCell + " hidden lg:table-cell text-right"}>Created</th>
+                            <th className={tableHeadCell + " text-right"}></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {forms.map((form) => (
+                        {filteredForms.map((form) => (
                             <tr
                                 key={form.id}
                                 className={cn(tableRow, "group cursor-pointer transition-colors active:bg-secondary/20")}
                                 onClick={() => router.push(`/dashboard/forms/${form.id}`)}
                             >
-                                <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
+                                <td className={tableCell}>
                                     <div className="flex flex-col gap-0.5">
-                                        <span className={cn("font-semibold text-foreground group-hover:text-foreground transition-colors", sansFont)}>{form.name}</span>
+                                        <span className={cn("font-semibold text-foreground", sansFont)}>{form.name}</span>
                                         <span className="text-[11px] text-muted-foreground font-mono tracking-tighter tabular-nums">{form.id}</span>
                                     </div>
                                 </td>
@@ -141,8 +165,8 @@ export function FormsListClient({ initialForms: forms, brands }: FormsListClient
                                 <td className={tableCell + " px-4 hidden sm:table-cell"}>
                                     <span className={cn(
                                         "text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider",
-                                        form.status === 'published' 
-                                            ? "bg-primary/10 text-primary border border-primary/20" 
+                                        form.status === "published"
+                                            ? "bg-primary/10 text-primary border border-primary/20"
                                             : "bg-secondary text-muted-foreground border border-border/50"
                                     )}>
                                         {form.status}
@@ -154,7 +178,7 @@ export function FormsListClient({ initialForms: forms, brands }: FormsListClient
                                 <td className={tableCell + " px-4 hidden lg:table-cell text-right text-muted-foreground text-sm tabular-nums"}>
                                     {format(new Date(form.created_at), "MMM d, yyyy")}
                                 </td>
-                                <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"} onClick={(e) => e.stopPropagation()}>
+                                <td className={tableCell + " text-right"} onClick={(e) => e.stopPropagation()}>
                                     <Link
                                         href={`/dashboard/forms/${form.id}`}
                                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -167,18 +191,6 @@ export function FormsListClient({ initialForms: forms, brands }: FormsListClient
                         ))}
                     </tbody>
                 </table>
-            </div>
-            <div className="border-t border-border/50 p-3">
-                <AddFormModal
-                    brands={brands}
-                    trigger={
-                        <button className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-secondary/50">
-                            <DocumentTextIcon className="w-4 h-4" />
-                            Add Form
-                        </button>
-                    }
-                    onCreated={refreshForms}
-                />
             </div>
         </motion.div>
     );

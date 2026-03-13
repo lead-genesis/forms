@@ -198,8 +198,11 @@ export async function addDomainPairToVercel(domain: string): Promise<{
             return;
         }
 
-        const body: Record<string, string> = { name };
-        if (redirect) body.redirect = redirect;
+        const body: Record<string, string | number> = { name };
+        if (redirect) {
+            body.redirect = redirect;
+            body.redirectStatusCode = 308;
+        }
 
         try {
             const res = await fetch(

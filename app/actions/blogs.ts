@@ -178,9 +178,9 @@ export async function getBlogBySlug(brandId: string, slug: string) {
     }
 }
 
-/** Returns published blogs for a brand without requiring authentication. */
 export async function getPublicBlogs(brandId: string) {
     const supabase = await createClient();
+
     const { data, error } = await supabase
         .from("blogs")
         .select("id, title, slug, excerpt, featured_image, created_at, brand_id")

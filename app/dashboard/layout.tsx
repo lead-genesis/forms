@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
@@ -20,8 +20,65 @@ import {
     DocumentTextIcon,
     UserGroupIcon,
     TagIcon,
+    ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
+
+// ── Breadcrumb config ────────────────────────────────────────────────────────
+// Each entry: path prefix → label. More specific paths first (sorted by length).
+type BreadcrumbSegment = { label: string; href: string };
+
+function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
+    const crumbs: BreadcrumbSegment[] = [{ label: "Dashboard", href: "/dashboard" }];
+
+    if (pathname === "/dashboard") return crumbs;
+
+    const segments = pathname.split("/").filter(Boolean); // ["dashboard", "brands", "abc123", "blogs", "xyz"]
+
+    // We build crumbs from known patterns
+    if (segments[1] === "forms") {
+        crumbs.push({ label: "Forms", href: "/dashboard/forms" });
+        if (segments[2]) crumbs.push({ label: "Form", href: pathname });
+    } else if (segments[1] === "leads") {
+        crumbs.push({ label: "Leads", href: "/dashboard/leads" });
+    } else if (segments[1] === "brands") {
+        crumbs.push({ label: "Brands", href: "/dashboard/brands" });
+        if (segments[2]) {
+            // /dashboard/brands/[id] — brand name resolved by page, use placeholder
+            crumbs.push({ label: "Brand", href: `/dashboard/brands/${segments[2]}` });
+            if (segments[3] === "blogs") {
+                crumbs.push({ label: "Blogs", href: `/dashboard/brands/${segments[2]}/blogs` });
+                if (segments[4]) {
+                    crumbs.push({ label: segments[4] === "new" ? "New Blog" : "Edit Blog", href: pathname });
+                }
+            }
+        }
+    } else if (segments[1] === "users") {
+        crumbs.push({ label: "Users", href: "/dashboard/users" });
+    } else if (segments[1] === "settings") {
+        crumbs.push({ label: "Settings", href: "/dashboard/settings" });
+    } else if (segments[1] === "products") {
+        crumbs.push({ label: "Products", href: "/dashboard/products" });
+    }
+
+    return crumbs;
+}
+
+// ── Page title map ───────────────────────────────────────────────────────────
+function getPageTitle(pathname: string): string {
+    if (pathname === "/dashboard") return "Overview";
+    if (pathname.startsWith("/dashboard/forms")) return "Forms";
+    if (pathname.startsWith("/dashboard/leads")) return "Leads";
+    if (pathname.startsWith("/dashboard/users")) return "Users";
+    if (pathname.startsWith("/dashboard/settings")) return "Settings";
+    if (pathname.startsWith("/dashboard/products")) return "Products";
+    if (pathname.match(/\/dashboard\/brands\/[^/]+\/blogs\/new/)) return "New Blog";
+    if (pathname.match(/\/dashboard\/brands\/[^/]+\/blogs\/.+/)) return "Edit Blog";
+    if (pathname.match(/\/dashboard\/brands\/[^/]+\/blogs/)) return "Blogs";
+    if (pathname.match(/\/dashboard\/brands\/[^/]+/)) return "Brand";
+    if (pathname.startsWith("/dashboard/brands")) return "Brands";
+    return "Dashboard";
+}
 
 export default function DashboardLayout({
     children,
@@ -65,20 +122,8 @@ export default function DashboardLayout({
         router.push("/auth");
     };
 
-    // Map routes to page titles
-    const pageTitleMap: Record<string, string> = {
-        "/dashboard": "Overview",
-        "/dashboard/forms": "Forms",
-        "/dashboard/leads": "Leads",
-        "/dashboard/brands": "Brands",
-        "/dashboard/users": "Users",
-        "/dashboard/settings": "Settings",
-        "/dashboard/products": "Products",
-    };
-
-    const sortedPaths = Object.keys(pageTitleMap).sort((a, b) => b.length - a.length);
-    const matchedPath = sortedPaths.find((path) => pathname.startsWith(path));
-    const pageTitle = matchedPath ? pageTitleMap[matchedPath] : "Dashboard";
+    const pageTitle = getPageTitle(pathname);
+    const breadcrumbs = buildBreadcrumbs(pathname);
 
     const navGroups = [
         {
@@ -100,10 +145,12 @@ export default function DashboardLayout({
     const userDisplayName = user?.first_name ? `${user.first_name}${user.last_name ? ` ${user.last_name}` : ''}` : (user?.email?.split('@')[0] || "User");
     const userInitials = user?.first_name ? `${user.first_name[0]}${user.last_name?.[0] || ''}` : (user?.email?.[0]?.toUpperCase() || "U");
 
+    const showBreadcrumbs = breadcrumbs.length > 1;
+
     return (
         <div className="min-h-screen bg-background flex">
             {/* Desktop Sidebar */}
-            <aside className="w-64 bg-secondary/20 hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border/60">
+            <aside className="w-64 bg-background hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r border-border/40">
                 {/* Logo */}
                 <div className="h-14 flex items-center px-5 mt-2">
                     <Link href="/dashboard">
@@ -120,7 +167,7 @@ export default function DashboardLayout({
                             </p>
                             <div className="space-y-px">
                                 {group.items.map((item) => {
-                                    const isActive = pathname === item.href;
+                                    const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                                     return (
                                         <Link
                                             key={item.href}
@@ -187,7 +234,7 @@ export default function DashboardLayout({
                             animate={{ x: 0 }}
                             exit={{ x: "-100%" }}
                             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                            className="fixed inset-y-0 left-0 w-72 bg-secondary/20 z-50 md:hidden flex flex-col shadow-2xl border-r border-border/60"
+                            className="fixed inset-y-0 left-0 w-72 bg-background z-50 md:hidden flex flex-col shadow-2xl border-r border-border/40"
                         >
                             {/* Header with close */}
                             <div className="h-14 flex items-center justify-between px-4 mt-2">
@@ -223,7 +270,7 @@ export default function DashboardLayout({
                                                 className="space-y-px"
                                             >
                                                 {group.items.map((item) => {
-                                                    const isActive = pathname === item.href;
+                                                    const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
                                                     return (
                                                         <motion.li
                                                             key={item.href}
@@ -285,18 +332,69 @@ export default function DashboardLayout({
 
             {/* Main content */}
             <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
-                {/* Mobile header with hamburger */}
-                <header className="md:hidden h-14 border-b border-border/50 bg-background/80 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-20">
-                    <Link href="/dashboard" className="flex items-center">
-                        <Logo />
-                    </Link>
+                {/* ── Unified Top Header Bar ── */}
+                <header className="h-12 border-b border-border/40 bg-background/70 backdrop-blur-xl sticky top-0 z-20 flex items-center px-4 md:px-6 transition-all duration-300">
+                    {/* Mobile hamburger */}
                     <button
                         onClick={() => setMobileMenuOpen(true)}
-                        className="p-1.5 -mr-1.5 rounded-lg hover:bg-secondary transition-colors"
+                        className="md:hidden p-1.5 -ml-1.5 mr-3 rounded-lg hover:bg-secondary/80 transition-colors"
                         aria-label="Open menu"
                     >
-                        <Bars2Icon className="w-6 h-6 text-foreground" />
+                        <Bars2Icon className="w-5 h-5 text-foreground/80" />
                     </button>
+
+                    {/* Left: Breadcrumbs — only show when deeper than root */}
+                    <div className="flex-1 flex items-center min-w-0">
+                        {showBreadcrumbs && (
+                            <nav className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60 overflow-hidden">
+                                {breadcrumbs.slice(0, -1).map((crumb, i) => (
+                                    <React.Fragment key={crumb.href}>
+                                        {i > 0 && <ChevronRightIcon className="w-3 h-3 text-muted-foreground/30 shrink-0" />}
+                                        <Link
+                                            href={crumb.href}
+                                            className="hover:text-primary transition-colors whitespace-nowrap truncate max-w-[120px]"
+                                        >
+                                            {crumb.label}
+                                        </Link>
+                                    </React.Fragment>
+                                ))}
+                                <ChevronRightIcon className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+                            </nav>
+                        )}
+                    </div>
+
+                    {/* Center: Dynamic Page Title with AnimatePresence */}
+                    <div className="absolute left-1/2 md:left-[calc(50vw-16rem)] -translate-x-1/2 flex items-center justify-center max-w-[40%]">
+                        <AnimatePresence mode="wait">
+                            <motion.h1
+                                key={pathname}
+                                initial={{ y: 5, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -5, opacity: 0 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className={cn(
+                                    "font-bold text-foreground tracking-tight truncate",
+                                    sansFont
+                                )}
+                                style={{ fontSize: "14px" }}
+                            >
+                                {pageTitle}
+                            </motion.h1>
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Right: Actions / Profile Placeholder */}
+                    <div className="flex-1 flex items-center justify-end gap-3">
+                        <div className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-full bg-secondary/40 border border-border/40 text-[10px] font-medium text-muted-foreground/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Live
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-secondary/60 border border-border/40 flex items-center justify-center ring-offset-background transition-all hover:ring-2 hover:ring-primary/20 cursor-pointer">
+                            <span className={cn("text-[9px] font-bold text-foreground/50", sansFont)}>
+                                {userInitials}
+                            </span>
+                        </div>
+                    </div>
                 </header>
 
                 <div className={cn(

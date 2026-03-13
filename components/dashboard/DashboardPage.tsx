@@ -11,15 +11,19 @@ interface DashboardPageProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function DashboardPage({ className, children, ...props }: DashboardPageProps) {
     return (
-        <div className={cn("flex-1 flex flex-col gap-6 p-4 md:p-8", className)} {...props}>
+        <div className={cn("flex-1 flex flex-col gap-6 py-4 md:py-8", className)} {...props}>
             {children}
         </div>
     );
 }
 
+import Link from "next/link";
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
+
 interface DashboardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     title: string;
     subtitle?: string;
+    breadcrumbs?: { label: string; href?: string }[];
     children?: React.ReactNode;
 }
 
@@ -28,7 +32,7 @@ const headerVariants = {
     show: { y: 0, opacity: 1, transition: { duration: 0.4 } },
 };
 
-export function DashboardHeader({ title, subtitle, className, children, ...props }: DashboardHeaderProps) {
+export function DashboardHeader({ title, subtitle, breadcrumbs, className, children, ...props }: DashboardHeaderProps) {
     const { onAnimationStart: _, onDragStart: __, onDragEnd: ___, onDrag: ____, ...filteredProps } = props;
 
     return (
@@ -36,21 +40,39 @@ export function DashboardHeader({ title, subtitle, className, children, ...props
             variants={headerVariants}
             initial="hidden"
             animate="show"
-            className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-6 lg:px-10", className)}
+            className={cn("flex flex-col sm:flex-row sm:items-end justify-between gap-6 px-4 md:px-6 lg:px-10 mb-2", className)}
             {...filteredProps}
         >
-            <div>
-                <h1 className={cn("text-2xl md:text-3xl font-bold tracking-tight text-foreground", sansFont)}>
+            <div className="flex-1 min-w-0">
+                {breadcrumbs && (
+                    <nav className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5 overflow-x-auto no-scrollbar whitespace-nowrap">
+                        {breadcrumbs.map((crumb, idx) => (
+                            <React.Fragment key={idx}>
+                                {crumb.href ? (
+                                    <Link href={crumb.href} className="hover:text-primary transition-colors flex items-center gap-1.5">
+                                        {crumb.label}
+                                    </Link>
+                                ) : (
+                                    <span className="text-muted-foreground/80">{crumb.label}</span>
+                                )}
+                                {idx < breadcrumbs.length - 1 && (
+                                    <ChevronRightIcon className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </nav>
+                )}
+                <h1 className={cn("text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-1.5", sansFont)}>
                     {title}
                 </h1>
                 {subtitle && (
-                    <p className="text-muted-foreground mt-1 text-sm md:text-base">
+                    <p className="text-muted-foreground/80 text-sm md:text-base max-w-2xl leading-relaxed">
                         {subtitle}
                     </p>
                 )}
             </div>
             {children && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 shrink-0 sm:mb-1">
                     {children}
                 </div>
             )}

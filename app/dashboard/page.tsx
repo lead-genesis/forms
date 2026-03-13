@@ -2,23 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import {
     sansFont,
-    tableBase,
-    tableHead,
-    tableHeadCell,
-    tableRow,
-    tableCell,
-    tableCellMuted,
     statLabelClass,
     statValueClass,
-    cardGap,
     staggerContainer,
-    hoverLift
 } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     UsersIcon,
@@ -26,262 +17,322 @@ import {
     ArrowUpRightIcon,
     EyeIcon,
     FireIcon,
-    BriefcaseIcon
+    BriefcaseIcon,
+    ChevronDownIcon,
+    BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { getDashboardStats } from "@/app/actions/analytics";
 import { formatDistanceToNow } from "date-fns";
+import { createClient } from "@/lib/supabase/client";
+import { DashboardBarChart, DashboardDonutChart } from "@/components/dashboard/DashboardCharts";
 
-const fadeInUp = {
-    hidden: { y: 12, opacity: 0 },
-    show: { y: 0, opacity: 1, transition: { duration: 0.4 } },
+const fadeUp = {
+    hidden: { y: 8, opacity: 0 },
+    show: { y: 0, opacity: 1, transition: { duration: 0.3 } },
 };
+
+const DATE_RANGES = [
+    { label: "Today", value: "today" },
+    { label: "Yesterday", value: "yesterday" },
+    { label: "Last 7 days", value: "7" },
+    { label: "Last 30 days", value: "30" },
+    { label: "Last 90 days", value: "90" },
+    { label: "All time", value: "all" },
+];
+
+function getStartDate(range: string): string | undefined {
+    if (range === "all") return undefined;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0); // Start of day
+
+    if (range === "today") {
+        return d.toISOString();
+    }
+    if (range === "yesterday") {
+        d.setDate(d.getDate() - 1);
+        return d.toISOString();
+    }
+
+    d.setDate(d.getDate() - parseInt(range));
+    return d.toISOString();
+}
+
+function getEndDate(range: string): string | undefined {
+    if (range === "yesterday") {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0); // Start of today = End of yesterday
+        return d.toISOString();
+    }
+    return undefined;
+}
+
+function Skeleton({ className }: { className?: string }) {
+    return <div className={cn("animate-pulse rounded-lg bg-secondary/30", className)} />;
+}
 
 export default function DashboardOverview() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [dateRange, setDateRange] = useState("30");
+    const [firstName, setFirstName] = useState<string | null>(null);
+
+    const supabase = createClient();
+
+    useEffect(() => {
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+            if (!user) return;
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("first_name")
+                .eq("id", user.id)
+                .single();
+            setFirstName(profile?.first_name || null);
+        });
+    }, []);
 
     useEffect(() => {
         async function loadStats() {
             setLoading(true);
-            const { data } = await getDashboardStats();
-            if (data) {
-                setStats(data);
-            }
+            const startDate = getStartDate(dateRange);
+            const endDate = getEndDate(dateRange);
+            const { data } = await getDashboardStats(startDate, endDate);
+            if (data) setStats(data);
             setLoading(false);
         }
         loadStats();
-    }, []);
+    }, [dateRange]);
 
-    const metrics = stats ? [
+    const metrics = [
         {
             label: "Total Leads",
-            value: stats.totalLeads.toLocaleString(),
+            value: (stats?.totalLeads ?? 0).toLocaleString(),
             icon: UsersIcon,
             color: "text-blue-500",
-            bg: "bg-blue-500/10"
+            bg: "bg-blue-500/10",
         },
         {
-            label: "Total Views",
-            value: stats.totalViews.toLocaleString(),
-            icon: EyeIcon,
+            label: "Total Revenue",
+            value: `$${(stats?.totalRevenue ?? 0).toLocaleString()}`,
+            icon: BanknotesIcon,
             color: "text-emerald-500",
-            bg: "bg-emerald-500/10"
+            bg: "bg-emerald-500/10",
         },
         {
             label: "Conversion Rate",
-            value: `${stats.avgConversionRate.toFixed(2)}%`,
+            value: `${(stats?.avgConversionRate ?? 0).toFixed(2)}%`,
             icon: ChartBarIcon,
             color: "text-violet-500",
-            bg: "bg-violet-500/10"
+            bg: "bg-violet-500/10",
         },
-    ] : [];
-
-    if (loading) {
-        return (
-            <DashboardPage className="space-y-8">
-                <DashboardHeader
-                    title="Dashboard Overview"
-                    subtitle="Loading your platform's performance..."
-                />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 md:px-6 lg:px-10">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="h-32 bg-secondary/20 animate-pulse rounded-2xl border border-border/50" />
-                    ))}
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4 md:px-6 lg:px-10">
-                    <div className="h-64 bg-secondary/10 animate-pulse rounded-2xl border border-border/50" />
-                    <div className="h-64 bg-secondary/10 animate-pulse rounded-2xl border border-border/50" />
-                </div>
-            </DashboardPage>
-        );
-    }
+    ];
 
     return (
-        <DashboardPage className="space-y-6 pb-20">
-            <DashboardHeader
-                title="Dashboard Overview"
-                subtitle="Welcome back. Here's a snapshot of your platform's performance."
-            />
+        <DashboardPage className="pb-12">
+            <div className="flex flex-col gap-6 max-w-[70%] mx-auto w-full">
 
-            {/* Metrics Grid */}
-            <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-                className={`grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 px-4 md:px-6 lg:px-10`}
-            >
-                {metrics.map((metric, i) => (
-                    <motion.div key={i} variants={fadeInUp} {...hoverLift}>
-                        <Card className="border-border/40 shadow-sm overflow-hidden rounded-2xl bg-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:border-border/80">
-                            <CardContent className="p-5 md:p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className={statLabelClass}>{metric.label}</span>
-                                    <div className={`p-2.5 rounded-xl ${metric.bg} ring-1 ring-inset ring-foreground/5`}>
-                                        <metric.icon className={`w-5 h-5 ${metric.color}`} />
+                {/* ── Header ── */}
+                <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center justify-between"
+                >
+                    <div>
+                        <h3 className={cn("text-lg font-semibold tracking-tight", sansFont)}>
+                            {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Here&apos;s an overview of your lead activity.
+                        </p>
+                    </div>
+                    <div className="relative">
+                        <select
+                            value={dateRange}
+                            onChange={e => setDateRange(e.target.value)}
+                            className={cn(
+                                "appearance-none pl-3 pr-7 py-1.5 rounded-full text-xs font-medium cursor-pointer",
+                                "border border-border/50 bg-background text-foreground",
+                                "hover:border-border/80 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-colors"
+                            )}
+                        >
+                            {DATE_RANGES.map(r => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
+                        </select>
+                        <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                </motion.div>
+
+                {/* ── Metric Cards ── */}
+                <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="show"
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                >
+                    {loading
+                        ? [1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)
+                        : metrics.map((m, i) => (
+                              <motion.div
+                                  key={i}
+                                  variants={fadeUp}
+                                  className="p-5 flex items-center justify-between rounded-xl bg-background/50 border border-border/40 hover:border-border/80 transition-colors"
+                              >
+                                  <div className="flex flex-col gap-1">
+                                      <span className={statLabelClass}>
+                                          {m.label}
+                                      </span>
+                                      <span className={cn(statValueClass, "text-2xl", sansFont)}>
+                                          {m.value}
+                                      </span>
+                                  </div>
+                                  <div className={cn("p-2.5 rounded-lg", m.bg)}>
+                                      <m.icon className={cn("w-5 h-5", m.color)} />
+                                  </div>
+                              </motion.div>
+                          ))}
+                </motion.div>
+
+                {/* ── Two-col: Top Forms + Top Brands ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 py-8">
+
+                    {/* Top Performing Forms */}
+                    <motion.div variants={fadeUp} initial="hidden" animate="show">
+                    <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <FireIcon className="w-4 h-4 text-orange-500" />
+                                <span className={cn("text-xs font-bold uppercase tracking-wide text-foreground/80", sansFont)}>
+                                    Top Forms
+                                </span>
+                                <Badge variant="outline" className="text-[9px] uppercase tracking-wider font-bold border-orange-500/20 text-orange-500 bg-orange-500/5 px-1.5 py-0 h-4">
+                                    Hot
+                                </Badge>
+                            </div>
+                        </div>
+                        <div className="pt-2 pb-4 min-h-[180px]">
+                            {loading ? (
+                                <div className="space-y-4">
+                                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+                                </div>
+                            ) : stats?.topForms.length > 0 ? (
+                                <DashboardBarChart data={stats.topForms} />
+                            ) : (
+                                <div className="py-8 h-full flex flex-col items-center justify-center gap-1.5 text-muted-foreground/40">
+                                    <ChartBarIcon className="w-6 h-6" />
+                                    <span className="text-xs">No activity in this period</span>
+                                </div>
+                            )}
+                        </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Top Brands */}
+                    <motion.div variants={fadeUp} initial="hidden" animate="show">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2">
+                            <BriefcaseIcon className="w-4 h-4 text-blue-500" />
+                            <span className={cn("text-xs font-bold uppercase tracking-wide text-foreground/80", sansFont)}>
+                                Top Brands
+                            </span>
+                        </div>
+                        <div className="pt-2 pb-4 min-h-[180px]">
+                            {loading ? (
+                                <div className="flex items-center gap-8">
+                                    <Skeleton className="w-32 h-32 rounded-full shrink-0" />
+                                    <div className="flex-1 space-y-2">
+                                        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-4 w-full" />)}
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <h3 className={cn(statValueClass, "text-2xl md:text-3xl", sansFont)}>{metric.value}</h3>
-                                    {/* Optional: Add a small trend indicator here if data allowed */}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
-            </motion.div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4 md:px-6 lg:px-10">
-                {/* Top Performing Forms */}
-                <motion.div variants={fadeInUp} initial="hidden" animate="show" className="h-full">
-                    <Card className="border-border/40 shadow-sm rounded-2xl overflow-hidden h-full bg-card/50 backdrop-blur-sm">
-                        <div className="p-6 border-b border-border/40 flex items-center justify-between bg-secondary/20">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-1.5 bg-orange-500/10 rounded-lg">
-                                    <FireIcon className="w-4 h-4 text-orange-500" />
-                                </div>
-                                <h2 className={cn("text-sm font-bold tracking-tight uppercase", sansFont)}>Top Performing Forms</h2>
-                            </div>
-                            <Badge variant="outline" className="text-[9px] uppercase tracking-tighter font-bold border-orange-500/20 text-orange-600 bg-orange-500/5 px-2">HOT</Badge>
-                        </div>
-                        <CardContent className="p-6">
-                            {stats?.topForms.length > 0 ? (
-                                <div className="space-y-6">
-                                    {stats.topForms.map((form: any, i: number) => {
-                                        const maxCount = Math.max(...stats.topForms.map((f: any) => f.count));
-                                        const percentage = (form.count / maxCount) * 100;
-                                        return (
-                                            <div key={i} className="group flex flex-col gap-2">
-                                                <div className="flex items-center justify-between text-sm">
-                                                    <span className="font-semibold truncate max-w-[200px]">{form.name}</span>
-                                                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                                                        <span className="font-bold text-foreground">{form.count}</span>
-                                                        <span>leads</span>
-                                                        <span className="text-muted-foreground/30">•</span>
-                                                        <span className="text-emerald-500 font-medium">{form.conversionRate.toFixed(1)}% conv.</span>
-                                                    </div>
-                                                </div>
-                                                <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
-                                                    <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${percentage}%` }}
-                                                        transition={{ duration: 1, ease: "easeOut", delay: i * 0.1 }}
-                                                        className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.3)]"
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                            ) : stats?.topBrands.length > 0 ? (
+                                <DashboardDonutChart data={stats.topBrands} />
                             ) : (
-                                <div className="py-20 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
-                                    <ChartBarIcon className="w-8 h-8 opacity-20" />
-                                    No form activity yet.
+                                <div className="py-8 h-full flex flex-col items-center justify-center gap-1.5 text-muted-foreground/40">
+                                    <BriefcaseIcon className="w-6 h-6" />
+                                    <span className="text-xs">No activity in this period</span>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* Top Brands */}
-                <motion.div variants={fadeInUp} initial="hidden" animate="show" className="h-full">
-                    <Card className="border-border/40 shadow-sm rounded-2xl overflow-hidden h-full bg-card/50 backdrop-blur-sm">
-                        <div className="p-6 border-b border-border/40 flex items-center justify-between bg-secondary/20">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-1.5 bg-blue-500/10 rounded-lg">
-                                    <BriefcaseIcon className="w-4 h-4 text-blue-500" />
-                                </div>
-                                <h2 className={cn("text-sm font-bold tracking-tight uppercase", sansFont)}>Top Brands</h2>
-                            </div>
                         </div>
-                        <CardContent className="p-0">
-                            {stats?.topBrands.length > 0 ? (
-                                <div className="divide-y divide-border/30">
-                                    {stats.topBrands.map((brand: any, i: number) => (
-                                        <div key={i} className="p-5 flex items-center justify-between hover:bg-secondary/20 transition-all duration-200">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-sm font-semibold">{brand.name}</span>
-                                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Active Brand</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-base font-bold text-blue-600 tracking-tight">{brand.count}</span>
-                                                <div className="px-2 py-0.5 rounded-full bg-blue-500/5 border border-blue-500/10 text-[9px] font-bold text-blue-500 uppercase">Leads</div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="py-20 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
-                                    <BriefcaseIcon className="w-8 h-8 opacity-20" />
-                                    No brand activity yet.
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            </div>
-
-            {/* Bottom Section - Recent Leads */}
-            <motion.div variants={fadeInUp} initial="hidden" animate="show" className="space-y-5">
-                <div className="flex items-center justify-between px-4 md:px-6 lg:px-11">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <h2 className={cn("text-sm font-bold tracking-tight uppercase", sansFont)}>Recent Leads</h2>
                     </div>
-                    <button className="group text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary/80 transition-all flex items-center gap-1.5 bg-primary/5 px-3 py-1.5 rounded-full ring-1 ring-inset ring-primary/10">
-                        View Leads <ArrowUpRightIcon className="w-3 h-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </button>
+                </motion.div>
                 </div>
-                <div className="w-full px-4 md:px-6 lg:px-10">
-                    <div className="border border-border/40 rounded-2xl overflow-hidden shadow-sm bg-card/50 backdrop-blur-sm">
-                        <table className={tableBase + " border-collapse min-w-full"}>
-                            <thead className={cn(tableHead, "backdrop-blur-md")}>
-                                <tr>
-                                    <th className={tableHeadCell + " pl-6 pr-4 py-5"}>Lead ID</th>
-                                    <th className={tableHeadCell + " px-4 py-5"}>Form</th>
-                                    <th className={tableHeadCell + " px-4 py-5"}>Brand</th>
-                                    <th className={tableHeadCell + " pl-4 pr-6 py-5 text-right"}>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/20">
-                                {stats?.recentLeads.length > 0 ? (
-                                    stats.recentLeads.map((lead: any) => (
-                                        <tr key={lead.id} className={cn(tableRow, "hover:bg-secondary/10 group active:bg-secondary/20 transition-all duration-150")}>
-                                            <td className={tableCell + " pl-6 pr-4 py-5"}>
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className={cn("font-mono text-[10px] font-bold text-muted-foreground bg-secondary/40 px-2 py-0.5 rounded border border-border/30 w-fit", sansFont)}>
-                                                        {lead.id.slice(0, 8).toUpperCase()}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground/60 invisible group-hover:visible transition-all">Click for details</span>
-                                                </div>
+
+                {/* ── Recent Leads ── */}
+                <motion.div variants={fadeUp} initial="hidden" animate="show" className="pt-12">
+                    <div className="flex flex-col gap-4">
+                        {/* Section header */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className={cn("text-xs font-bold uppercase tracking-wide text-foreground/80", sansFont)}>
+                                    Recent Leads
+                                </span>
+                            </div>
+                            <button className="group flex items-center gap-1 text-[10px] font-semibold text-primary/70 hover:text-primary transition-colors">
+                                View all
+                                <ArrowUpRightIcon className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
+
+                        {loading ? (
+                            <div className="space-y-2">
+                                {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10" />)}
+                            </div>
+                        ) : stats?.recentLeads.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead>
+                                        <tr className="border-b border-border/20">
+                                            {["Lead ID", "Form", "Brand", "Time"].map((h, i) => (
+                                                <th
+                                                    key={h}
+                                                    className={cn(
+                                                        "py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider",
+                                                        i === 3 && "text-right"
+                                                    )}
+                                                >
+                                                    {h}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                <tbody className="divide-y divide-border/30">
+                                    {stats.recentLeads.map((lead: any) => (
+                                        <tr
+                                            key={lead.id}
+                                            className="hover:bg-muted/30 transition-colors duration-100 group"
+                                        >
+                                            <td className="py-2.5">
+                                                <span className="font-mono text-[10px] font-bold text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/30">
+                                                    {lead.id.slice(0, 8).toUpperCase()}
+                                                </span>
                                             </td>
-                                            <td className={tableCell + " px-4 py-5"}>
-                                                <span className="font-bold text-sm text-foreground/90">{lead.formName}</span>
+                                            <td className="py-2.5">
+                                                <span className="text-sm font-medium">{lead.formName}</span>
                                             </td>
-                                            <td className={tableCell + " px-4 py-5"}>
+                                            <td className="py-2.5">
                                                 <Badge variant="outline" className="rounded-full text-[9px] uppercase tracking-tighter font-bold border-blue-500/10 text-blue-600 bg-blue-500/5 px-2 py-0">
                                                     {lead.brandName}
                                                 </Badge>
                                             </td>
-                                            <td className={tableCellMuted + " pl-4 pr-6 py-5 text-right font-medium text-[11px]"}>
+                                            <td className="py-2.5 text-right text-xs text-muted-foreground font-medium tabular-nums">
                                                 {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={4} className="p-16 text-center text-muted-foreground text-sm">
-                                            <div className="flex flex-col items-center gap-3 opacity-40">
-                                                <UsersIcon className="w-10 h-10" />
-                                                <p>No recent leads found.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </motion.div>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="py-10 flex flex-col items-center gap-1.5 text-muted-foreground/40">
+                                <UsersIcon className="w-7 h-7" />
+                                <span className="text-xs">No leads in this period</span>
+                            </div>
+                        )}
+                        </div>
+                    </motion.div>
+
+            </div>
         </DashboardPage>
     );
 }

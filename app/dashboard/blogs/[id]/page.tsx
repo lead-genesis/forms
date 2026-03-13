@@ -1,15 +1,7 @@
-import { Suspense } from "react";
-import BlogEditorPage from "@/components/dashboard/BlogEditorPage";
-import { Loader2Icon } from "lucide-react";
+import { redirect } from "next/navigation";
 
-export default function EditBlogPage({ params }: { params: Promise<{ id: string }> }) {
-    return (
-        <Suspense fallback={
-            <div className="flex items-center justify-center p-20">
-                <Loader2Icon className="w-8 h-8 animate-spin text-primary" />
-            </div>
-        }>
-            <BlogEditorPage params={params} />
-        </Suspense>
-    );
+// Blog editing is now under /dashboard/brands/[id]/blogs/[blogId]
+// Redirect old links to /dashboard/brands
+export default function OldBlogEditorRedirect() {
+    redirect("/dashboard/brands");
 }

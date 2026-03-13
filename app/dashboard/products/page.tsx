@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DashboardPage, DashboardHeader, DashboardControls } from "@/components/dashboard/DashboardPage";
+import { DashboardPage, DashboardControls } from "@/components/dashboard/DashboardPage";
 import {
     sansFont,
     tableBase,
@@ -39,16 +39,6 @@ export default function ProductsPage() {
 
     return (
         <DashboardPage>
-            <DashboardHeader
-                title="Products"
-                subtitle="View and manage your product catalog and inventory."
-            >
-                <Button className="rounded-full px-6 shrink-0">
-                    <PlusIcon className="w-4 h-4 mr-2" />
-                    Add Product
-                </Button>
-            </DashboardHeader>
-
             <DashboardControls>
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -59,6 +49,10 @@ export default function ProductsPage() {
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
+                <Button className="rounded-full px-6 shrink-0">
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Add Product
+                </Button>
             </DashboardControls>
 
             {/* Table */}

@@ -1,9 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
     sansFont,
     tableBase,
@@ -12,7 +14,7 @@ import {
     tableRow,
     tableCell,
 } from "@/lib/design-system";
-import { TagIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { TagIcon, ChevronRightIcon, PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { BrandModal } from "@/components/dashboard/BrandModal";
 import { format } from "date-fns";
@@ -41,6 +43,7 @@ interface BrandListClientProps {
 export function BrandListClient({ initialBrands: brands }: BrandListClientProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [search, setSearch] = useState("");
 
     const refreshBrands = () => {
         startTransition(() => {
@@ -48,15 +51,20 @@ export function BrandListClient({ initialBrands: brands }: BrandListClientProps)
         });
     };
 
+    const filteredBrands = brands.filter((b) =>
+        b.name.toLowerCase().includes(search.toLowerCase())
+    );
+
     const addBrandTrigger = (
-        <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200">
+        <Button className="rounded-full px-6 gap-2 shrink-0">
+            <PlusIcon className="w-4 h-4" />
             Add Brand
-        </button>
+        </Button>
     );
 
     if (brands.length === 0) {
         return (
-            <motion.div variants={fadeInUp} className="px-4 md:px-6 lg:px-10 flex-1 flex flex-col items-center justify-center">
+            <motion.div variants={fadeInUp} className="flex-1 flex flex-col items-center justify-center">
                 <div className="max-w-xl w-full mx-auto">
                     <Card className="border-none shadow-none rounded-2xl overflow-hidden bg-transparent">
                         <CardContent className="p-10 flex flex-col items-center justify-center text-center">
@@ -76,102 +84,107 @@ export function BrandListClient({ initialBrands: brands }: BrandListClientProps)
     }
 
     return (
-        <motion.div variants={fadeInUp} className={cn("px-4 md:px-6 lg:px-10", isPending && "opacity-50")}>
+        <motion.div variants={fadeInUp} className={cn("flex flex-col gap-4 w-full max-w-[70%] mx-auto", isPending && "opacity-50")}>
+            {/* Local header */}
+            <div className="flex items-center justify-between">
+                <h3 className={cn("text-lg font-semibold tracking-tight", sansFont)}>Brands</h3>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                            placeholder="Search brands..."
+                            className="pl-8 h-9 w-36 sm:w-48 rounded-full text-sm border-border/50 bg-background"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <BrandModal trigger={addBrandTrigger} onCreated={refreshBrands} />
+                </div>
+            </div>
+
+            {/* Table */}
             <div className="w-full overflow-x-auto">
                 <table className={tableBase + " border-collapse min-w-full"}>
-                        <thead className={tableHead}>
-                            <tr>
-                                <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Brand</th>
-                                <th className={tableHeadCell + " px-4 hidden sm:table-cell"}>Description</th>
-                                <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Verticals</th>
-                                <th className={tableHeadCell + " px-4 hidden lg:table-cell"}>Created</th>
-                                <th className={tableHeadCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}></th>
+                    <thead className={tableHead}>
+                        <tr>
+                            <th className={tableHeadCell}>Brand</th>
+                            <th className={tableHeadCell + " hidden sm:table-cell"}>Description</th>
+                            <th className={tableHeadCell + " hidden md:table-cell"}>Verticals</th>
+                            <th className={tableHeadCell + " hidden lg:table-cell"}>Created</th>
+                            <th className={tableHeadCell + " text-right"}></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredBrands.map((brand) => (
+                            <tr
+                                key={brand.id}
+                                className={cn(tableRow, "group cursor-pointer transition-colors active:bg-secondary/20")}
+                                onClick={() => router.push(`/dashboard/brands/${brand.id}`)}
+                            >
+                                <td className={tableCell}>
+                                    <Link
+                                        href={`/dashboard/brands/${brand.id}`}
+                                        className="flex items-center gap-3 no-underline text-foreground"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="relative w-10 h-10 rounded-xl border border-border/50 bg-secondary/30 overflow-hidden flex-shrink-0">
+                                            {brand.logo_url ? (
+                                                <Image
+                                                    src={brand.logo_url}
+                                                    alt={brand.name}
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="40px"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <TagIcon className="w-5 h-5 text-muted-foreground/40" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className={cn("font-semibold", sansFont)}>{brand.name}</span>
+                                    </Link>
+                                </td>
+                                <td className={tableCell + " px-4 hidden sm:table-cell text-muted-foreground text-sm max-w-[200px]"}>
+                                    <span className="line-clamp-2">{brand.description || "—"}</span>
+                                </td>
+                                <td className={tableCell + " px-4 hidden md:table-cell"}>
+                                    {brand.verticals && brand.verticals.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {brand.verticals.slice(0, 3).map((v) => (
+                                                <span
+                                                    key={v}
+                                                    className="text-[11px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full"
+                                                >
+                                                    {v}
+                                                </span>
+                                            ))}
+                                            {brand.verticals.length > 3 && (
+                                                <span className="text-[11px] text-muted-foreground">
+                                                    +{brand.verticals.length - 3}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-muted-foreground text-sm">—</span>
+                                    )}
+                                </td>
+                                <td className={tableCell + " px-4 hidden lg:table-cell text-muted-foreground text-sm"}>
+                                    {format(new Date(brand.created_at), "MMM d, yyyy")}
+                                </td>
+                                <td className={tableCell + " text-right"} onClick={(e) => e.stopPropagation()}>
+                                    <Link
+                                        href={`/dashboard/brands/${brand.id}`}
+                                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                        aria-label={`Manage ${brand.name}`}
+                                    >
+                                        <ChevronRightIcon className="w-4 h-4" />
+                                    </Link>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {brands.map((brand) => (
-                                <tr
-                                    key={brand.id}
-                                    className={cn(tableRow, "group cursor-pointer transition-colors active:bg-secondary/20")}
-                                    onClick={() => router.push(`/dashboard/brands/${brand.id}`)}
-                                >
-                                    <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
-                                        <Link
-                                            href={`/dashboard/brands/${brand.id}`}
-                                            className="flex items-center gap-3 no-underline text-foreground"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <div className="relative w-10 h-10 rounded-xl border border-border/50 bg-secondary/30 overflow-hidden flex-shrink-0">
-                                                {brand.logo_url ? (
-                                                    <Image
-                                                        src={brand.logo_url}
-                                                        alt={brand.name}
-                                                        fill
-                                                        className="object-cover"
-                                                        sizes="40px"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <TagIcon className="w-5 h-5 text-muted-foreground/40" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <span className={cn("font-semibold", sansFont)}>{brand.name}</span>
-                                        </Link>
-                                    </td>
-                                    <td className={tableCell + " px-4 hidden sm:table-cell text-muted-foreground text-sm max-w-[200px]"}>
-                                        <span className="line-clamp-2">
-                                            {brand.description || "—"}
-                                        </span>
-                                    </td>
-                                    <td className={tableCell + " px-4 hidden md:table-cell"}>
-                                        {brand.verticals && brand.verticals.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1">
-                                                {brand.verticals.slice(0, 3).map((v) => (
-                                                    <span
-                                                        key={v}
-                                                        className="text-[11px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full"
-                                                    >
-                                                        {v}
-                                                    </span>
-                                                ))}
-                                                {brand.verticals.length > 3 && (
-                                                    <span className="text-[11px] text-muted-foreground">
-                                                        +{brand.verticals.length - 3}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span className="text-muted-foreground text-sm">—</span>
-                                        )}
-                                    </td>
-                                    <td className={tableCell + " px-4 hidden lg:table-cell text-muted-foreground text-sm"}>
-                                        {format(new Date(brand.created_at), "MMM d, yyyy")}
-                                    </td>
-                                    <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"} onClick={(e) => e.stopPropagation()}>
-                                        <Link
-                                            href={`/dashboard/brands/${brand.id}`}
-                                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                                            aria-label={`Manage ${brand.name}`}
-                                        >
-                                            <ChevronRightIcon className="w-4 h-4" />
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-            </div>
-            <div className="border-t border-border/50 p-3">
-                <BrandModal
-                    trigger={
-                        <button className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-secondary/50">
-                            <TagIcon className="w-4 h-4" />
-                            Add Brand
-                        </button>
-                    }
-                    onCreated={refreshBrands}
-                />
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </motion.div>
     );

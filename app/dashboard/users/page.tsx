@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
-import { DashboardPage, DashboardHeader, DashboardControls } from "@/components/dashboard/DashboardPage";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import {
     sansFont,
     tableBase,
@@ -99,37 +99,36 @@ export default function UsersPage() {
 
     return (
         <DashboardPage>
-            <DashboardHeader
-                title="Users"
-                subtitle="Manage your team members and their account permissions."
-            >
-                <Button
-                    className="rounded-full px-6 shrink-0"
-                    onClick={() => setIsInviteModalOpen(true)}
-                >
-                    <UserPlusIcon className="w-4 h-4 mr-2" />
-                    Invite User
-                </Button>
-            </DashboardHeader>
-
-            <DashboardControls>
-                <div className="relative flex-1 max-w-sm">
-                    <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        placeholder="Search by name..."
-                        className="pl-9 rounded-xl border-border/50"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+        <div className="flex flex-col gap-4 w-full max-w-[70%] mx-auto">
+            {/* Local header */}
+            <div className="flex items-center justify-between">
+                <h3 className={cn("text-lg font-semibold tracking-tight", sansFont)}>Users</h3>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                            placeholder="Search by name..."
+                            className="pl-8 h-9 w-36 sm:w-48 rounded-full text-sm border-border/50 bg-background"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <Button
+                        className="rounded-full px-6 gap-2 shrink-0"
+                        onClick={() => setIsInviteModalOpen(true)}
+                    >
+                        <UserPlusIcon className="w-4 h-4" />
+                        Invite User
+                    </Button>
                 </div>
-            </DashboardControls>
+            </div>
 
             {/* Table */}
             <div className="w-full overflow-x-auto">
                 <table className={tableBase + " border-collapse min-w-full"}>
                     <thead className={tableHead}>
                         <tr>
-                            <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>User</th>
+                            <th className={tableHeadCell}>User</th>
                             <th className={tableHeadCell + " px-4"}>Role</th>
                             <th className={tableHeadCell + " px-4"}>Status</th>
                             <th className={tableHeadCell + " px-4 hidden sm:table-cell text-right"}></th>
@@ -158,7 +157,7 @@ export default function UsersPage() {
                                         setIsSheetOpen(true);
                                     }}
                                 >
-                                    <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
+                                    <td className={tableCell}>
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center font-bold text-xs text-foreground ring-1 ring-border/50 shrink-0">
                                                 {user.first_name?.[0]}{user.last_name?.[0]}
@@ -189,7 +188,7 @@ export default function UsersPage() {
                                             {user.status || 'Active'}
                                         </Badge>
                                     </td>
-                                    <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
+                                    <td className={tableCell + " text-right"}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                                 <Button variant="ghost" size="icon" className="rounded-lg h-8 w-8 text-muted-foreground">
@@ -225,6 +224,7 @@ export default function UsersPage() {
                     </tbody>
                 </table>
             </div>
+        </div>
 
             <InviteUserModal
                 isOpen={isInviteModalOpen}
