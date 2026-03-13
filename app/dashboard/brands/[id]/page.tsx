@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,10 +17,12 @@ import { DocumentTextIcon, PlusIcon, Cog6ToothIcon, NewspaperIcon, GlobeAltIcon,
 import { cn } from "@/lib/utils";
 import { getBrandPages, createPage, setPageAsIndex, migrateBrandBlogPages, BrandPage } from "@/app/actions/pages";
 import { getBrand, updateBrand, updateBrandHeaderConfig, verifyDomainDNS } from "@/app/actions/brands";
-import { getBlogs } from "@/app/actions/blogs";
+import { getBlogs, updateBlog, deleteBlog } from "@/app/actions/blogs";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Edit2, Save, CheckCircle2, AlertCircle, RefreshCcw, Globe, ArrowRight, Upload, Loader2, X, Monitor, Tablet, Smartphone } from "lucide-react";
+import { Edit2, Save, CheckCircle2, AlertCircle, RefreshCcw, Globe, ArrowRight, Upload, Loader2, X, Monitor, Tablet, Smartphone, ArrowLeft, ExternalLink, Check, GripVertical } from "lucide-react";
+import { PageStatusToggle } from "@/components/PageStatusToggle";
+import { Switch } from "@/components/ui/switch";
 import { uploadPageImage } from "@/app/actions/pages";
 import { HeaderRenderer } from "@/components/page-builder/renderers/HeaderRenderer";
 import {
@@ -42,7 +44,15 @@ export default function BrandDetailsPage() {
     const router = useRouter();
     const brandId = params.id as string;
 
-    const [activeTab, setActiveTab] = useState<Tab>('pages');
+    const searchParams = useSearchParams();
+    const activeTab = (searchParams.get('tab') as Tab) || 'pages';
+
+    const handleTabChange = (tab: Tab) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('tab', tab);
+        router.push(`${window.location.pathname}?${params.toString()}`);
+    };
+
     const [pages, setPages] = useState<BrandPage[]>([]);
     const [blogs, setBlogs] = useState<Array<{
         id: string;
@@ -51,6 +61,7 @@ export default function BrandDetailsPage() {
         content: any;
         featured_image?: string | null;
         brand_id: string;
+        is_published?: boolean;
         brands?: { name: string };
     }>>([]);
     const [brand, setBrand] = useState<any>(null);
@@ -329,15 +340,50 @@ export default function BrandDetailsPage() {
 
     return (
         <DashboardPage className="space-y-8">
-            <DashboardHeader
-                title={brand ? brand.name : "Brand Details"}
-                subtitle={brand ? brand.description || "Manage your brand pages and settings." : "Manage your brand pages and settings."}
-            >
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="max-w-[70%] mx-auto w-full space-y-8">
+            <div className="px-4 md:px-6 lg:px-10">
+                <Link
+                    href="/dashboard/brands"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back to Brands
+                </Link>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 px-4 md:px-6 lg:px-10 mb-2">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {brand?.logo_url ? (
+                        <img src={brand.logo_url} alt="" className="w-12 h-12 rounded-xl object-contain border border-border/50 bg-white shrink-0" />
+                    ) : (
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className={cn("text-lg font-bold text-primary", sansFont)}>{brand?.name?.[0] || "B"}</span>
+                        </div>
+                    )}
+                    <div className="min-w-0">
+                        <h1 className={cn("text-xl md:text-2xl font-bold tracking-tight text-foreground mb-0.5", sansFont)}>
+                            {brand ? brand.name : "Brand Details"}
+                        </h1>
+                        <p className="text-muted-foreground/80 text-sm md:text-base max-w-2xl leading-relaxed">
+                            {brand ? brand.description || "Manage your brand pages and settings." : "Manage your brand pages and settings."}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0 sm:mb-1">
+                    {brand && (customDomain || subdomain) && (
+                        <a
+                            href={customDomain ? `https://${customDomain}` : `https://${subdomain}.genesisflow.io`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="border border-border/50 hover:bg-secondary/50 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-sm font-semibold transition-colors flex items-center gap-1.5 sm:gap-2 text-muted-foreground hover:text-foreground"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="hidden sm:inline">Visit Site</span>
+                        </a>
+                    )}
                     {activeTab !== 'settings' && activeTab !== 'domain' && activeTab !== 'header' && mounted && (
                         activeTab === 'blogs' ? (
                             <Link
-                                href={`/dashboard/blogs/new?brand_id=${brandId}`}
+                                href={`/dashboard/brands/${brandId}/blogs/new`}
                                 className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200 flex items-center gap-1.5 sm:gap-2"
                             >
                                 <PlusIcon className="w-4 h-4 flex-shrink-0" />
@@ -366,14 +412,14 @@ export default function BrandDetailsPage() {
                         )
                     )}
                 </div>
-            </DashboardHeader>
+            </div>
 
             <div className="px-3 sm:px-4 md:px-6 lg:px-10">
                 {/* Tabs */}
                 <div className="overflow-x-auto -mx-3 sm:-mx-4 md:mx-0 pb-2 mb-6 md:mb-8 scrollbar-thin">
                     <div className="flex items-center gap-1 bg-secondary/20 p-1 rounded-2xl w-max min-w-0 border border-border/50 mx-3 sm:mx-4 md:mx-0">
                         <button
-                            onClick={() => setActiveTab('pages')}
+                            onClick={() => handleTabChange('pages')}
                             className={cn(
                                 "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
                                 activeTab === 'pages' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -383,7 +429,7 @@ export default function BrandDetailsPage() {
                             Pages
                         </button>
                         <button
-                            onClick={() => setActiveTab('blogs')}
+                            onClick={() => handleTabChange('blogs')}
                             className={cn(
                                 "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
                                 activeTab === 'blogs' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -393,7 +439,7 @@ export default function BrandDetailsPage() {
                             Blogs
                         </button>
                         <button
-                            onClick={() => setActiveTab('header')}
+                            onClick={() => handleTabChange('header')}
                             className={cn(
                                 "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
                                 activeTab === 'header' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -403,7 +449,7 @@ export default function BrandDetailsPage() {
                             Header
                         </button>
                         <button
-                            onClick={() => setActiveTab('domain')}
+                            onClick={() => handleTabChange('domain')}
                             className={cn(
                                 "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
                                 activeTab === 'domain' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -413,7 +459,7 @@ export default function BrandDetailsPage() {
                             Domain
                         </button>
                         <button
-                            onClick={() => setActiveTab('settings')}
+                            onClick={() => handleTabChange('settings')}
                             className={cn(
                                 "px-3 sm:px-4 md:px-6 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
                                 activeTab === 'settings' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -520,7 +566,7 @@ export default function BrandDetailsPage() {
                                         <div className="pt-4 border-t border-border/40 space-y-4">
                                             <div>
                                                 <h4 className="text-lg font-bold mb-1">Navigation Links</h4>
-                                                <p className="text-xs text-muted-foreground">Select which pages appear in the header navigation across your site.</p>
+                                                <p className="text-xs text-muted-foreground">Drag to reorder active links. The order here is reflected in the live header.</p>
                                             </div>
 
                                             <div className="space-y-2">
@@ -539,36 +585,88 @@ export default function BrandDetailsPage() {
                                                 />
                                             </div>
 
-                                            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-2">
-                                                {pages.length > 0 ? pages.map((page) => (
-                                                    <button
-                                                        key={page.id}
-                                                        onClick={() => toggleHeaderNavPage(page.id)}
-                                                        className={cn(
-                                                            "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
-                                                            headerNavigation.includes(page.id)
-                                                                ? "bg-primary border-primary text-primary-foreground shadow-md"
-                                                                : "bg-background border-border/50 text-foreground hover:border-border"
-                                                        )}
-                                                    >
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xs font-bold">{page.title}</span>
-                                                            <span className={cn(
-                                                                "text-[9px] uppercase tracking-wider font-semibold opacity-60",
-                                                                headerNavigation.includes(page.id) ? "text-primary-foreground/60" : "text-muted-foreground"
-                                                            )}>
-                                                                /{page.slug}
-                                                            </span>
+                                            {/* Active Navigation - Drag to Reorder */}
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <label className="text-sm font-semibold text-foreground">Active Navigation</label>
+                                                    <span className="text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full font-medium">Drag to reorder</span>
+                                                </div>
+                                                <Reorder.Group
+                                                    axis="y"
+                                                    values={headerNavigation}
+                                                    onReorder={setHeaderNavigation}
+                                                    className="space-y-2"
+                                                >
+                                                    {headerNavigation.map((pageId: string) => {
+                                                        const page = pages.find(p => p.id === pageId);
+                                                        if (!page) return null;
+                                                        return (
+                                                            <Reorder.Item
+                                                                key={pageId}
+                                                                value={pageId}
+                                                                className="bg-primary border border-primary text-primary-foreground rounded-xl p-3 flex items-center gap-3 shadow-sm group"
+                                                            >
+                                                                <GripVertical className="w-4 h-4 opacity-60 cursor-grab active:cursor-grabbing" />
+                                                                <div className="flex-1 flex flex-col min-w-0">
+                                                                    <span className="text-xs font-bold truncate">{page.title}</span>
+                                                                    <span className="text-[9px] uppercase tracking-wider font-semibold opacity-60 truncate">/{page.slug}</span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => toggleHeaderNavPage(pageId)}
+                                                                    className="p-1.5 opacity-60 hover:opacity-100 hover:bg-primary-foreground/10 rounded-lg transition-all"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </Reorder.Item>
+                                                        );
+                                                    })}
+                                                    {headerNavigation.length === 0 && (
+                                                        <div className="p-6 text-center border-2 border-dashed border-border/30 rounded-2xl">
+                                                            <p className="text-xs text-muted-foreground italic">No links added to navigation yet.</p>
                                                         </div>
-                                                        {headerNavigation.includes(page.id) && (
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
-                                                        )}
-                                                    </button>
-                                                )) : (
-                                                    <div className="p-8 text-center border-2 border-dashed border-border/30 rounded-2xl">
-                                                        <p className="text-xs text-muted-foreground italic">No pages found. Create pages first to add navigation links.</p>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </Reorder.Group>
+                                            </div>
+
+                                            {/* Available Pages to Add */}
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-foreground px-1">Add Pages</label>
+                                                <div className="space-y-2 max-h-[240px] overflow-y-auto pr-2">
+                                                    {pages.filter(p => !headerNavigation.includes(p.id)).length > 0 ? (
+                                                        pages.filter(p => !headerNavigation.includes(p.id)).map((page) => (
+                                                            <button
+                                                                key={page.id}
+                                                                onClick={() => toggleHeaderNavPage(page.id)}
+                                                                className={cn(
+                                                                    "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
+                                                                    !page.is_published
+                                                                        ? "bg-secondary/30 border-border/30 text-muted-foreground/50 opacity-60"
+                                                                        : "bg-background border-border/50 text-foreground hover:border-border"
+                                                                )}
+                                                            >
+                                                                <div className="flex flex-col">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-xs font-bold">{page.title}</span>
+                                                                        {!page.is_published && (
+                                                                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/60 uppercase tracking-wider">Draft</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground opacity-60">
+                                                                        /{page.slug}
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    ) : pages.length > 0 ? (
+                                                        <div className="p-6 text-center border-2 border-dashed border-border/30 rounded-2xl">
+                                                            <p className="text-xs text-muted-foreground italic">All pages are already in the navigation.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-8 text-center border-2 border-dashed border-border/30 rounded-2xl">
+                                                            <p className="text-xs text-muted-foreground italic">No pages found. Create pages first to add navigation links.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -760,7 +858,7 @@ export default function BrandDetailsPage() {
                                                                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5">
                                                                     <span className="text-xs text-muted-foreground">A Record</span>
                                                                     <span className="text-xs text-muted-foreground/40 hidden sm:inline">|</span>
-                                                                    <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded break-all">@ → 76.76.21.21</code>
+                                                                    <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded break-all">@ → 216.198.79.1</code>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -804,9 +902,9 @@ export default function BrandDetailsPage() {
                                                                 )}
                                                             </div>
                                                                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5">
-                                                                    <span className="text-xs text-muted-foreground">CNAME</span>
+                                                                    <span className="text-xs text-muted-foreground">A Record</span>
                                                                     <span className="text-xs text-muted-foreground/40 hidden sm:inline">|</span>
-                                                                    <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded break-all">www → cname.genesisflow.io</code>
+                                                                    <code className="text-xs font-mono text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded break-all">www → 216.198.79.1</code>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -889,7 +987,7 @@ export default function BrandDetailsPage() {
                                                             {dnsStatus.vercel.verified && dnsStatus.vercel.configured
                                                                 ? "Both domains are live with automatic HTTPS."
                                                                 : dnsStatus.vercel.misconfigured
-                                                                    ? "DNS records are pointing elsewhere. Update your A and CNAME records."
+                                                                    ? "DNS records are pointing elsewhere. Update your A records for both apex and www."
                                                                     : !dnsStatus.vercel.verified
                                                                         ? "Waiting for domain ownership verification. See issues below."
                                                                         : "SSL certificates are being provisioned. This typically takes 1-2 minutes."}
@@ -915,8 +1013,8 @@ export default function BrandDetailsPage() {
                                                         <p className="text-sm font-semibold text-amber-600">Partial Configuration</p>
                                                         <p className="text-xs text-amber-600/70 mt-0.5">
                                                             {dnsStatus.a && !dnsStatus.cname
-                                                                ? `Apex domain is connected but www.${domainPair.apex} needs a CNAME record.`
-                                                                : `www is connected but ${domainPair.apex} needs an A record pointing to 76.76.21.21.`}
+                                                                ? `Apex domain is connected but www.${domainPair.apex} needs an A record pointing to 216.198.79.1.`
+                                                                : `www is connected but ${domainPair.apex} needs an A record pointing to 216.198.79.1.`}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1154,7 +1252,7 @@ export default function BrandDetailsPage() {
                                                 Share updates and insights by creating your first blog post for this brand.
                                             </p>
                                             <Link
-                                                href={`/dashboard/blogs/new?brand_id=${brandId}`}
+                                                href={`/dashboard/brands/${brandId}/blogs/new`}
                                                 className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-3 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95"
                                             >
                                                 Create First Blog
@@ -1168,11 +1266,8 @@ export default function BrandDetailsPage() {
                                         <thead className={tableHead}>
                                             <tr>
                                                 <th className={tableHeadCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>Blog</th>
-                                                <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Excerpt</th>
-                                                <th className={tableHeadCell + " px-4 hidden lg:table-cell"}>Preview</th>
-                                                <th className={tableHeadCell + " px-4 hidden md:table-cell"}>Image</th>
-                                                <th className={tableHeadCell + " px-4 hidden lg:table-cell"}>Brand</th>
-                                                <th className={tableHeadCell + " px-4 text-right pr-4 md:pr-6 lg:pr-10"}>Actions</th>
+                                                <th className={tableHeadCell + " px-4"}>Status</th>
+                                                <th className={tableHeadCell + " px-4 w-12"}></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1180,7 +1275,7 @@ export default function BrandDetailsPage() {
                                                 <tr
                                                     key={blog.id}
                                                     className={cn(tableRow, "group cursor-pointer active:bg-secondary/20")}
-                                                    onClick={() => router.push(`/dashboard/blogs/${blog.id}`)}
+                                                    onClick={() => router.push(`/dashboard/brands/${brandId}/blogs/${blog.id}`)}
                                                 >
                                                     <td className={tableCell + " pl-4 md:pl-6 lg:pl-10 pr-4"}>
                                                         <div className="flex items-center gap-3">
@@ -1192,34 +1287,39 @@ export default function BrandDetailsPage() {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className={tableCell + " px-4 text-muted-foreground max-w-[180px] truncate hidden md:table-cell"}>
-                                                        <span className="text-sm">{blog.excerpt || "—"}</span>
+                                                    <td className={tableCell + " px-4"} onClick={(e) => e.stopPropagation()}>
+                                                        <Switch
+                                                            checked={blog.is_published ?? false}
+                                                            onCheckedChange={async (checked) => {
+                                                                setBlogs(prev => prev.map(b => b.id === blog.id ? { ...b, is_published: checked } : b));
+                                                                const res = await updateBlog(blog.id, { is_published: checked });
+                                                                if (res.error) {
+                                                                    toast.error("Failed to update blog status");
+                                                                    setBlogs(prev => prev.map(b => b.id === blog.id ? { ...b, is_published: !checked } : b));
+                                                                } else {
+                                                                    toast.success(`Blog ${checked ? "published" : "unpublished"}`);
+                                                                }
+                                                            }}
+                                                            className="data-[state=checked]:bg-emerald-500"
+                                                        />
                                                     </td>
-                                                    <td className={tableCell + " px-4 text-muted-foreground max-w-[220px] hidden lg:table-cell"}>
-                                                        <span className="line-clamp-2 text-sm">{contentPreview(blog.content)}</span>
-                                                    </td>
-                                                    <td className={tableCell + " px-4 hidden md:table-cell"}>
-                                                        {blog.featured_image ? (
-                                                            <img
-                                                                src={blog.featured_image}
-                                                                alt=""
-                                                                className="w-10 h-10 rounded-lg object-cover border border-border/50"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-muted-foreground text-xs italic">No image</span>
-                                                        )}
-                                                    </td>
-                                                    <td className={tableCell + " px-4 text-muted-foreground hidden lg:table-cell"}>
-                                                        <span className="text-sm">{blog.brands?.name ?? "—"}</span>
-                                                    </td>
-                                                    <td className={tableCell + " pl-4 pr-4 md:pr-6 lg:pr-10 text-right"}>
-                                                        <Link
-                                                            href={`/dashboard/blogs/${blog.id}`}
-                                                            className="text-xs font-semibold text-primary hover:underline hover:text-primary/80 transition-all opacity-0 group-hover:opacity-100"
-                                                            onClick={(e) => e.stopPropagation()}
+                                                    <td className={tableCell + " px-4"} onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (!confirm(`Delete "${blog.title}"? This cannot be undone.`)) return;
+                                                                const { error } = await deleteBlog(blog.id);
+                                                                if (error) {
+                                                                    toast.error("Failed to delete blog");
+                                                                } else {
+                                                                    setBlogs(prev => prev.filter(b => b.id !== blog.id));
+                                                                    toast.success("Blog deleted");
+                                                                }
+                                                            }}
+                                                            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            title="Delete blog"
                                                         >
-                                                            Edit
-                                                        </Link>
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -1265,10 +1365,8 @@ export default function BrandDetailsPage() {
                                                 <th className={tableHeadCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>Page</th>
                                                 <th className={tableHeadCell + " px-3 sm:px-4 hidden sm:table-cell"}>Slug</th>
                                                 <th className={tableHeadCell + " px-3 sm:px-4"}>Index</th>
-                                                <th className={tableHeadCell + " px-3 sm:px-4 hidden md:table-cell"}>Type</th>
                                                 <th className={tableHeadCell + " px-3 sm:px-4"}>Status</th>
                                                 <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Updated</th>
-                                                <th className={tableHeadCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right w-14 sm:w-20"}></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1301,9 +1399,7 @@ export default function BrandDetailsPage() {
                                                         </td>
                                                         <td className={tableCell + " px-3 sm:px-4"} onClick={(e) => e.stopPropagation()}>
                                                             {page.is_index ? (
-                                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase tracking-tight">
-                                                                    Index
-                                                                </span>
+                                                                <Check className="w-4 h-4 text-primary" />
                                                             ) : (
                                                                 <button
                                                                     type="button"
@@ -1315,35 +1411,11 @@ export default function BrandDetailsPage() {
                                                                 </button>
                                                             )}
                                                         </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 hidden md:table-cell"}>
-                                                            <span className={cn(
-                                                                "text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-tight",
-                                                                page.type === "landing" ? "bg-blue-500/10 text-blue-600" :
-                                                                (page.type === "blog" || page.type === "blog_list") ? "bg-purple-500/10 text-purple-600" : "bg-secondary text-muted-foreground"
-                                                            )}>
-                                                                {page.type === "blog" ? "Blog" : page.type === "blog_list" ? "Blog List" : page.type === "landing" ? "Landing" : "Content"}
-                                                            </span>
-                                                        </td>
-                                                        <td className={tableCell + " px-3 sm:px-4"}>
-                                                            <span className={cn(
-                                                                "text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight",
-                                                                page.is_published ? "bg-emerald-500/10 text-emerald-600" : "bg-secondary text-muted-foreground"
-                                                            )}>
-                                                                {page.is_published ? "Published" : "Draft"}
-                                                            </span>
+                                                        <td className={tableCell + " px-3 sm:px-4"} onClick={(e) => e.stopPropagation()}>
+                                                            <PageStatusToggle page={page} showLabel={false} />
                                                         </td>
                                                         <td className={tableCell + " px-3 sm:px-4 text-muted-foreground text-xs hidden lg:table-cell"}>
                                                             {new Date(page.updated_at).toLocaleDateString()}
-                                                        </td>
-                                                        <td className={tableCell + " pl-3 pr-4 sm:pr-6 md:pr-10 text-right"}>
-                                                            <Link
-                                                                href={`/page-builder/${page.id}`}
-                                                                className="p-2 hover:bg-secondary/30 rounded-xl text-muted-foreground hover:text-foreground transition-all inline-flex"
-                                                                title="Edit page"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </Link>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1354,6 +1426,7 @@ export default function BrandDetailsPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+            </div>
             </div>
         </DashboardPage>
     );

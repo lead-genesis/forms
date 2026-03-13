@@ -80,7 +80,7 @@ export const HeaderRenderer = React.memo(({ data, brand, brandPages, forceMobile
 
     return (
         <div>
-            <header className="h-14 sm:h-16 lg:h-20 border-b border-zinc-100 bg-white relative z-10 w-full">
+            <header className="h-14 sm:h-16 lg:h-20 bg-white relative z-10 w-full">
                 <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 flex items-center justify-between h-full">
                     <a href="/" className="flex items-center gap-3 shrink-0" onClick={(e) => e.preventDefault()}>
                         {logoToUse ? (

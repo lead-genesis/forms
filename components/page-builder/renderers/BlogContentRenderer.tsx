@@ -91,7 +91,7 @@ function LiveView({ blog, brand }: { blog: BlogData; brand?: any }) {
                 )}
             </header>
 
-            <div className="max-w-3xl mx-auto prose prose-sm sm:prose-base max-w-none">
+            <div className="max-w-3xl mx-auto">
                 <TiptapRenderer content={blog.content} />
             </div>
 

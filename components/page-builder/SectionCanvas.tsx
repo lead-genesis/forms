@@ -35,7 +35,7 @@ export const SectionCanvas = React.memo(({ sections, currentSectionId, onSection
 
     return (
         <div className={cn(
-            "bg-white flex flex-col transition-all duration-700 ease-in-out origin-top min-w-0 overflow-x-hidden",
+            "bg-white flex flex-col transition-[border-radius,min-height,box-shadow] duration-300 ease-in-out origin-top min-w-0 overflow-x-hidden",
             !isRuntime && "shadow-2xl shadow-black/5 mx-auto",
             viewport === "desktop" ? cn("w-full min-h-[120vh]", !isRuntime && "max-w-5xl rounded-[32px]") :
                 viewport === "tablet" ? "w-[768px] max-w-[100vw] rounded-[36px] min-h-[1024px]" :

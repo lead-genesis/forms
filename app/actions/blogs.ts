@@ -75,6 +75,29 @@ export async function updateBlog(id: string, updates: Partial<CreateBlogInput>) 
     return { data, error: null };
 }
 
+export async function deleteBlog(id: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { error: "Unauthorized" };
+    }
+
+    const { error } = await supabase
+        .from("blogs")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+    if (error) {
+        console.error("Delete blog error:", error);
+        return { error: error.message };
+    }
+
+    revalidatePath("/dashboard/blogs");
+    return { error: null };
+}
+
 export async function getBlogs(brandId?: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -134,29 +157,6 @@ export async function getBlog(id: string) {
     }
 
     return { data, error: null };
-}
-
-export async function deleteBlog(id: string) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-        return { data: null, error: "Unauthorized" };
-    }
-
-    const { error } = await supabase
-        .from("blogs")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-    if (error) {
-        console.error("Delete blog error:", error);
-        return { data: null, error: error.message };
-    }
-
-    revalidatePath("/dashboard/blogs");
-    return { data: true, error: null };
 }
 
 export async function getBlogBySlug(brandId: string, slug: string) {

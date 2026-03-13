@@ -62,7 +62,7 @@ export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroC
                 </div>
             </div>
 
-            <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-6">
                 <div className="space-y-4 pt-2">
                     <div className="space-y-2">
                         <label className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Heading</label>

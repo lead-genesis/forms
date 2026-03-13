@@ -23,11 +23,14 @@ interface SectionConfigProps {
 export function SectionConfig({ section, brandPages, brandForms, onChange, onDelete, onClose }: SectionConfigProps) {
     const [activeTab, setActiveTab] = useState<'content' | 'style'>('content');
     const [localData, setLocalData] = useState(section.data || {});
+    const localDataRef = useRef<any>(section.data || {});
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Sync local data when section changes (e.g. selecting a different section)
     useEffect(() => {
-        setLocalData(section.data || {});
+        const data = section.data || {};
+        setLocalData(data);
+        localDataRef.current = data;
     }, [section.id]);
 
     const debouncedOnChange = useCallback((updates: any) => {
@@ -38,7 +41,8 @@ export function SectionConfig({ section, brandPages, brandForms, onChange, onDel
     }, [onChange]);
 
     const handleDataChange = (key: string, value: any) => {
-        const newData = { ...localData, [key]: value };
+        const newData = { ...localDataRef.current, [key]: value };
+        localDataRef.current = newData;
         setLocalData(newData);
         debouncedOnChange(newData);
     };
