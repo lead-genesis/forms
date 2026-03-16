@@ -55,7 +55,8 @@ export default function Home() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
   return (
     <div className="flex flex-col min-h-screen bg-background selection:bg-primary/10">
       {/* Navigation */}
