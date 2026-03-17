@@ -18,13 +18,34 @@ import {
 import { BrandPage } from "@/app/actions/pages";
 import { PageStatusToggle } from "@/components/PageStatusToggle";
 
+function useRelativeTime(date?: Date) {
+    const [now, setNow] = React.useState(() => Date.now());
+
+    React.useEffect(() => {
+        if (!date) return;
+        const id = setInterval(() => setNow(Date.now()), 10_000);
+        return () => clearInterval(id);
+    }, [date]);
+
+    if (!date) return "";
+
+    const seconds = Math.floor((now - date.getTime()) / 1000);
+    if (seconds < 10) return "just now";
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+}
+
 interface PageBuilderHeaderProps {
     title: string;
     onTitleChange: (title: string) => void;
     onBack: () => void;
     isSaving?: boolean;
     status?: string;
-    lastSaved?: string;
+    lastSavedAt?: Date;
     onOpenSettings?: () => void;
     pageId: string;
     brandPages?: BrandPage[];
@@ -38,7 +59,7 @@ export function PageBuilderHeader({
     onBack,
     isSaving,
     status,
-    lastSaved,
+    lastSavedAt,
     onOpenSettings,
     pageId,
     brandPages = [],
@@ -46,6 +67,7 @@ export function PageBuilderHeader({
     page
 }: PageBuilderHeaderProps) {
     const router = useRouter();
+    const lastSaved = useRelativeTime(lastSavedAt);
 
     const handlePreview = () => {
         window.open(`/preview/${pageId}`, '_blank');

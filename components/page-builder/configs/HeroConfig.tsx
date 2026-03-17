@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, Globe, FileText, Layout, ExternalLink, Check } from "lucide-react";
+import { Search, Globe, FileText, Layout, ExternalLink, Check, Upload, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandPage } from "@/app/actions/pages";
 import { Form as BrandForm } from "@/app/actions/forms";
@@ -9,11 +9,15 @@ import { Form as BrandForm } from "@/app/actions/forms";
 interface HeroConfigProps {
     data: any;
     onDataChange: (key: string, value: any) => void;
+    onBatchDataChange?: (updates: Record<string, any>) => void;
     brandPages?: BrandPage[];
     brandForms?: BrandForm[];
+    onFileUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    isUploading?: boolean;
+    fileInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroConfigProps) {
+export function HeroConfig({ data, onDataChange, onBatchDataChange, brandPages, brandForms, onFileUpload, isUploading, fileInputRef }: HeroConfigProps) {
     const [searchTerm, setSearchTerm] = React.useState("");
 
     const publishedPages = React.useMemo(() => {
@@ -62,11 +66,58 @@ export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroC
                 </div>
             </div>
 
+            {/* Image Upload */}
+            <div className="space-y-2">
+                <label className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Hero Image</label>
+                <div className="space-y-3">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={data?.imageUrl || ""}
+                            onChange={(e) => onDataChange('imageUrl', e.target.value)}
+                            placeholder="Paste image URL..."
+                            className="flex-1 bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                        />
+                        {onFileUpload && fileInputRef && (
+                            <>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={onFileUpload}
+                                    className="hidden"
+                                    accept="image/*"
+                                />
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                    className="px-3 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                                >
+                                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    {data?.imageUrl && (
+                        <div className="aspect-video w-full rounded-xl border border-zinc-100 bg-zinc-50 overflow-hidden relative">
+                            <img src={data.imageUrl} alt="Hero preview" className="w-full h-full object-cover" />
+                            <button
+                                onClick={() => onDataChange('imageUrl', '')}
+                                className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur shadow-sm rounded-lg text-zinc-500 hover:text-red-500 transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="space-y-6">
                 <div className="space-y-4 pt-2">
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Heading</label>
+                        <label htmlFor="hero-heading" className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Heading</label>
                         <input
+                            id="hero-heading"
                             type="text"
                             value={data?.heading || ""}
                             onChange={(e) => onDataChange('heading', e.target.value)}
@@ -76,8 +127,9 @@ export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroC
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Subheading</label>
+                        <label htmlFor="hero-subheading" className="text-[11px] font-bold text-zinc-500 ml-1 uppercase tracking-wider">Subheading</label>
                         <textarea
+                            id="hero-subheading"
                             value={data?.subheading || ""}
                             onChange={(e) => onDataChange('subheading', e.target.value)}
                             placeholder="Supporting description..."
@@ -94,8 +146,9 @@ export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroC
 
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-zinc-400 ml-1 uppercase tracking-tight">Button Text</label>
+                                <label htmlFor="hero-button-text" className="text-[10px] font-bold text-zinc-400 ml-1 uppercase tracking-tight">Button Text</label>
                                 <input
+                                    id="hero-button-text"
                                     type="text"
                                     value={data?.buttonText || ""}
                                     onChange={(e) => onDataChange('buttonText', e.target.value)}
@@ -115,8 +168,12 @@ export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroC
                                         <button
                                             key={type.id}
                                             onClick={() => {
-                                                onDataChange('buttonLinkType', type.id);
-                                                onDataChange('buttonLink', '');
+                                                if (onBatchDataChange) {
+                                                    onBatchDataChange({ buttonLinkType: type.id, buttonLink: '' });
+                                                } else {
+                                                    onDataChange('buttonLinkType', type.id);
+                                                    onDataChange('buttonLink', '');
+                                                }
                                                 setSearchTerm("");
                                             }}
                                             className={cn(
@@ -136,11 +193,17 @@ export function HeroConfig({ data, onDataChange, brandPages, brandForms }: HeroC
                             <div className="space-y-3">
                                 {data?.buttonLinkType === 'external' ? (
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-zinc-400 ml-1">Destination URL</label>
+                                        <label htmlFor="hero-destination-url" className="text-[10px] font-bold text-zinc-400 ml-1">Destination URL</label>
                                         <input
+                                            id="hero-destination-url"
                                             type="url"
                                             value={data?.buttonLink || ""}
-                                            onChange={(e) => onDataChange('buttonLink', e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                // Block javascript: and data: URIs to prevent XSS
+                                                if (/^\s*(javascript|data|vbscript):/i.test(val)) return;
+                                                onDataChange('buttonLink', val);
+                                            }}
                                             placeholder="https://..."
                                             className="w-full bg-white border border-zinc-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all text-zinc-900"
                                         />

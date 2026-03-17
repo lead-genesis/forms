@@ -31,30 +31,51 @@ export function BannerModal({
     const [uploading, setUploading] = React.useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+    const compressImage = (file: File, maxWidth = 1600, quality = 0.8): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let { width, height } = img;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                if (!ctx) return reject(new Error("Canvas not supported"));
+
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL("image/webp", quality));
+            };
+            img.onerror = () => reject(new Error("Failed to load image"));
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
     const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !formId) return;
 
         setUploading(true);
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            const dataUrl = reader.result as string;
-            try {
-                const res = await updateFormBanner(formId, dataUrl);
-                if (res.error) {
-                    toast.error(res.error);
-                } else {
-                    onBannerChange(res.data?.banner ?? null);
-                    toast.success("Banner updated!");
-                    onClose();
-                }
-            } catch (err: any) {
-                toast.error("Upload failed");
-            } finally {
-                setUploading(false);
+        try {
+            const dataUrl = await compressImage(file);
+            const res = await updateFormBanner(formId, dataUrl);
+            if (res.error) {
+                toast.error(res.error);
+            } else {
+                onBannerChange(res.data?.banner ?? null);
+                toast.success("Banner updated!");
+                onClose();
             }
-        };
-        reader.readAsDataURL(file);
+        } catch (err: any) {
+            toast.error("Upload failed");
+        } finally {
+            setUploading(false);
+        }
     };
 
     return (

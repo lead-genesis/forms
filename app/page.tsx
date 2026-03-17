@@ -10,11 +10,14 @@ import { cn } from "@/lib/utils";
 
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef, useMemo } from "react";
 
 export default function Home() {
   const router = useRouter();
-  const supabase = createClient();
+  const routerRef = useRef(router);
+  routerRef.current = router;
+
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     // 1. Immediate Aggressive Check for Recovery (handles fragments #type=recovery)
@@ -40,7 +43,7 @@ export default function Home() {
         // Only redirect to dashboard if not a recovery/callback flow
         const hasTokens = window.location.hash.includes('access_token=') || window.location.search.includes('type=recovery');
         if (!window.location.search.includes('code=') && !hasTokens) {
-          router.push("/dashboard");
+          routerRef.current.push("/dashboard");
         }
       }
     });
@@ -48,7 +51,7 @@ export default function Home() {
     // 3. Initial check for existing session
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user && !isRecovery && !window.location.search.includes('code=')) {
-        router.push("/dashboard");
+        routerRef.current.push("/dashboard");
       }
     });
 
@@ -56,7 +59,7 @@ export default function Home() {
       subscription.unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, []);
   return (
     <div className="flex flex-col min-h-screen bg-background selection:bg-primary/10">
       {/* Navigation */}

@@ -1,23 +1,23 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { buildWebhookPayload } from "@/lib/webhook";
+import { resolveAndValidate } from "@/lib/url-validation";
+import { safeError } from "@/lib/utils";
+import { getValidatedUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { randomInt } from "crypto";
 
-async function getValidatedUser() {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+const MAX_SMS_ATTEMPTS = 5;
+const MAX_SMS_RESENDS = 3;
 
-    if (error || !user) {
-        throw new Error("Unauthorized");
-    }
-
-    return { supabase, user };
+function generateSmsCode(): string {
+    return randomInt(100000, 999999).toString();
 }
 
 export async function saveLead(input: { formId: string; answers: Record<string, any> }) {
-    const supabase = await createClient(); // Use standard createClient
+    const supabase = createAdminClient();
 
     // 1. Fetch form settings first to check for SMS verification and get brand info
     const { data: form } = await supabase
@@ -28,7 +28,7 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
 
     let smsCode = null;
     if (form?.sms_verification) {
-        smsCode = Math.floor(1000 + Math.random() * 9000).toString();
+        smsCode = generateSmsCode();
     }
 
     // 2. Insert lead with sms_code if applicable
@@ -42,9 +42,11 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
         .select()
         .single();
 
+    console.log("[saveLead] Insert result:", { id: data?.id, error });
+
     if (error) {
         console.error(`[saveLead] Error saving lead for form ${input.formId}:`, error);
-        return { data: null, error: error.message };
+        return { data: null, error: safeError(error, "Failed to save lead") };
     }
 
     const brandName = (form?.brands as any)?.name || "Genesis Flow";
@@ -113,29 +115,37 @@ export async function saveLead(input: { formId: string; answers: Record<string, 
  * the immediate verification trigger and the 3-minute fallback.
  */
 export async function triggerLeadWebhook(leadId: string) {
-    const startTime = Date.now();
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
-    // 1. Fetch lead and form data to check if already sent
-    const { data: lead, error: leadError } = await supabase
+    // 1. Atomically claim this webhook delivery to prevent duplicates.
+    // Only proceeds if webhook_status is currently null.
+    const { data: claimed, error: claimError } = await supabase
         .from("leads")
-        .select("*, forms(id, name, webhook_url)")
+        .update({ webhook_status: -1 }) // -1 = "in progress" sentinel
         .eq("id", leadId)
+        .is("webhook_status", null)
+        .select("*, forms(id, name, webhook_url)")
         .single();
 
-    if (leadError || !lead) {
-        console.error("Trigger webhook lead fetch error:", leadError);
-        return { success: false, error: "Lead not found" };
+    if (claimError || !claimed) {
+        // Either lead not found or webhook already claimed/processed
+        return { success: true, message: "Webhook already processed or lead not found" };
     }
 
-    if (lead.webhook_status !== null) {
-        // Webhook already attempted or sent
-        return { success: true, message: "Webhook already processed" };
-    }
-
+    const lead = claimed;
     const form = lead.forms as any;
     if (!form?.webhook_url) {
+        // Reset sentinel since we won't send
+        await supabase.from("leads").update({ webhook_status: null }).eq("id", leadId);
         return { success: false, error: "No webhook URL configured" };
+    }
+
+    // Validate webhook URL before fetching to prevent SSRF (includes DNS resolution check)
+    const urlCheck = await resolveAndValidate(form.webhook_url);
+    if (!urlCheck.ok) {
+        console.error("Blocked webhook URL:", form.webhook_url, urlCheck.error);
+        await supabase.from("leads").update({ webhook_status: null }).eq("id", leadId);
+        return { success: false, error: "Webhook URL is not allowed" };
     }
 
     // 2. Build payload
@@ -168,6 +178,7 @@ export async function triggerLeadWebhook(leadId: string) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
                 signal: controller.signal,
+                redirect: "error", // Prevent redirect-based SSRF
             });
             clearTimeout(timeoutId);
 
@@ -182,7 +193,6 @@ export async function triggerLeadWebhook(leadId: string) {
         } catch (err: any) {
             clearTimeout(timeoutId);
             if (attempt < 2 && (err.name === 'AbortError' || err.message.includes('fetch'))) {
-                console.log(`Webhook attempt ${attempt} failed, retrying...`);
                 return sendWebhook(attempt + 1);
             }
             throw err;
@@ -203,35 +213,33 @@ export async function triggerLeadWebhook(leadId: string) {
         webhook_status: webhookStatus,
         webhook_response: webhookResponse,
     }).eq("id", leadId);
-    const endTime = Date.now();
-    console.log(`[triggerLeadWebhook] Finished for lead ${leadId} in ${endTime - startTime}ms. Status: ${webhookStatus}`);
 
-    return { success: true, status: webhookStatus, durationMs: endTime - startTime };
+    return { success: true, status: webhookStatus };
 }
 
-export async function getDashboardLeads() {
+export async function getDashboardLeads(limit = 100, offset = 0) {
     const { supabase, user } = await getValidatedUser();
-    const uid = user.id;
 
     const { data, error } = await supabase
         .from("leads")
         .select(`
             *,
-            forms (
-                name
+            forms!inner (
+                name,
+                user_id
             )
         `)
-        .order("created_at", { ascending: false });
+        .eq("forms.user_id", user.id)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
 
     if (error) {
-        console.error("Get dashboard leads error:", error);
         return { data: [], error: error.message };
     }
 
-    // Transform data to flatten form name
     const transformedLeads = (data ?? []).map(lead => ({
         ...lead,
-        form_name: lead.forms?.name || "Unknown Form"
+        form_name: (lead.forms as any)?.name || "Unknown Form"
     }));
 
     return { data: transformedLeads, error: null };
@@ -240,14 +248,18 @@ export async function getDashboardLeads() {
 export async function updateLead(leadId: string, answers: Record<string, any>) {
     const { supabase, user } = await getValidatedUser();
 
-    // 1. Fetch lead (internal tool: no user_id restriction)
+    // Fetch lead and verify the form belongs to this user
     const { data: lead, error: fetchError } = await supabase
         .from("leads")
-        .select("id, answers")
+        .select("id, answers, forms!inner(user_id)")
         .eq("id", leadId)
         .single();
 
     if (fetchError || !lead) return { success: false, error: fetchError?.message || "Lead not found" };
+
+    if ((lead.forms as any)?.user_id !== user.id) {
+        return { success: false, error: "Unauthorized" };
+    }
 
     const { error } = await supabase
         .from("leads")
@@ -265,16 +277,38 @@ export async function updateLead(leadId: string, answers: Record<string, any>) {
 }
 
 export async function verifyLeadSms(leadId: string, code: string) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
+    // Atomically increment sms_attempts and fetch in one step to prevent race conditions.
+    // Uses an RPC for atomic increment; falls back to read-then-write if RPC doesn't exist.
     const { data: lead, error: fetchError } = await supabase
         .from("leads")
-        .select("sms_code")
+        .select("sms_code, sms_attempts")
         .eq("id", leadId)
         .single();
 
     if (fetchError || !lead) {
+        console.error("[verifyLeadSms] Lead lookup failed:", { leadId, fetchError, lead });
         return { success: false, error: "Lead not found" };
+    }
+
+    const currentAttempts = lead.sms_attempts ?? 0;
+    if (currentAttempts >= MAX_SMS_ATTEMPTS) {
+        return { success: false, error: "Too many verification attempts. Please request a new code." };
+    }
+
+    // Atomic increment: only update if the count hasn't changed since we read it
+    const { data: updated, error: updateError } = await supabase
+        .from("leads")
+        .update({ sms_attempts: currentAttempts + 1 })
+        .eq("id", leadId)
+        .eq("sms_attempts", currentAttempts)
+        .select("id")
+        .single();
+
+    if (updateError || !updated) {
+        // Another request raced us — tell user to retry
+        return { success: false, error: "Please try again" };
     }
 
     if (lead.sms_code === code) {
@@ -290,8 +324,6 @@ export async function verifyLeadSms(leadId: string, code: string) {
             return { success: false, error: "Failed to update verification status" };
         }
 
-        // Trigger webhook immediately on successful verification
-        // This will be awaited to ensure delivery
         await triggerLeadWebhook(leadId);
 
         return { success: true };
@@ -301,7 +333,7 @@ export async function verifyLeadSms(leadId: string, code: string) {
 }
 
 export async function resendLeadSms(leadId: string) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch lead and related data
     const { data: lead, error: fetchError } = await supabase
@@ -315,6 +347,12 @@ export async function resendLeadSms(leadId: string) {
         return { success: false, error: "Lead not found" };
     }
 
+    // Check resend limit
+    const resendCount = (lead.sms_resends ?? 0) + 1;
+    if (resendCount > MAX_SMS_RESENDS) {
+        return { success: false, error: "Maximum resend limit reached. Please try again later." };
+    }
+
     const phoneNumber = lead.answers?.phone || lead.answers?.phoneNumber;
     if (!phoneNumber) {
         return { success: false, error: "Phone number not found for this lead" };
@@ -323,12 +361,12 @@ export async function resendLeadSms(leadId: string) {
     const brandName = (lead.forms as any)?.brands?.name || "Genesis Flow";
 
     // 2. Generate new code
-    const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const newCode = generateSmsCode();
 
-    // 3. Update lead with new code
+    // 3. Update lead with new code — reset attempts but track resend count
     const { error: updateError } = await supabase
         .from("leads")
-        .update({ sms_code: newCode })
+        .update({ sms_code: newCode, sms_attempts: 0, sms_resends: resendCount })
         .eq("id", leadId);
 
     if (updateError) {

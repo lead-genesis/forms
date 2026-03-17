@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BrandPage, BrandSection, uploadPageImage } from "@/app/actions/pages";
 import { cn } from "@/lib/utils";
-import { X, Trash2, Palette } from "lucide-react";
+import { X, Trash2, Palette, AlignLeft, AlignRight, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import imageCompression from "browser-image-compression";
 
 // Modular Configs
 import { HeroConfig } from "./configs/HeroConfig";
@@ -33,6 +34,13 @@ export function SectionConfig({ section, brandPages, brandForms, onChange, onDel
         localDataRef.current = data;
     }, [section.id]);
 
+    // Cleanup debounce timer on unmount
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, []);
+
     const debouncedOnChange = useCallback((updates: any) => {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
@@ -48,6 +56,14 @@ export function SectionConfig({ section, brandPages, brandForms, onChange, onDel
     };
 
     const handleFullDataUpdate = (newData: any) => {
+        localDataRef.current = newData;
+        setLocalData(newData);
+        debouncedOnChange(newData);
+    };
+
+    const handleBatchDataChange = (updates: Record<string, any>) => {
+        const newData = { ...localDataRef.current, ...updates };
+        localDataRef.current = newData;
         setLocalData(newData);
         debouncedOnChange(newData);
     };
@@ -60,21 +76,32 @@ export function SectionConfig({ section, brandPages, brandForms, onChange, onDel
         if (!file) return;
 
         setIsUploading(true);
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            const base64 = reader.result as string;
-            const { url, error } = await uploadPageImage(section.page_id, base64);
+        try {
+            const compressed = await imageCompression(file, {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1920,
+                useWebWorker: true,
+            });
 
-            if (error) {
-                toast.error(error);
-            } else if (url) {
-                const field = section.type === 'header' ? 'customLogoUrl' : 'imageUrl';
-                handleDataChange(field, url);
-                toast.success("Image uploaded!");
-            }
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result as string;
+                const { url, error } = await uploadPageImage(section.page_id, base64);
+
+                if (error) {
+                    toast.error(error);
+                } else if (url) {
+                    const field = section.type === 'header' ? 'customLogoUrl' : 'imageUrl';
+                    handleDataChange(field, url);
+                    toast.success("Image uploaded!");
+                }
+                setIsUploading(false);
+            };
+            reader.readAsDataURL(compressed);
+        } catch {
+            toast.error("Failed to compress image");
             setIsUploading(false);
-        };
-        reader.readAsDataURL(file);
+        }
     };
 
     return (
@@ -88,13 +115,14 @@ export function SectionConfig({ section, brandPages, brandForms, onChange, onDel
                     <button
                         onClick={onDelete}
                         className="p-2 hover:bg-red-50 text-zinc-400 hover:text-red-500 rounded-xl transition-all"
-                        title="Delete Section"
+                        aria-label="Delete section"
                     >
                         <Trash2 className="w-5 h-5" />
                     </button>
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 rounded-xl transition-all"
+                        aria-label="Close settings panel"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -132,6 +160,7 @@ export function SectionConfig({ section, brandPages, brandForms, onChange, onDel
                         brandPages={brandPages}
                         brandForms={brandForms}
                         onDataChange={handleDataChange}
+                        onBatchDataChange={handleBatchDataChange}
                         onFullDataUpdate={handleFullDataUpdate}
                         onFileUpload={handleFileUpload}
                         isUploading={isUploading}
@@ -164,6 +193,7 @@ function SectionTypeConfig({
     brandPages,
     brandForms,
     onDataChange,
+    onBatchDataChange,
     onFullDataUpdate,
     onFileUpload,
     isUploading,
@@ -174,6 +204,7 @@ function SectionTypeConfig({
     brandPages?: BrandPage[];
     brandForms?: BrandForm[];
     onDataChange: (key: string, value: any) => void;
+    onBatchDataChange: (updates: Record<string, any>) => void;
     onFullDataUpdate: (newData: any) => void;
     onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     isUploading: boolean;
@@ -189,6 +220,10 @@ function SectionTypeConfig({
                     brandPages={brandPages}
                     brandForms={brandForms}
                     onDataChange={onDataChange}
+                    onBatchDataChange={onBatchDataChange}
+                    onFileUpload={onFileUpload}
+                    isUploading={isUploading}
+                    fileInputRef={fileInputRef}
                 />
             );
         case 'text':
@@ -274,8 +309,6 @@ function SectionTypeConfig({
     }
 }
 
-import { AlignLeft, AlignRight, Image as ImageIcon, Upload, Loader2, X as CloseIcon } from "lucide-react";
-
 function SectionStylingConfig({
     section,
     data,
@@ -356,7 +389,7 @@ function SectionStylingConfig({
                                         onClick={() => onDataChange('imageUrl', '')}
                                         className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur shadow-sm rounded-lg text-zinc-500 hover:text-red-500 transition-colors"
                                     >
-                                        <CloseIcon className="w-4 h-4" />
+                                        <X className="w-4 h-4" />
                                     </button>
                                 </div>
                             )}

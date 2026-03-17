@@ -85,10 +85,12 @@ export async function middleware(req: NextRequest) {
     const SEO_PATHS = ['/sitemap.xml', '/robots.txt'];
     const isSeoPath = SEO_PATHS.includes(url.pathname);
 
-    // Skip internal Next.js paths and static files (but not SEO files — those need domain rewriting)
+    // Skip internal paths, static files, and already-rewritten paths (but not SEO files — those need domain rewriting)
     if (
         url.pathname.startsWith('/_next') ||
         url.pathname.startsWith('/api') ||
+        url.pathname.startsWith('/form-subdomain/') ||
+        url.pathname.startsWith('/brand-runtime/') ||
         (url.pathname.includes('.') && !isSeoPath)
     ) {
         return res;
@@ -116,22 +118,13 @@ export async function middleware(req: NextRequest) {
         '127.0.0.1:3001',
     ];
 
-    // 1. Initial checks to skip internal paths (SEO files pass through for domain rewriting)
-    if (
-        url.pathname.startsWith('/_next') ||
-        url.pathname.startsWith('/api') ||
-        url.pathname.startsWith('/form-subdomain/') ||
-        url.pathname.startsWith('/brand-runtime/') ||
-        (url.pathname.includes('.') && !isSeoPath)
-    ) {
-        return res;
-    }
-
     // 2. Identify if it's a custom domain or a subdomain
     const isBaseDomain = baseDomains.includes(hostname);
     const isVercelDomain = hostname.includes('vercel.app') || hostname.includes('now.sh');
 
-    if (isBaseDomain || (isVercelDomain && hostname.split('.').length <= 3)) {
+    // Vercel preview URLs can have 4+ segments (e.g. feature-branch.project.vercel.app)
+    // so treat any *.vercel.app or *.now.sh hostname as a platform domain, not a custom domain.
+    if (isBaseDomain || isVercelDomain) {
         return res;
     }
 
@@ -142,11 +135,32 @@ export async function middleware(req: NextRequest) {
         const subdomain = hostname.replace('.genesisflow.io', '').toLowerCase();
         if (subdomain === 'www' || subdomain === 'api' || subdomain === 'admin') return res;
 
-        console.log(`Rewriting subdomain: ${subdomain}, path: ${url.pathname}`);
+        // Check if subdomain belongs to a brand first
+        const { data: brand } = await supabase
+            .from("brands")
+            .select("id")
+            .eq("subdomain", subdomain)
+            .single();
+
+        if (brand) {
+            return NextResponse.rewrite(new URL(`/brand-runtime/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, req.url));
+        }
+
+        // Check if subdomain belongs to a form
+        const { data: form } = await supabase
+            .from("forms")
+            .select("id")
+            .eq("subdomain", subdomain)
+            .single();
+
+        if (form) {
+            return NextResponse.rewrite(new URL(`/form-subdomain/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, req.url));
+        }
+
+        // Default to brand-runtime (will show "Site Not Found")
         return NextResponse.rewrite(new URL(`/brand-runtime/${subdomain}${url.pathname === '/' ? '' : url.pathname}`, req.url));
     }
 
     // 4. Otherwise, handle as a full custom domain (for brands)
-    console.log(`Rewriting custom domain: ${hostname}, path: ${url.pathname}`);
     return NextResponse.rewrite(new URL(`/brand-runtime/${hostname}${url.pathname === '/' ? '' : url.pathname}`, req.url));
 }

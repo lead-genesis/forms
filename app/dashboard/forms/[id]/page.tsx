@@ -207,7 +207,7 @@ export default function FormDetailPage() {
     // ─── Render ───────────────────────────────────────────────────────────────
 
     return (
-        <DashboardPage>
+        <DashboardPage className="pt-3 md:pt-4">
             {/* Header */}
             <motion.div
                 initial={{ y: -10, opacity: 0 }}
@@ -215,20 +215,19 @@ export default function FormDetailPage() {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-6 lg:px-10 mb-2"
             >
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-1">
                     <button
                         onClick={() => router.push("/dashboard/forms")}
-                        className="p-2 -ml-2 rounded-xl hover:bg-secondary/60 transition-colors"
+                        className="flex items-center gap-1.5 -ml-0.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-fit cursor-pointer"
                         aria-label="Back to forms"
                     >
-                        <ArrowLeftIcon className="w-5 h-5 text-muted-foreground" />
+                        <ArrowLeftIcon className="w-3.5 h-3.5" />
+                        Back to Forms
                     </button>
                     <div>
-                        <div className="flex items-center gap-2.5">
-                            <h1 className={cn("text-2xl md:text-3xl font-bold tracking-tight text-foreground", sansFont)}>
-                                {form.name}
-                            </h1>
-                        </div>
+                        <h1 className={cn("text-2xl md:text-3xl font-bold tracking-tight text-foreground", sansFont)}>
+                            {form.name}
+                        </h1>
                         {form.brands && (
                             <p className="text-sm text-muted-foreground mt-0.5">{form.brands.name}</p>
                         )}
@@ -267,7 +266,7 @@ export default function FormDetailPage() {
                     <button
                         onClick={handleDuplicate}
                         disabled={isDuplicating}
-                        className="inline-flex items-center gap-2 bg-secondary/50 text-foreground hover:bg-secondary/80 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 disabled:opacity-50"
+                        className="btn-outline disabled:opacity-50"
                     >
                         {isDuplicating ? (
                             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -279,7 +278,7 @@ export default function FormDetailPage() {
 
                     <button
                         onClick={handlePreview}
-                        className="inline-flex items-center gap-2 bg-secondary/50 text-foreground hover:bg-secondary/80 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200"
+                        className="btn-outline"
                     >
                         <PlayIcon className="w-4 h-4" />
                         Preview
@@ -288,10 +287,8 @@ export default function FormDetailPage() {
                     <button
                         onClick={handleCopyLink}
                         className={cn(
-                            "inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 border border-transparent",
-                            copied
-                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                : "bg-secondary/50 text-foreground hover:bg-secondary/80"
+                            "btn-outline",
+                            copied && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10"
                         )}
                     >
                         {copied ? (

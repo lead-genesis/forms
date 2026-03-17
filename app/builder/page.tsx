@@ -31,6 +31,8 @@ function BuilderContent() {
     const [formName, setFormName] = useState("New Lead Form");
     const [brand, setBrand] = useState<{ name: string; logo_url?: string | null; banner_url?: string | null } | null>(null);
     const [steps, setSteps] = useState<FormStep[]>([]);
+    const stepsRef = useRef<FormStep[]>(steps);
+    stepsRef.current = steps;
     const [currentStepId, setCurrentStepId] = useState<string>("");
     const [webhookUrl, setWebhookUrl] = useState("");
     const [subdomain, setSubdomain] = useState("");
@@ -193,12 +195,12 @@ function BuilderContent() {
 
         clearTimeout(stepDebounceRefs.current[stepId]);
         stepDebounceRefs.current[stepId] = setTimeout(async () => {
-            const step = steps.find(s => s.id === stepId);
+            const step = stepsRef.current.find(s => s.id === stepId);
             if (step) {
                 await updateStep(stepId, { data: { ...step.data, ...newData } });
             }
         }, 300);
-    }, [formId, steps]);
+    }, [formId]);
 
     const updateStepTitle = useCallback((stepId: string, title: string) => {
         setSteps(prev =>

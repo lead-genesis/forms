@@ -1,7 +1,7 @@
 const config = {
   plugins: {
     "@tailwindcss/postcss": {
-      base: "./",
+      base: import.meta.dirname,
     },
   },
 };

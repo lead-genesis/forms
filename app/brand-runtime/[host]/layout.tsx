@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
     const decodedHost = decodeURIComponent(host);
     const { data: brand } = await getBrandByDomain(decodedHost);
 
-    if (!brand) return { title: "Site Not Found" };
+    if (!brand) return { title: { absolute: "Site Not Found" } };
 
     const baseUrl = `https://${brand.custom_domain || decodedHost}`;
 
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ host: str
     return {
         metadataBase: new URL(baseUrl),
         title: {
-            default: title,
+            absolute: title,
             template: `%s | ${brand.name}`,
         },
         description,

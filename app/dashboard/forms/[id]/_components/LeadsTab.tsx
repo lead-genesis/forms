@@ -1,9 +1,20 @@
 import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { sansFont } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 import { PerformanceTab } from "./PerformanceTab";
+
+function getPaginationRange(current: number, total: number): (number | "...")[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [1];
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    if (start > 2) pages.push("...");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < total - 1) pages.push("...");
+    pages.push(total);
+    return pages;
+}
 
 interface Lead {
     id: string;
@@ -42,7 +53,7 @@ export function LeadsTab({
     onViewLead
 }: LeadsTabProps) {
     const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 15;
+    const pageSize = 10;
 
     if (leads.length === 0) {
         return (
@@ -52,8 +63,8 @@ export function LeadsTab({
                     totalViews={totalViews}
                     conversionRate={conversionRate}
                 />
-                <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                    <CardContent className="p-10 flex flex-col items-center justify-center text-center">
+                <div className="rounded-xl bg-background/50 border border-border/40 overflow-hidden">
+                    <div className="p-10 flex flex-col items-center justify-center text-center">
                         <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
                             <UserGroupIcon className="w-8 h-8 text-muted-foreground" />
                         </div>
@@ -61,8 +72,8 @@ export function LeadsTab({
                         <p className="text-muted-foreground text-sm max-w-md">
                             Share your form to start collecting leads. They&apos;ll appear here in real time.
                         </p>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -87,8 +98,8 @@ export function LeadsTab({
                 conversionRate={conversionRate}
             />
 
-            <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
-                <CardContent className="p-0">
+            <div className="rounded-xl bg-background/50 border border-border/40 overflow-hidden">
+                <div className="p-0">
                     <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-secondary/50">
                         <table className={cn("w-full text-sm min-w-[800px]", sansFont)}>
                             <thead>
@@ -161,8 +172,8 @@ export function LeadsTab({
                             </tbody>
                         </table>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
@@ -179,19 +190,23 @@ export function LeadsTab({
                             Previous
                         </button>
                         <div className="flex items-center gap-1">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                <button
-                                    key={page}
-                                    onClick={() => setCurrentPage(page)}
-                                    className={cn(
-                                        "w-9 h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200",
-                                        currentPage === page
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-                                    )}
-                                >
-                                    {page}
-                                </button>
+                            {getPaginationRange(currentPage, totalPages).map((page, i) => (
+                                page === "..." ? (
+                                    <span key={`ellipsis-${i}`} className="w-9 h-9 flex items-center justify-center text-sm text-muted-foreground">...</span>
+                                ) : (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page as number)}
+                                        className={cn(
+                                            "w-9 h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200",
+                                            currentPage === page
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        {page}
+                                    </button>
+                                )
                             ))}
                         </div>
                         <button

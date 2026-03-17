@@ -1,17 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-
-async function getValidatedUser() {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) {
-        throw new Error("Unauthorized");
-    }
-
-    return { supabase, user };
-}
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isAllowedWebhookUrl } from "@/lib/url-validation";
+import { safeError } from "@/lib/utils";
+import { getValidatedUser } from "@/lib/auth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,7 +65,7 @@ export async function createForm(input: CreateFormInput) {
 
     if (error) {
         console.error("Create form error:", error);
-        return { data: null, error: error.message };
+        return { data: null, error: safeError(error, "Failed to create form") };
     }
 
     // Seed default Welcome + Thank You steps
@@ -122,7 +115,7 @@ export async function getForms() {
 
     if (error) {
         console.error("Get forms error:", error);
-        return { data: [], error: error.message };
+        return { data: [], error: safeError(error, "Failed to load forms") };
     }
 
     return { data: data ?? [], error: null };
@@ -147,7 +140,6 @@ export async function getBrandForms(brandId: string) {
 
 /** Load a single form with its brand details (for the builder). */
 export async function getForm(id: string) {
-    console.log("[getForm] Fetching form with ID:", id);
     try {
         const supabase = await createClient();
         const { data, error } = await supabase
@@ -165,11 +157,10 @@ export async function getForm(id: string) {
             .single();
 
         if (error) {
-            console.error(`[updateForm] Error updating form ${id}:`, error);
-            return { data: null, error: error.message };
+            console.error(`[getForm] Error fetching form ${id}:`, error);
+            return { data: null, error: safeError(error, "Failed to load form") };
         }
 
-        console.log("[getForm] Successfully fetched form:", data?.name);
         return { data, error: null };
     } catch (error: any) {
         console.error("[getForm] Caught exception:", error);
@@ -179,7 +170,6 @@ export async function getForm(id: string) {
 
 /** Load a single form with its brand details by subdomain (for custom domains). */
 export async function getFormBySubdomain(subdomain: string) {
-    console.log("Fetching form by subdomain:", subdomain);
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -196,20 +186,17 @@ export async function getFormBySubdomain(subdomain: string) {
         .eq("subdomain", subdomain)
         .single();
 
-
     if (error) {
         console.error("Get form by subdomain error:", error);
         return { data: null, error: error.message };
     }
 
-    console.log("Successfully fetched form:", data.name);
     return { data, error: null };
 }
 
 // ─── Form Steps ───────────────────────────────────────────────────────────────
 
 export async function getFormSteps(formId: string) {
-    console.log("[getFormSteps] Fetching steps for form ID:", formId);
     try {
         const supabase = await createClient();
         const { data, error } = await supabase
@@ -223,7 +210,6 @@ export async function getFormSteps(formId: string) {
             return { data: [], error: error.message };
         }
 
-        console.log("[getFormSteps] Successfully fetched steps count:", data?.length);
         return { data: data ?? [], error: null };
     } catch (error: any) {
         console.error("[getFormSteps] Caught exception:", error);
@@ -340,14 +326,15 @@ export async function reorderSteps(updates: { id: string; order: number }[]) {
 
 // ─── Leads ────────────────────────────────────────────────────────────────────
 
-export async function getLeadsByForm(formId: string) {
+export async function getLeadsByForm(formId: string, limit = 100, offset = 0) {
     try {
         const { supabase } = await getValidatedUser();
         const { data, error } = await supabase
             .from("leads")
             .select("*")
             .eq("form_id", formId)
-            .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) {
             console.error("Get leads error:", error);
@@ -366,23 +353,11 @@ export async function incrementFormViews(formId: string) {
     try {
         const supabase = await createClient();
 
-        // 1. Try atomic increment using RPC
         const { error: rpcError } = await supabase.rpc('increment_form_views', { f_id: formId });
 
-        if (!rpcError) return { success: true };
-
-        // 2. Fallback to basic update (non-atomic but reliable)
-        const { data: form } = await supabase
-            .from("forms")
-            .select("views")
-            .eq("id", formId)
-            .single();
-
-        if (form) {
-            await supabase
-                .from("forms")
-                .update({ views: (form.views || 0) + 1 })
-                .eq("id", formId);
+        if (rpcError) {
+            console.error("increment_form_views RPC failed:", rpcError);
+            return { success: false };
         }
 
         return { success: true };
@@ -472,6 +447,14 @@ export async function updateForm(formId: string, input: UpdateFormInput) {
             }
         }
 
+        // Validate webhook URL before saving
+        if (input.webhook_url) {
+            const validation = isAllowedWebhookUrl(input.webhook_url);
+            if (!validation.ok) {
+                return { data: null, error: validation.error || "Invalid webhook URL" };
+            }
+        }
+
         const { data, error } = await supabase
             .from("forms")
             .update(input)
@@ -481,7 +464,7 @@ export async function updateForm(formId: string, input: UpdateFormInput) {
 
         if (error) {
             console.error("Update form error:", error);
-            return { data: null, error: error.message };
+            return { data: null, error: safeError(error, "Failed to update form") };
         }
 
         return { data, error: null };
@@ -624,6 +607,18 @@ export async function duplicateForm(formId: string) {
 // ─── Webhooks ─────────────────────────────────────────────────────────────────
 
 export async function testWebhookUrl(url: string, payload: any) {
+    // Require authentication to prevent unauthenticated proxy abuse
+    try {
+        await getValidatedUser();
+    } catch {
+        return { success: false, error: "Unauthorized" };
+    }
+
+    const validation = isAllowedWebhookUrl(url);
+    if (!validation.ok) {
+        return { success: false, error: validation.error };
+    }
+
     try {
         const res = await fetch(url, {
             method: "POST",
@@ -631,6 +626,7 @@ export async function testWebhookUrl(url: string, payload: any) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
+            redirect: "error",
         });
 
         if (!res.ok) {
@@ -647,21 +643,38 @@ export async function testWebhookUrl(url: string, payload: any) {
 // ─── Image Upload ─────────────────────────────────────────────────────────────
 
 async function uploadImage(
-    supabase: any,
     dataUrl: string,
     path: string
 ): Promise<string | null> {
+    const supabase = createAdminClient();
     try {
         const [meta, base64] = dataUrl.split(",");
+        if (!base64) {
+            console.error("Invalid image data");
+            return null;
+        }
+
         const mimeMatch = meta.match(/:(.*?);/);
         const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+
+        if (!mime.startsWith("image/")) {
+            console.error("Invalid file type:", mime);
+            return null;
+        }
+
         const ext = mime.split("/")[1] ?? "jpg";
         const buffer = Buffer.from(base64, "base64");
+
+        if (buffer.length > 5 * 1024 * 1024) {
+            console.error("Image too large:", buffer.length);
+            return null;
+        }
+
         const filePath = `${path}.${ext}`;
 
         const { error } = await supabase.storage
             .from("brand-images")
-            .upload(filePath, buffer, { contentType: mime, upsert: true });
+            .upload(filePath, buffer, { contentType: mime, upsert: true, cacheControl: '3600' });
 
         if (error) {
             console.error("Image upload error:", error);
@@ -681,7 +694,7 @@ export async function updateFormBanner(formId: string, dataUrl: string) {
         const { supabase, user } = await getValidatedUser();
 
         const filePath = `${user.id}/forms/${formId}/banner`;
-        const bannerUrl = await uploadImage(supabase, dataUrl, filePath);
+        const bannerUrl = await uploadImage(dataUrl, filePath);
 
         if (!bannerUrl) {
             return { data: null, error: "Failed to upload image" };

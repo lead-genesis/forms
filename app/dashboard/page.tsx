@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import {
@@ -76,7 +76,7 @@ export default function DashboardOverview() {
     const [dateRange, setDateRange] = useState("30");
     const [firstName, setFirstName] = useState<string | null>(null);
 
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
         supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -111,7 +111,7 @@ export default function DashboardOverview() {
             bg: "bg-blue-500/10",
         },
         {
-            label: "Total Revenue",
+            label: "Est. Revenue",
             value: `$${(stats?.totalRevenue ?? 0).toLocaleString()}`,
             icon: BanknotesIcon,
             color: "text-emerald-500",
@@ -175,6 +175,8 @@ export default function DashboardOverview() {
                         : metrics.map((m, i) => (
                               <motion.div
                                   key={i}
+                                  initial="hidden"
+                                  animate="show"
                                   variants={fadeUp}
                                   className="p-5 flex items-center justify-between rounded-xl bg-background/50 border border-border/40 hover:border-border/80 transition-colors"
                               >
@@ -194,11 +196,11 @@ export default function DashboardOverview() {
                 </motion.div>
 
                 {/* ── Two-col: Top Forms + Top Brands ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                     {/* Top Performing Forms */}
                     <motion.div variants={fadeUp} initial="hidden" animate="show">
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <FireIcon className="w-4 h-4 text-orange-500" />
@@ -210,7 +212,7 @@ export default function DashboardOverview() {
                                 </Badge>
                             </div>
                         </div>
-                        <div className="pt-2 pb-4 min-h-[180px]">
+                        <div>
                             {loading ? (
                                 <div className="space-y-4">
                                     {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
@@ -229,14 +231,14 @@ export default function DashboardOverview() {
 
                     {/* Top Brands */}
                     <motion.div variants={fadeUp} initial="hidden" animate="show">
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-2">
                             <BriefcaseIcon className="w-4 h-4 text-blue-500" />
                             <span className={cn("text-xs font-bold uppercase tracking-wide text-foreground/80", sansFont)}>
                                 Top Brands
                             </span>
                         </div>
-                        <div className="pt-2 pb-4 min-h-[180px]">
+                        <div>
                             {loading ? (
                                 <div className="flex items-center gap-8">
                                     <Skeleton className="w-32 h-32 rounded-full shrink-0" />
@@ -258,8 +260,8 @@ export default function DashboardOverview() {
                 </div>
 
                 {/* ── Recent Leads ── */}
-                <motion.div variants={fadeUp} initial="hidden" animate="show" className="pt-12">
-                    <div className="flex flex-col gap-4">
+                <motion.div variants={fadeUp} initial="hidden" animate="show">
+                    <div className="flex flex-col gap-3">
                         {/* Section header */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">

@@ -38,6 +38,12 @@
   --font-serif-playfair: var(--font-playfair), "Playfair Display", Georgia, serif;
 }
 
+@layer components {
+  .btn-outline {
+    @apply inline-flex items-center gap-2 border border-border text-foreground hover:bg-secondary/40 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 duration-200 cursor-pointer;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

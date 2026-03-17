@@ -97,10 +97,10 @@ export function FormCanvas({
     return (
         <div className="flex-1 overflow-y-auto pt-0 pb-20 relative no-scrollbar @container">
             {/* Banner */}
-            <div className="h-[20vh] @lg:h-96 w-full overflow-hidden relative shrink-0 transition-all duration-500">
+            <div className="h-[20vh] @lg:h-56 w-full overflow-hidden relative shrink-0 transition-all duration-500">
                 <img
                     src={bannerSrc}
-                    alt="Brand Banner"
+                    alt={brand?.name ? `${brand.name} banner` : "Form banner"}
                     className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-secondary/5" />
@@ -110,6 +110,7 @@ export function FormCanvas({
                     <div className="absolute top-6 right-6 z-10">
                         <button
                             onClick={() => setIsBannerModalOpen(true)}
+                            aria-label="Update banner image"
                             className="bg-background/95 backdrop-blur-md border border-border/60 rounded-full px-4 py-2 shadow-xl flex items-center gap-2 hover:bg-secondary transition-all active:scale-95 group"
                         >
                             <Paintbrush className="w-3.5 h-3.5 text-primary group-hover:rotate-12 transition-transform" />

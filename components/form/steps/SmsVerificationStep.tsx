@@ -27,7 +27,7 @@ export function SmsVerificationStep({
     const [timer, setTimer] = useState(60);
 
     useEffect(() => {
-        let interval: any;
+        let interval: ReturnType<typeof setInterval>;
         if (timer > 0) {
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
@@ -37,8 +37,8 @@ export function SmsVerificationStep({
     }, [timer]);
 
     const handleVerify = async () => {
-        if (code.length !== 4) {
-            setError("Please enter a 4-digit code");
+        if (code.length !== 6) {
+            setError("Please enter a 6-digit code");
             return;
         }
 
@@ -85,7 +85,7 @@ export function SmsVerificationStep({
                 </div>
                 <h2 className={cn("text-2xl font-bold tracking-tight", sansFont)}>Almost Done! Enter SMS Code</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                    We've sent a 4-digit code to <span className="font-semibold text-foreground whitespace-nowrap">{phoneNumber || "your phone"}</span>.
+                    We've sent a 6-digit code to <span className="font-semibold text-foreground whitespace-nowrap">{phoneNumber || "your phone"}</span>.
                 </p>
             </div>
 
@@ -93,16 +93,19 @@ export function SmsVerificationStep({
                 <div className="relative">
                     <input
                         type="text"
-                        maxLength={4}
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
                         value={code}
                         onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, "");
-                            if (val.length <= 4) setCode(val);
+                            if (val.length <= 6) setCode(val);
                             if (error) setError(null);
                         }}
                         autoFocus
-                        placeholder="----"
-                        className="w-48 h-16 text-center text-3xl font-bold tracking-[0.5em] pl-[0.5em] rounded-2xl border-2 border-border/50 bg-secondary/5 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-muted-foreground/20"
+                        placeholder="------"
+                        aria-label="6-digit verification code"
+                        className="w-48 h-16 text-center text-2xl font-bold tracking-[0.5em] pl-[0.5em] rounded-2xl border-2 border-border/50 bg-secondary/5 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all placeholder:text-muted-foreground/20"
                     />
                 </div>
 
@@ -123,7 +126,7 @@ export function SmsVerificationStep({
                         size="lg"
                         className="w-full rounded-xl h-12 text-sm font-bold shadow-lg shadow-primary/20"
                         onClick={handleVerify}
-                        disabled={loading || code.length !== 4}
+                        disabled={loading || code.length !== 6}
                     >
                         {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                         Verify & Continue

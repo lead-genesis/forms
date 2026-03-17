@@ -2,32 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-export interface AnalyticsSummary {
-    totalLeads: number;
-    totalConversions: number;
-    conversionRate: number;
-    leadsByDay: { date: string, count: number }[];
-    leadsByBrand: { name: string, count: number }[];
-    totalViews: number;
-}
-
-export async function getAnalyticsSummary(brandId?: string) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-        return { data: null, error: "Unauthorized" };
-    }
-
-    try {
-        // This is a placeholder for more detailed analytics if needed later
-        // For now, we'll return a basic structure or implement as needed
-        return { data: null, error: "Not implemented" };
-    } catch (e: any) {
-        return { data: null, error: e.message };
-    }
-}
-
 export interface DashboardStats {
     totalLeads: number;
     totalViews: number;

@@ -1362,11 +1362,11 @@ export default function BrandDetailsPage() {
                                     <table className={tableBase + " border-collapse min-w-[520px] sm:min-w-full w-full"}>
                                         <thead className={tableHead}>
                                             <tr>
-                                                <th className={tableHeadCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>Page</th>
-                                                <th className={tableHeadCell + " px-3 sm:px-4 hidden sm:table-cell"}>Slug</th>
-                                                <th className={tableHeadCell + " px-3 sm:px-4"}>Index</th>
-                                                <th className={tableHeadCell + " px-3 sm:px-4"}>Status</th>
-                                                <th className={tableHeadCell + " px-3 sm:px-4 hidden lg:table-cell"}>Updated</th>
+                                                <th className={tableHeadCell}>Page</th>
+                                                <th className={tableHeadCell + " hidden sm:table-cell"}>Slug</th>
+                                                <th className={tableHeadCell}>Index</th>
+                                                <th className={tableHeadCell}>Status</th>
+                                                <th className={tableHeadCell + " hidden lg:table-cell"}>Updated</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1376,7 +1376,7 @@ export default function BrandDetailsPage() {
                                                         className={cn(tableRow, "cursor-pointer transition-colors active:bg-secondary/20")}
                                                         onClick={() => router.push(`/page-builder/${page.id}`)}
                                                     >
-                                                        <td className={tableCell + " pl-4 sm:pl-6 md:pl-10 pr-3 sm:pr-4"}>
+                                                        <td className={tableCell}>
                                                             <div className="flex items-center gap-3">
                                                                 <div className={cn(
                                                                     "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
@@ -1394,10 +1394,10 @@ export default function BrandDetailsPage() {
                                                                 </span>
                                                             </div>
                                                         </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground font-mono text-xs hidden sm:table-cell"}>
+                                                        <td className={tableCell + " text-muted-foreground font-mono text-xs hidden sm:table-cell"}>
                                                             /{page.slug}
                                                         </td>
-                                                        <td className={tableCell + " px-3 sm:px-4"} onClick={(e) => e.stopPropagation()}>
+                                                        <td className={tableCell} onClick={(e) => e.stopPropagation()}>
                                                             {page.is_index ? (
                                                                 <Check className="w-4 h-4 text-primary" />
                                                             ) : (
@@ -1411,10 +1411,10 @@ export default function BrandDetailsPage() {
                                                                 </button>
                                                             )}
                                                         </td>
-                                                        <td className={tableCell + " px-3 sm:px-4"} onClick={(e) => e.stopPropagation()}>
+                                                        <td className={tableCell} onClick={(e) => e.stopPropagation()}>
                                                             <PageStatusToggle page={page} showLabel={false} />
                                                         </td>
-                                                        <td className={tableCell + " px-3 sm:px-4 text-muted-foreground text-xs hidden lg:table-cell"}>
+                                                        <td className={tableCell + " text-muted-foreground text-xs hidden lg:table-cell"}>
                                                             {new Date(page.updated_at).toLocaleDateString()}
                                                         </td>
                                                     </tr>

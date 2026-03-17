@@ -171,7 +171,7 @@ export default function PageBuilderPage() {
                 onTitleChange={(title) => handleUpdatePage({ title })}
                 onBack={() => router.push(`/dashboard/brands/${page.brand_id}`)}
                 status={page.is_published ? "Published" : "Draft"}
-                lastSaved={new Date(page.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                lastSavedAt={new Date(page.updated_at)}
                 onOpenSettings={() => {
                     setShowPageSettings(!showPageSettings);
                 }}
