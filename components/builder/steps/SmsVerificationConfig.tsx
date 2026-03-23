@@ -1,35 +1,17 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Code } from "lucide-react";
 
-interface ThankYouConfigProps {
+interface SmsVerificationConfigProps {
     data: any;
     onUpdate: (data: any) => void;
 }
 
-export const ThankYouConfig = ({ data, onUpdate }: ThankYouConfigProps) => {
+export const SmsVerificationConfig = ({ data, onUpdate }: SmsVerificationConfigProps) => {
     return (
         <div className="space-y-4">
             <div className="space-y-2">
-                <Label>Message</Label>
-                <Input
-                    value={data.message || ""}
-                    onChange={(e) => onUpdate({ message: e.target.value })}
-                    placeholder="Thank You!"
-                />
-            </div>
-            <div className="space-y-2">
-                <Label>Subtext</Label>
-                <Textarea
-                    value={data.subtext || ""}
-                    onChange={(e) => onUpdate({ subtext: e.target.value })}
-                    placeholder="Confirmation message..."
-                />
-            </div>
-
-            <div className="space-y-2 pt-4 border-t border-border/60">
                 <div className="flex items-center gap-1.5">
                     <Code className="w-3 h-3 text-primary" />
                     <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Conversion Code</Label>
@@ -37,7 +19,7 @@ export const ThankYouConfig = ({ data, onUpdate }: ThankYouConfigProps) => {
                 <Textarea
                     value={data.conversion_code || ""}
                     onChange={(e) => onUpdate({ conversion_code: e.target.value })}
-                    placeholder={"<!-- Fires on form completion -->\n<script>\n  fbq('track', 'Lead');\n</script>"}
+                    placeholder={"<!-- Fires on SMS verification -->\n<script>\n  fbq('track', 'CompleteRegistration');\n</script>"}
                     className="min-h-[120px] resize-none font-mono text-xs"
                     spellCheck={false}
                 />

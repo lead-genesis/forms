@@ -22,6 +22,8 @@ export interface Form {
     custom_page_title: string | null;
     custom_site_description: string | null;
     disclaimer: string | null;
+    custom_code: string | null;
+    vertical: string | null;
 }
 
 export interface CreateFormInput {
@@ -150,7 +152,8 @@ export async function getForm(id: string) {
                     id,
                     name,
                     logo_url,
-                    banner_url
+                    banner_url,
+                    verticals
                 )
             `)
             .eq("id", id)
@@ -379,6 +382,8 @@ export interface UpdateFormInput {
     custom_page_title?: string | null;
     custom_site_description?: string | null;
     disclaimer?: string | null;
+    custom_code?: string | null;
+    vertical?: string | null;
 }
 
 export async function updateForm(formId: string, input: UpdateFormInput) {

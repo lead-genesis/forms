@@ -62,7 +62,6 @@ Use `border-l-2` on cards, upgrading to `border-l-[3px]` on hover.
 Use the modular dashboard components from `@/components/dashboard/DashboardPage`:
 
 - **`<DashboardPage>`**: Main wrapper for staggered animations and consistent vertical spacing.
-- **`<DashboardHeader>`**: Consistent page title, subtitle, and action buttons.
 - **`<DashboardControls>`**: Wrapper for search bars and filters.
 
 ---

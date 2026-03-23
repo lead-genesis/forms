@@ -60,7 +60,7 @@ export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview, 
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => buttonHref === "#" && e.preventDefault()}
-                                className="inline-block bg-zinc-900 text-white px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm shadow-2xl active:scale-95 transition-all border border-white/10"
+                                className="inline-block bg-zinc-900 text-white px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-full font-bold text-sm shadow-2xl active:scale-95 transition-all border border-white/10"
                             >
                                 {data.buttonText}
                             </a>
@@ -94,7 +94,7 @@ export const HeroRenderer = React.memo(({ data, fontColor, imageUrl, isPreview, 
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => buttonHref === "#" && e.preventDefault()}
-                                className="inline-block bg-zinc-900 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all"
+                                className="inline-block bg-zinc-900 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-full font-bold text-sm shadow-xl active:scale-95 transition-all"
                             >
                                 {data.buttonText}
                             </a>

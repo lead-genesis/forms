@@ -186,9 +186,9 @@ export function AddFormModal({ trigger, onCreated, brands: initialBrands }: AddF
                                                     )}
                                                 >
                                                     {/* Logo */}
-                                                    <div className="w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
+                                                    <div className="relative w-9 h-9 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
                                                         {brand.logo_url ? (
-                                                            <Image src={brand.logo_url} alt={brand.name} fill className="object-cover" />
+                                                            <Image src={brand.logo_url} alt={brand.name} fill className="object-cover" sizes="36px" />
                                                         ) : (
                                                             <TagIcon className="w-4 h-4 text-zinc-400" />
                                                         )}
@@ -226,9 +226,9 @@ export function AddFormModal({ trigger, onCreated, brands: initialBrands }: AddF
                                 {/* Selected brand preview */}
                                 {selectedBrand && (
                                     <div className="flex items-center gap-2.5 px-3 py-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                                        <div className="w-7 h-7 rounded-lg bg-white border border-zinc-100 flex items-center justify-center overflow-hidden shrink-0">
+                                        <div className="relative w-7 h-7 rounded-lg bg-white border border-zinc-100 flex items-center justify-center overflow-hidden shrink-0">
                                             {selectedBrand.logo_url ? (
-                                                <Image src={selectedBrand.logo_url} alt={selectedBrand.name} fill className="object-cover" />
+                                                <Image src={selectedBrand.logo_url} alt={selectedBrand.name} fill className="object-cover" sizes="28px" />
                                             ) : (
                                                 <TagIcon className="w-3.5 h-3.5 text-zinc-400" />
                                             )}
@@ -303,7 +303,7 @@ export function AddFormModal({ trigger, onCreated, brands: initialBrands }: AddF
                             disabled={isCreating || !formName.trim()}
                             whileHover={!isCreating ? { scale: 1.02 } : {}}
                             whileTap={!isCreating ? { scale: 0.97 } : {}}
-                            className="flex items-center gap-2 bg-zinc-900 text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm"
+                            className="flex items-center gap-2 bg-zinc-900 text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm"
                         >
                             {isCreating ? "Creating…" : "Create & Open"}
                             {!isCreating && <ArrowRightIcon className="w-3.5 h-3.5" />}

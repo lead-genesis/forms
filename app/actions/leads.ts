@@ -124,7 +124,7 @@ export async function triggerLeadWebhook(leadId: string) {
         .update({ webhook_status: -1 }) // -1 = "in progress" sentinel
         .eq("id", leadId)
         .is("webhook_status", null)
-        .select("*, forms(id, name, webhook_url)")
+        .select("*, forms(id, name, webhook_url, vertical)")
         .single();
 
     if (claimError || !claimed) {
@@ -158,6 +158,7 @@ export async function triggerLeadWebhook(leadId: string) {
     const payload = buildWebhookPayload({
         formId: form.id,
         formName: form.name,
+        vertical: form.vertical ?? null,
         steps: steps || [],
         answers: lead.answers,
         isSmsVerified: lead.is_sms_verified ?? false,

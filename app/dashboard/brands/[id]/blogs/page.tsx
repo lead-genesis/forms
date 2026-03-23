@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { Card, CardContent } from "@/components/ui/card";
 import { sansFont } from "@/lib/design-system";
 import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
@@ -63,18 +63,32 @@ export default function BrandBlogsPage() {
 
     return (
         <DashboardPage className="p-0">
-            <DashboardHeader
-                title="Blog Posts"
-                breadcrumbs={breadcrumbs}
-            >
-                <Link
-                    href={`/dashboard/brands/${brandId}/blogs/new`}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 flex items-center gap-2"
-                >
-                    <PlusIcon className="w-4 h-4" />
-                    New Blog
-                </Link>
-            </DashboardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 px-4 md:px-6 lg:px-10 mb-2">
+                <div className="flex-1 min-w-0">
+                    <nav className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5 overflow-x-auto no-scrollbar whitespace-nowrap">
+                        {breadcrumbs.map((crumb, idx) => (
+                            <span key={idx} className="flex items-center gap-1.5">
+                                {crumb.href ? (
+                                    <Link href={crumb.href} className="hover:text-primary transition-colors">{crumb.label}</Link>
+                                ) : (
+                                    <span className="text-muted-foreground/80">{crumb.label}</span>
+                                )}
+                                {idx < breadcrumbs.length - 1 && <span className="text-muted-foreground/30">/</span>}
+                            </span>
+                        ))}
+                    </nav>
+                    <h1 className={cn("text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-1.5", sansFont)}>Blog Posts</h1>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 sm:mb-1">
+                    <Link
+                        href={`/dashboard/brands/${brandId}/blogs/new`}
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200 flex items-center gap-2"
+                    >
+                        <PlusIcon className="w-4 h-4" />
+                        New Blog
+                    </Link>
+                </div>
+            </div>
 
             <div className="px-4 md:px-6 lg:px-10 mt-6">
                 <motion.div variants={fadeInUp} initial="hidden" animate="show">
@@ -98,7 +112,7 @@ export default function BrandBlogsPage() {
                                         </p>
                                         <Link
                                             href={`/dashboard/brands/${brandId}/blogs/new`}
-                                            className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200"
+                                            className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2.5 rounded-full text-sm font-semibold transition-all shadow-sm active:scale-95 duration-200"
                                         >
                                             Create First Blog
                                         </Link>

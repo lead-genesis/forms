@@ -152,6 +152,11 @@ export function FormStepRenderer({
         }
     };
 
+    // Conversion code for thank-you and sms-verification steps (ad platform event tracking)
+    const conversionCode = (step.type === "thank-you" || step.type === "sms-verification")
+        ? step.data?.conversion_code
+        : null;
+
     return (
         <motion.div
             variants={variants}
@@ -161,6 +166,9 @@ export function FormStepRenderer({
             className="flex flex-col justify-center min-h-[300px]"
         >
             {renderContent()}
+            {mode === "live" && conversionCode && (
+                <div dangerouslySetInnerHTML={{ __html: conversionCode }} />
+            )}
         </motion.div>
     );
 }

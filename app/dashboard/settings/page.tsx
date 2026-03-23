@@ -64,15 +64,15 @@ export default function SettingsPage() {
 
     if (isLoading) {
         return (
-            <DashboardPage className="max-w-4xl">
-                <div className="p-8 text-center text-muted-foreground">Loading settings...</div>
+            <DashboardPage>
+                <div className="max-w-[70%] mx-auto w-full p-8 text-center text-muted-foreground">Loading settings...</div>
             </DashboardPage>
         );
     }
 
     return (
-        <DashboardPage className="max-w-4xl">
-            <div className="px-4 md:px-6 lg:px-10 space-y-6">
+        <DashboardPage>
+            <div className="max-w-[70%] mx-auto w-full space-y-6">
                 {/* Profile */}
                 <Card className="border-border/50 shadow-sm rounded-2xl overflow-hidden">
                     <CardHeader>

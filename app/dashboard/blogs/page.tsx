@@ -1,6 +1,15 @@
-import { redirect } from "next/navigation";
+import { getBlogs } from "@/app/actions/blogs";
+import { getBrands } from "@/app/actions/brands";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
+import { BlogsListClient } from "@/components/dashboard/BlogsListClient";
 
-// Blogs are now managed under /dashboard/brands/[id]/blogs
-export default function BlogsRedirect() {
-    redirect("/dashboard/brands");
+export default async function BlogsPage() {
+    const { data: blogs = [] } = await getBlogs();
+    const { data: brands = [] } = await getBrands();
+
+    return (
+        <DashboardPage>
+            <BlogsListClient initialBlogs={blogs} brands={brands} />
+        </DashboardPage>
+    );
 }

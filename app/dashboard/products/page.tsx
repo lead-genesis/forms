@@ -39,6 +39,7 @@ export default function ProductsPage() {
 
     return (
         <DashboardPage>
+            <div className="flex flex-col gap-4 w-full max-w-[70%] mx-auto">
             <DashboardControls>
                 <div className="relative flex-1 max-w-sm">
                     <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -105,6 +106,7 @@ export default function ProductsPage() {
                         ))}
                     </tbody>
                 </table>
+            </div>
             </div>
         </DashboardPage>
     );

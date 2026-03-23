@@ -13,13 +13,14 @@ interface FormStep {
 interface PayloadInput {
     formId: string;
     formName: string;
+    vertical?: string | null;
     steps: FormStep[];
     answers: Record<string, any>;
     isSmsVerified?: boolean;
     smsVerifiedDate?: string | null;
 }
 
-export function buildWebhookPayload({ formId, formName, steps, answers, isSmsVerified, smsVerifiedDate }: PayloadInput) {
+export function buildWebhookPayload({ formId, formName, vertical, steps, answers, isSmsVerified, smsVerifiedDate }: PayloadInput) {
     const dataSteps = steps.filter(
         s => s.type !== "welcome" && s.type !== "thank-you"
     );
@@ -27,6 +28,7 @@ export function buildWebhookPayload({ formId, formName, steps, answers, isSmsVer
     return {
         form_id: formId,
         form_name: formName,
+        vertical: vertical ?? null,
         submitted_at: new Date().toISOString(),
         sms_verification: isSmsVerified ?? false,
         sms_verified_at: smsVerifiedDate ?? null,

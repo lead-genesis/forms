@@ -134,12 +134,12 @@ export function ContactStep({
                 </div>
             ))}
             {!isPreview && (
-                <Button className="w-full rounded-lg h-12 @lg:h-10 mt-2 text-base @lg:text-sm font-semibold" onClick={handleContinue}>
+                <Button className="w-full rounded-full h-12 @lg:h-10 mt-2 text-base @lg:text-sm font-semibold" onClick={handleContinue}>
                     Continue
                 </Button>
             )}
             {isPreview && (
-                <Button className="w-full rounded-lg h-12 @lg:h-10 mt-2 text-base @lg:text-sm font-semibold" disabled>Continue</Button>
+                <Button className="w-full rounded-full h-12 @lg:h-10 mt-2 text-base @lg:text-sm font-semibold" disabled>Continue</Button>
             )}
 
             {data.optInText && (

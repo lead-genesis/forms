@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
+import BlogEditorPage from "@/components/dashboard/BlogEditorPage";
 
-// Blog editing is now under /dashboard/brands/[id]/blogs/[blogId]
-// Redirect old links to /dashboard/brands
-export default function OldBlogEditorRedirect() {
-    redirect("/dashboard/brands");
+export default function EditBlogPage({ params }: { params: Promise<{ id: string }> }) {
+    return <BlogEditorPage params={params} />;
 }

@@ -247,7 +247,7 @@ export function PageSettings({ page, onChange, onClose }: PageSettingsProps) {
                 <div className="bg-white p-4 rounded-2xl border border-zinc-100 space-y-3 shadow-sm">
                     <h4 className="text-[11px] font-bold text-zinc-900">Custom Domain</h4>
                     <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">To use a custom domain, first configure it in your brand settings.</p>
-                    <button className="w-full py-2 bg-zinc-900 text-white rounded-xl text-[11px] font-bold hover:bg-zinc-800 transition-colors shadow-sm">
+                    <button className="w-full py-2 bg-zinc-900 text-white rounded-full text-[11px] font-bold hover:bg-zinc-800 transition-colors shadow-sm">
                         Manage Domains
                     </button>
                 </div>

@@ -23,6 +23,7 @@ function PublicFormPageContent() {
     const [error, setError] = useState(false);
     const [isInactive, setIsInactive] = useState(false);
     const [disclaimer, setDisclaimer] = useState("");
+    const [customCode, setCustomCode] = useState("");
 
     useEffect(() => {
         if (!formId) return;
@@ -53,6 +54,7 @@ function PublicFormPageContent() {
             setBanner(form.banner ?? null);
             setSmsVerification(form.sms_verification ?? false);
             setDisclaimer(form.disclaimer ?? "");
+            setCustomCode(form.custom_code ?? "");
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -110,6 +112,9 @@ function PublicFormPageContent() {
 
     return (
         <div className="min-h-screen bg-secondary/5 flex flex-col">
+            {customCode && (
+                <div dangerouslySetInnerHTML={{ __html: customCode }} />
+            )}
             <div className="flex-1 flex flex-col">
                 <FormCanvas
                     mode="live"

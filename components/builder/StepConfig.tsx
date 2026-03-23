@@ -1,23 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { FormStep } from "@/lib/builder";
 import { sansFont } from "@/lib/design-system";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowRight, Trash2 } from "lucide-react";
 import { WelcomeConfig } from "./steps/WelcomeConfig";
 import { ContactConfig } from "./steps/ContactConfig";
 import { MultiChoiceConfig } from "./steps/MultiChoiceConfig";
 import { InputConfig } from "./steps/InputConfig";
 import { AddressConfig } from "./steps/AddressConfig";
 import { ThankYouConfig } from "./steps/ThankYouConfig";
+import { SmsVerificationConfig } from "./steps/SmsVerificationConfig";
 
 interface StepConfigProps {
     step: FormStep;
     allSteps: FormStep[];
     onUpdate: (data: any) => void;
+    onDelete?: (stepId: string) => void;
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -88,7 +102,7 @@ function LogicSection({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function StepConfig({ step, allSteps, onUpdate }: StepConfigProps) {
+export function StepConfig({ step, allSteps, onUpdate, onDelete }: StepConfigProps) {
     const { type, data } = step;
 
     const renderFields = () => {
@@ -105,10 +119,12 @@ export function StepConfig({ step, allSteps, onUpdate }: StepConfigProps) {
                 return <AddressConfig data={data} onUpdate={onUpdate} />;
             case "thank-you":
                 return <ThankYouConfig data={data} onUpdate={onUpdate} />;
+            case "sms-verification":
+                return <SmsVerificationConfig data={data} onUpdate={onUpdate} />;
             default:
                 return (
                     <div className="p-4 bg-secondary/10 rounded-lg text-xs text-muted-foreground italic border border-border/50 text-center uppercase tracking-widest font-bold opacity-60">
-                        {type.replace("-", " ")} settings coming soon
+                        {String(type).replace("-", " ")} settings coming soon
                     </div>
                 );
         }
@@ -140,6 +156,41 @@ export function StepConfig({ step, allSteps, onUpdate }: StepConfigProps) {
 
                 {type !== "multi-choice" && (
                     <LogicSection step={step} allSteps={allSteps} onUpdate={onUpdate} />
+                )}
+
+                {/* Delete step */}
+                {onDelete && (
+                    <div className="pt-4 border-t border-border/60">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 gap-2 font-medium"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Delete Step
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete &ldquo;{step.title}&rdquo;?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently remove this step and all its configuration. Any logic pointing to this step will fall back to the default flow.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => onDelete(step.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                        Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                 )}
             </div>
         </div>

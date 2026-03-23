@@ -27,6 +27,11 @@ interface FormSettingsProps {
     onCustomSiteDescriptionChange: (desc: string) => void;
     disclaimer: string;
     onDisclaimerChange: (text: string) => void;
+    customCode: string;
+    onCustomCodeChange: (code: string) => void;
+    vertical: string;
+    onVerticalChange: (v: string) => void;
+    brandVerticals: string[];
 }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,7 +55,12 @@ export function FormSettings({
     customSiteDescription,
     onCustomSiteDescriptionChange,
     disclaimer,
-    onDisclaimerChange
+    onDisclaimerChange,
+    customCode,
+    onCustomCodeChange,
+    vertical,
+    onVerticalChange,
+    brandVerticals
 }: FormSettingsProps) {
     const [copied, setCopied] = React.useState(false);
     const [testing, setTesting] = React.useState(false);
@@ -78,11 +88,14 @@ export function FormSettings({
     const payload = buildWebhookPayload({
         formId: formId ?? "preview",
         formName,
+        vertical: vertical || null,
         steps,
         answers: sampleAnswers,
     });
 
-    const jsonPayload = JSON.stringify(payload, null, 2);
+    // Use a static timestamp for the preview to avoid SSR/client hydration mismatch
+    const previewPayload = { ...payload, submitted_at: "2025-01-01T00:00:00.000Z" };
+    const jsonPayload = JSON.stringify(previewPayload, null, 2);
 
 
     const copyToClipboard = () => {
@@ -137,7 +150,7 @@ export function FormSettings({
                         value="seo"
                         className="rounded-none border-b-2 border-transparent px-2 py-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent hover:text-foreground/80 transition-colors"
                     >
-                        SEO & Domain
+                        Advanced
                     </TabsTrigger>
                 </TabsList>
 
@@ -256,10 +269,36 @@ export function FormSettings({
                                 This disclaimer will be shown at the bottom of the welcome step.
                             </p>
                         </div>
+
+                        {brandVerticals.length > 0 && (
+                            <>
+                                <div className="h-px bg-border/50" />
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Globe className="w-3 h-3 text-primary" />
+                                        <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Vertical</Label>
+                                    </div>
+                                    <select
+                                        value={vertical}
+                                        onChange={(e) => onVerticalChange(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg border border-border/50 bg-secondary/10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none"
+                                    >
+                                        <option value="">Select a vertical…</option>
+                                        {brandVerticals.map((v) => (
+                                            <option key={v} value={v}>{v}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                        Assign this form to one of the brand's verticals.
+                                    </p>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </TabsContent>
 
-                <TabsContent value="seo" className="space-y-8 mt-0">
+                <TabsContent value="seo" className="space-y-8 mt-0 pb-12">
                     <div className="space-y-6">
                         <div className="space-y-3">
                             <div className="flex items-center gap-2 mb-1">
@@ -319,6 +358,24 @@ export function FormSettings({
                                     A brief summary that search engines and social platforms use for snippets.
                                 </p>
                             </div>
+                        </div>
+                        <div className="h-px bg-border/50" />
+
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Terminal className="w-3 h-3 text-primary" />
+                                <Label className="uppercase text-[10px] tracking-widest opacity-50 font-bold">Custom Code</Label>
+                            </div>
+                            <Textarea
+                                value={customCode}
+                                onChange={(e) => onCustomCodeChange(e.target.value)}
+                                placeholder={"<!-- Tracking pixels, analytics, or custom scripts -->\n<script>\n  // Your code here\n</script>"}
+                                className="bg-secondary/10 border-border/50 min-h-[200px] resize-none font-mono text-xs"
+                                spellCheck={false}
+                            />
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                HTML, scripts, or tracking pixels injected into the form page. This code runs when the form loads.
+                            </p>
                         </div>
                     </div>
                 </TabsContent>

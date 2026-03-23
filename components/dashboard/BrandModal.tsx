@@ -250,7 +250,7 @@ export function BrandModal({ trigger, onCreated }: BrandModalProps) {
                             type="button"
                             onClick={handleSubmit}
                             disabled={isLoading}
-                            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-2"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-2"
                         >
                             {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                             {isLoading ? "Creating…" : "Create Brand"}

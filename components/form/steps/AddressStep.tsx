@@ -54,7 +54,7 @@ export function AddressStep({
                         disabled={isPreview}
                         className="w-full h-12 @lg:h-10 px-3 rounded-lg border border-border/50 bg-transparent text-base @lg:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground/50"
                     />
-                    <Button className="w-full rounded-lg h-12 @lg:h-10 text-base @lg:text-sm font-semibold" onClick={onNext}>
+                    <Button className="w-full rounded-full h-12 @lg:h-10 text-base @lg:text-sm font-semibold" onClick={onNext}>
                         Continue
                     </Button>
                 </>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,23 +129,28 @@ export default function BlogEditorPage({ params }: BlogEditorPageProps) {
 
     return (
         <DashboardPage>
-            <DashboardHeader
-                title={isEditing ? "Edit Blog" : "New Blog"}
-                subtitle={isEditing ? "Update your blog post content." : "Create a new blog post for your brand."}
-            >
-                <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 px-4 md:px-6 lg:px-10 mb-2">
+                <div className="flex-1 min-w-0">
+                    <h1 className={cn("text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-1.5", sansFont)}>
+                        {isEditing ? "Edit Blog" : "New Blog"}
+                    </h1>
+                    <p className="text-muted-foreground/80 text-sm md:text-base max-w-2xl leading-relaxed">
+                        {isEditing ? "Update your blog post content." : "Create a new blog post for your brand."}
+                    </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 sm:mb-1">
                     <Link href="/dashboard/blogs">
-                        <Button variant="outline" className="rounded-2xl">Cancel</Button>
+                        <Button variant="outline" className="rounded-full">Cancel</Button>
                     </Link>
                     <Button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 min-w-[100px]"
+                        className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 min-w-[100px]"
                     >
                         {isSaving ? <Loader2Icon className="w-4 h-4 animate-spin" /> : (isEditing ? "Save Changes" : "Create Blog")}
                     </Button>
                 </div>
-            </DashboardHeader>
+            </div>
 
             <div className="px-4 md:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">

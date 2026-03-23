@@ -35,11 +35,13 @@ interface Form {
     brand_id: string;
     subdomain: string | null;
     views: number;
+    vertical: string | null;
     brands?: {
         id: string;
         name: string;
         logo_url?: string | null;
         banner_url?: string | null;
+        verticals?: string[];
     };
 }
 
@@ -89,6 +91,7 @@ export default function FormDetailPage() {
     const [editWebhook, setEditWebhook] = useState("");
     const [editStatus, setEditStatus] = useState("draft");
     const [editSubdomain, setEditSubdomain] = useState("");
+    const [editVertical, setEditVertical] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [isDuplicating, setIsDuplicating] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -109,6 +112,7 @@ export default function FormDetailPage() {
             setEditWebhook(f.webhook_url ?? "");
             setEditStatus(f.status);
             setEditSubdomain(f.subdomain ?? "");
+            setEditVertical(f.vertical ?? "");
         }
         setIsLoading(false);
     }, [formId]);
@@ -123,6 +127,7 @@ export default function FormDetailPage() {
             webhook_url: editWebhook.trim() || null,
             status: editStatus,
             subdomain: editSubdomain.trim() || null,
+            vertical: editVertical || null,
         });
         await fetchData();
         setIsSaving(false);
@@ -173,7 +178,7 @@ export default function FormDetailPage() {
     if (isLoading) {
         return (
             <DashboardPage className="space-y-6">
-                <div className="px-4 md:px-6 lg:px-10 space-y-6">
+                <div className="max-w-[70%] mx-auto w-full space-y-6">
                     <div className="h-8 w-48 rounded-xl bg-secondary/30 animate-pulse" />
                     <div className="h-10 w-full rounded-xl bg-secondary/20 animate-pulse" />
                     <div className="h-64 w-full rounded-2xl bg-secondary/20 animate-pulse" />
@@ -185,7 +190,7 @@ export default function FormDetailPage() {
     if (!form) {
         return (
             <DashboardPage className="space-y-6">
-                <div className="px-4 md:px-6 lg:px-10 flex flex-col items-center justify-center py-20">
+                <div className="max-w-[70%] mx-auto w-full flex flex-col items-center justify-center py-20">
                     <p className="text-muted-foreground">Form not found.</p>
                     <button
                         onClick={() => router.push("/dashboard/forms")}
@@ -208,12 +213,13 @@ export default function FormDetailPage() {
 
     return (
         <DashboardPage className="pt-3 md:pt-4">
+          <div className="w-full max-w-[70%] mx-auto">
             {/* Header */}
             <motion.div
                 initial={{ y: -10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4 }}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 md:px-6 lg:px-10 mb-2"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2"
             >
                 <div className="flex flex-col gap-1">
                     <button
@@ -303,7 +309,7 @@ export default function FormDetailPage() {
                         href={`/builder?formId=${form.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200"
+                        className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-full text-sm font-semibold transition-colors shadow-sm active:scale-95 duration-200"
                     >
                         <PencilSquareIcon className="w-4 h-4" />
                         Edit Form
@@ -317,7 +323,6 @@ export default function FormDetailPage() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: 0.1 }}
-                    className="px-4 md:px-6 lg:px-10"
                 >
                     <div className="flex items-center gap-1 bg-secondary/30 p-1 rounded-2xl w-fit">
                         {tabs.map((tab) => (
@@ -346,7 +351,6 @@ export default function FormDetailPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.25 }}
-                        className="px-4 md:px-6 lg:px-10"
                     >
                         {activeTab === "leads" && (
                             <LeadsTab
@@ -368,6 +372,9 @@ export default function FormDetailPage() {
                                 setEditStatus={setEditStatus}
                                 editSubdomain={editSubdomain}
                                 setEditSubdomain={setEditSubdomain}
+                                editVertical={editVertical}
+                                setEditVertical={setEditVertical}
+                                brandVerticals={form.brands?.verticals ?? []}
                                 isSaving={isSaving}
                                 onSave={handleSaveSettings}
                                 shareUrl={shareUrl}
@@ -378,6 +385,8 @@ export default function FormDetailPage() {
                     </motion.div>
                 </AnimatePresence>
             </div>
+
+          </div>
 
             <LeadDetailsSheet
                 lead={selectedLead}

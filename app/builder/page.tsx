@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { BuilderHeader } from "@/components/builder/BuilderHeader";
 import { StepList } from "@/components/builder/StepList";
@@ -13,6 +13,7 @@ import {
     getFormSteps,
     createStep,
     updateStep,
+    deleteStep,
     reorderSteps,
     updateForm,
 } from "@/app/actions/forms";
@@ -25,11 +26,12 @@ import { useFormAutosave } from "./hooks/useFormAutosave";
 
 function BuilderContent() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const formId = searchParams.get("formId");
 
     const [isLoading, setIsLoading] = useState(!!formId);
     const [formName, setFormName] = useState("New Lead Form");
-    const [brand, setBrand] = useState<{ name: string; logo_url?: string | null; banner_url?: string | null } | null>(null);
+    const [brand, setBrand] = useState<{ name: string; logo_url?: string | null; banner_url?: string | null; verticals?: string[] } | null>(null);
     const [steps, setSteps] = useState<FormStep[]>([]);
     const stepsRef = useRef<FormStep[]>(steps);
     stepsRef.current = steps;
@@ -42,6 +44,8 @@ function BuilderContent() {
     const [customPageTitle, setCustomPageTitle] = useState("");
     const [customSiteDescription, setCustomSiteDescription] = useState("");
     const [disclaimer, setDisclaimer] = useState("");
+    const [customCode, setCustomCode] = useState("");
+    const [vertical, setVertical] = useState("");
     const [viewport, setViewport] = useState<ViewportMode>("desktop");
 
     const { isSaving, debouncedSave, saveField } = useFormAutosave(formId);
@@ -55,13 +59,7 @@ function BuilderContent() {
     // ── Load form on mount ─────────────────────────────────────────────────────
     useEffect(() => {
         if (!formId) {
-            const defaults: FormStep[] = [
-                { id: "1", type: "welcome", title: humanTitle("welcome"), data: defaultData("welcome") },
-                { id: "2", type: "contact", title: humanTitle("contact"), data: defaultData("contact") },
-                { id: "3", type: "thank-you", title: humanTitle("thank-you"), data: defaultData("thank-you") },
-            ];
-            setSteps(defaults);
-            setCurrentStepId(defaults[0].id);
+            router.replace("/dashboard");
             return;
         }
 
@@ -88,6 +86,8 @@ function BuilderContent() {
             setCustomPageTitle(form.custom_page_title ?? "");
             setCustomSiteDescription(form.custom_site_description ?? "");
             setDisclaimer(form.disclaimer ?? "");
+            setCustomCode(form.custom_code ?? "");
+            setVertical(form.vertical ?? "");
             if (form.brands) setBrand(form.brands);
 
             const loadedSteps: FormStep[] = (stepsRes.data as any[]).map(s => ({
@@ -140,6 +140,16 @@ function BuilderContent() {
         setDisclaimer(text);
         debouncedSave("disclaimer", text);
     }, [debouncedSave]);
+
+    const setCustomCodeWithSave = useCallback((code: string) => {
+        setCustomCode(code);
+        debouncedSave("custom_code", code);
+    }, [debouncedSave]);
+
+    const setVerticalWithSave = useCallback((v: string) => {
+        setVertical(v);
+        saveField("vertical", v || null);
+    }, [saveField]);
 
     // ── Add Step (optimistic) ──────────────────────────────────────────────────
     const addStep = useCallback(async (type: StepType) => {
@@ -224,6 +234,28 @@ function BuilderContent() {
         reorderSteps(updates);
     }, [formId]);
 
+    const handleDeleteStep = useCallback(async (stepId: string) => {
+        const stepIndex = steps.findIndex(s => s.id === stepId);
+        const removed = steps.filter(s => s.id !== stepId);
+        setSteps(removed);
+
+        // Select an adjacent step
+        if (currentStepId === stepId) {
+            const nextIndex = Math.min(stepIndex, removed.length - 1);
+            setCurrentStepId(removed[nextIndex]?.id ?? "");
+        }
+
+        if (formId && !stepId.startsWith("tmp_")) {
+            const { error } = await deleteStep(stepId);
+            if (error) {
+                toast.error("Failed to delete step");
+                // Rollback
+                setSteps(stepsRef.current);
+                return;
+            }
+        }
+    }, [formId, steps, currentStepId]);
+
     const handleConfigUpdate = useCallback((data: any) => {
         if (!currentStep) return;
         if ("title" in data) {
@@ -264,6 +296,7 @@ function BuilderContent() {
                             step={currentStep}
                             allSteps={steps}
                             onUpdate={handleConfigUpdate}
+                            onDelete={steps.length > 1 ? handleDeleteStep : undefined}
                         />
                     )}
                 </aside>
@@ -321,6 +354,11 @@ function BuilderContent() {
                         onCustomSiteDescriptionChange={setCustomSiteDescriptionWithSave}
                         disclaimer={disclaimer}
                         onDisclaimerChange={setDisclaimerWithSave}
+                        customCode={customCode}
+                        onCustomCodeChange={setCustomCodeWithSave}
+                        vertical={vertical}
+                        onVerticalChange={setVerticalWithSave}
+                        brandVerticals={brand?.verticals ?? []}
                     />
                 </aside>
             </div>

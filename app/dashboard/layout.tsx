@@ -21,6 +21,8 @@ import {
     UserGroupIcon,
     TagIcon,
     ChevronRightIcon,
+    RectangleStackIcon,
+    NewspaperIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
 
@@ -28,7 +30,7 @@ import { createClient } from "@/lib/supabase/client";
 // Each entry: path prefix → label. More specific paths first (sorted by length).
 type BreadcrumbSegment = { label: string; href: string };
 
-function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
+function buildBreadcrumbs(pathname: string, brandName?: string | null): BreadcrumbSegment[] {
     const crumbs: BreadcrumbSegment[] = [{ label: "Dashboard", href: "/dashboard" }];
 
     if (pathname === "/dashboard") return crumbs;
@@ -44,8 +46,7 @@ function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
     } else if (segments[1] === "brands") {
         crumbs.push({ label: "Brands", href: "/dashboard/brands" });
         if (segments[2]) {
-            // /dashboard/brands/[id] — brand name resolved by page, use placeholder
-            crumbs.push({ label: "Brand", href: `/dashboard/brands/${segments[2]}` });
+            crumbs.push({ label: brandName || "Brand", href: `/dashboard/brands/${segments[2]}` });
             if (segments[3] === "blogs") {
                 crumbs.push({ label: "Blogs", href: `/dashboard/brands/${segments[2]}/blogs` });
                 if (segments[4]) {
@@ -53,6 +54,15 @@ function buildBreadcrumbs(pathname: string): BreadcrumbSegment[] {
                 }
             }
         }
+    } else if (segments[1] === "blogs") {
+        crumbs.push({ label: "Blogs", href: "/dashboard/blogs" });
+        if (segments[2] === "new") {
+            crumbs.push({ label: "New Blog", href: pathname });
+        } else if (segments[2]) {
+            crumbs.push({ label: "Edit Blog", href: pathname });
+        }
+    } else if (segments[1] === "verticals") {
+        crumbs.push({ label: "Verticals", href: "/dashboard/verticals" });
     } else if (segments[1] === "users") {
         crumbs.push({ label: "Users", href: "/dashboard/users" });
     } else if (segments[1] === "settings") {
@@ -69,9 +79,13 @@ function getPageTitle(pathname: string): string {
     if (pathname === "/dashboard") return "Overview";
     if (pathname.startsWith("/dashboard/forms")) return "Forms";
     if (pathname.startsWith("/dashboard/leads")) return "Leads";
+    if (pathname.startsWith("/dashboard/verticals")) return "Verticals";
     if (pathname.startsWith("/dashboard/users")) return "Users";
     if (pathname.startsWith("/dashboard/settings")) return "Settings";
     if (pathname.startsWith("/dashboard/products")) return "Products";
+    if (pathname === "/dashboard/blogs") return "Blogs";
+    if (pathname === "/dashboard/blogs/new") return "New Blog";
+    if (pathname.startsWith("/dashboard/blogs/")) return "Edit Blog";
     if (pathname.match(/\/dashboard\/brands\/[^/]+\/blogs\/new/)) return "New Blog";
     if (pathname.match(/\/dashboard\/brands\/[^/]+\/blogs\/.+/)) return "Edit Blog";
     if (pathname.match(/\/dashboard\/brands\/[^/]+\/blogs/)) return "Blogs";
@@ -122,17 +136,46 @@ export default function DashboardLayout({
         router.push("/auth");
     };
 
+    // Listen for brand-name updates from the brand detail page
+    const [brandName, setBrandName] = useState<string | null>(null);
+    useEffect(() => {
+        const handler = (e: Event) => setBrandName((e as CustomEvent).detail);
+        window.addEventListener("brand-name", handler);
+        return () => window.removeEventListener("brand-name", handler);
+    }, []);
+    // Reset brand name when navigating away from a brand page
+    useEffect(() => {
+        if (!pathname.match(/\/dashboard\/brands\/[^/]+/)) setBrandName(null);
+    }, [pathname]);
+
     const pageTitle = getPageTitle(pathname);
-    const breadcrumbs = buildBreadcrumbs(pathname);
+    const breadcrumbs = buildBreadcrumbs(pathname, brandName);
 
     const navGroups = [
         {
-            label: "Main",
+            label: "Overview",
             items: [
                 { href: "/dashboard", label: "Overview", icon: Squares2X2Icon },
+            ],
+        },
+        {
+            label: "Lead Gen",
+            items: [
                 { href: "/dashboard/forms", label: "Forms", icon: DocumentTextIcon },
                 { href: "/dashboard/leads", label: "Leads", icon: UserGroupIcon },
+            ],
+        },
+        {
+            label: "Content",
+            items: [
                 { href: "/dashboard/brands", label: "Brands", icon: TagIcon },
+                { href: "/dashboard/blogs", label: "Blogs", icon: NewspaperIcon },
+                { href: "/dashboard/verticals", label: "Verticals", icon: RectangleStackIcon },
+            ],
+        },
+        {
+            label: "Team",
+            items: [
                 { href: "/dashboard/users", label: "Users", icon: UsersIcon },
             ],
         },
@@ -397,10 +440,7 @@ export default function DashboardLayout({
                     </div>
                 </header>
 
-                <div className={cn(
-                    "py-6 lg:py-10 mx-auto flex-1 flex flex-col",
-                    pathname === "/dashboard/settings" ? "max-w-4xl px-6 lg:px-10" : "w-full"
-                )}>
+                <div className="py-6 lg:py-10 mx-auto flex-1 flex flex-col w-full">
                     {children}
                 </div>
             </main>

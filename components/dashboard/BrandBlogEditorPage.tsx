@@ -2,7 +2,9 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { DashboardPage, DashboardHeader } from "@/components/dashboard/DashboardPage";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
+import { cn } from "@/lib/utils";
+import { sansFont } from "@/lib/design-system";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,13 +124,27 @@ export default function BrandBlogEditorPage({ params }: BrandBlogEditorPageProps
 
     return (
         <DashboardPage>
-            <DashboardHeader
-                title={isEditing ? (title || "Edit Blog") : "Create New Blog"}
-                breadcrumbs={breadcrumbs}
-            >
-                <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 px-4 md:px-6 lg:px-10 mb-2">
+                <div className="flex-1 min-w-0">
+                    <nav className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1.5 overflow-x-auto no-scrollbar whitespace-nowrap">
+                        {breadcrumbs.map((crumb, idx) => (
+                            <span key={idx} className="flex items-center gap-1.5">
+                                {crumb.href ? (
+                                    <Link href={crumb.href} className="hover:text-primary transition-colors">{crumb.label}</Link>
+                                ) : (
+                                    <span className="text-muted-foreground/80">{crumb.label}</span>
+                                )}
+                                {idx < breadcrumbs.length - 1 && <span className="text-muted-foreground/30">/</span>}
+                            </span>
+                        ))}
+                    </nav>
+                    <h1 className={cn("text-3xl md:text-4xl font-extrabold tracking-tight text-foreground mb-1.5", sansFont)}>
+                        {isEditing ? (title || "Edit Blog") : "Create New Blog"}
+                    </h1>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 sm:mb-1">
                     <Link href={backHref}>
-                        <Button variant="outline" className="rounded-2xl gap-2">
+                        <Button variant="outline" className="rounded-full gap-2">
                             <ArrowLeftIcon className="w-4 h-4" />
                             Cancel
                         </Button>
@@ -136,12 +152,12 @@ export default function BrandBlogEditorPage({ params }: BrandBlogEditorPageProps
                     <Button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 min-w-[120px]"
+                        className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 min-w-[120px]"
                     >
                         {isSaving ? <Loader2Icon className="w-4 h-4 animate-spin" /> : (isEditing ? "Save Changes" : "Create Blog")}
                     </Button>
                 </div>
-            </DashboardHeader>
+            </div>
 
             <div className="px-4 md:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
