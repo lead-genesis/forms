@@ -9,6 +9,7 @@ import { InputStep } from "./steps/InputStep";
 import { AddressStep } from "./steps/AddressStep";
 import { SmsVerificationStep } from "./steps/SmsVerificationStep";
 import { ThankYouStep } from "./steps/ThankYouStep";
+import { ScriptInjector } from "./ScriptInjector";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -167,7 +168,7 @@ export function FormStepRenderer({
         >
             {renderContent()}
             {mode === "live" && conversionCode && (
-                <div dangerouslySetInnerHTML={{ __html: conversionCode }} />
+                <ScriptInjector html={conversionCode} />
             )}
         </motion.div>
     );

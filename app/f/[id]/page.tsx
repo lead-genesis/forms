@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormCanvas } from "@/components/form/FormCanvas";
 import { FormStep } from "@/components/form/FormStepRenderer";
+import { ScriptInjector } from "@/components/form/ScriptInjector";
 import { getForm, getFormSteps, incrementFormViews } from "@/app/actions/forms";
 // Metadata moved to layout.tsx
 
@@ -112,9 +113,7 @@ function PublicFormPageContent() {
 
     return (
         <div className="min-h-screen bg-secondary/5 flex flex-col">
-            {customCode && (
-                <div dangerouslySetInnerHTML={{ __html: customCode }} />
-            )}
+            {customCode && <ScriptInjector html={customCode} />}
             <div className="flex-1 flex flex-col">
                 <FormCanvas
                     mode="live"
